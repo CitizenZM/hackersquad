@@ -40,16 +40,10 @@ export async function startResearch(projectId: string): Promise<string> {
     data: { status: "RESEARCHING" },
   });
 
-  // Run pipeline in background (fire-and-forget)
-  runPipeline(projectId, jobId).catch((err) => {
-    console.error("Research pipeline error:", err);
-    jobManager.failJob(jobId, err.message);
-  });
-
   return jobId;
 }
 
-async function runPipeline(projectId: string, jobId: string) {
+export async function runPipeline(projectId: string, jobId: string) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: { brand: true, competitors: true },
