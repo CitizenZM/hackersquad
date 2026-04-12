@@ -19,7 +19,7 @@ export default function RootLayout({
       <body className="min-h-full font-sans">
         <TooltipProvider>
           <Sidebar />
-          <main className="ml-64 min-h-screen">{children}</main>
+          <main className="pt-14 lg:pt-0 lg:ml-64 min-h-screen">{children}</main>
         </TooltipProvider>
       </body>
     </html>

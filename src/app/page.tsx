@@ -32,9 +32,9 @@ export default async function HomePage() {
         title="Projects"
         description="Your brand intelligence workspaces"
       />
-      <div className="p-8">
+      <div className="p-4 sm:p-6 md:p-8">
         {projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center px-4">
             <div className="rounded-full bg-primary/10 p-6 mb-6">
               <Brain className="h-12 w-12 text-primary" />
             </div>

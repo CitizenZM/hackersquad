@@ -28,7 +28,7 @@ export default async function ProjectLayout({
         }
       />
       <TabNav projectId={projectId} />
-      <div className="p-8">{children}</div>
+      <div className="p-4 sm:p-6 md:p-8">{children}</div>
     </div>
   );
 }

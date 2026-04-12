@@ -69,7 +69,7 @@ export default async function OverviewPage({
   return (
     <div className="space-y-6">
       {/* Score cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Brand Health</CardTitle>

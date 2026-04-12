@@ -166,7 +166,7 @@ export default function CreativePage() {
         </div>
 
         {angles.length > 0 && (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
             {angles.map((angle) => (
               <Card
                 key={angle.id}
@@ -327,7 +327,7 @@ export default function CreativePage() {
             <p className="text-sm text-muted-foreground">
               {storyboard.style} - {storyboard.totalDuration}
             </p>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {storyboard.frames.map((frame) => (
                 <Card key={frame.frameNumber}>
                   <CardContent className="pt-4 space-y-2">

@@ -34,7 +34,7 @@ export default async function AssetInsightPage({
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <Link
         href={`/projects/${projectId}/content`}
         className="text-sm text-muted-foreground hover:text-foreground"
@@ -43,9 +43,9 @@ export default async function AssetInsightPage({
       </Link>
 
       {/* Header */}
-      <div className="flex gap-6">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
         {asset.thumbnailUrl && (
-          <div className="w-64 shrink-0">
+          <div className="w-full sm:w-64 shrink-0">
             <div className="aspect-video rounded-lg overflow-hidden bg-muted">
               <img
                 src={asset.thumbnailUrl}
