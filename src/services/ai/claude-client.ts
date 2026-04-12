@@ -1,11 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { z, ZodSchema } from "zod";
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
 
-const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
+const MODEL = process.env.AI_MODEL || "gpt-4o";
 
 export async function analyzeWithClaude<T>(options: {
   systemPrompt: string;
@@ -19,17 +19,17 @@ export async function analyzeWithClaude<T>(options: {
 
   const { systemPrompt, userPrompt, responseSchema, maxTokens = 4096 } = options;
 
-  const response = await client.messages.create({
+  const response = await client.chat.completions.create({
     model: MODEL,
     max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    response_format: { type: "json_object" },
   });
 
-  const text = response.content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("");
+  const text = response.choices[0]?.message?.content || "";
 
   // Extract JSON from response (handles markdown code blocks)
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
@@ -40,11 +40,14 @@ export async function analyzeWithClaude<T>(options: {
     return responseSchema.parse(parsed);
   } catch (parseError) {
     // Retry with a correction prompt
-    const retryResponse = await client.messages.create({
+    const retryResponse = await client.chat.completions.create({
       model: MODEL,
       max_tokens: maxTokens,
-      system: "You must respond with ONLY valid JSON. No explanation, no markdown. Just the JSON object.",
       messages: [
+        {
+          role: "system",
+          content: "You must respond with ONLY valid JSON. No explanation, no markdown. Just the JSON object.",
+        },
         { role: "user", content: userPrompt },
         { role: "assistant", content: text },
         {
@@ -52,13 +55,10 @@ export async function analyzeWithClaude<T>(options: {
           content: `Your previous response was not valid JSON. Please output ONLY the JSON object, nothing else. The error was: ${parseError instanceof Error ? parseError.message : "parse error"}`,
         },
       ],
+      response_format: { type: "json_object" },
     });
 
-    const retryText = retryResponse.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("");
-
+    const retryText = retryResponse.choices[0]?.message?.content || "";
     const retryJsonMatch = retryText.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, retryText];
     const retryJsonStr = (retryJsonMatch[1] || retryText).trim();
     const retryParsed = JSON.parse(retryJsonStr);
