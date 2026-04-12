@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSSE } from "@/lib/hooks/use-sse";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,69 +10,121 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Circle,
   ArrowRight,
   Play,
+  Brain,
+  Globe,
+  Video,
+  BarChart3,
+  MessageSquare,
 } from "lucide-react";
+
+const STEPS = [
+  { name: "Crawling websites", icon: Globe },
+  { name: "YouTube research", icon: Video },
+  { name: "Collecting mentions", icon: MessageSquare },
+  { name: "AI analysis", icon: Brain },
+  { name: "Scoring content", icon: BarChart3 },
+];
+
+type Status = "idle" | "running" | "complete" | "error";
 
 export default function ResearchPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId as string;
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  const [started, setStarted] = useState(false);
 
-  const sseUrl = jobId
-    ? `/api/projects/${projectId}/research/progress?jobId=${jobId}`
-    : null;
-  const { status, progress, steps, messages } = useSSE(sseUrl);
+  const [status, setStatus] = useState<Status>("idle");
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const checkStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}`);
+      const data = await res.json();
+      if (data.status === "ANALYZED" || data.status === "COMPLETE") {
+        setStatus("complete");
+        setProgress(100);
+      } else if (data.status === "ERROR") {
+        setStatus("error");
+        setError("Research failed. Please try again.");
+      } else if (data.status === "RESEARCHING") {
+        setStatus("running");
+      }
+    } catch {
+      // ignore polling errors
+    }
+  }, [projectId]);
 
   async function startResearch() {
-    setStarting(true);
+    setStatus("running");
+    setProgress(0);
+    setError(null);
+
+    // Animate progress while waiting
+    const progressInterval = setInterval(() => {
+      setProgress((p) => Math.min(p + 2, 90));
+    }, 1000);
+
     try {
       const res = await fetch(`/api/projects/${projectId}/research`, {
         method: "POST",
       });
-      const data = await res.json();
-      if (data.jobId) {
-        setJobId(data.jobId);
-        setStarted(true);
+      clearInterval(progressInterval);
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Research failed");
       }
+
+      setProgress(100);
+      setStatus("complete");
     } catch (err) {
-      console.error("Failed to start research:", err);
-    } finally {
-      setStarting(false);
+      clearInterval(progressInterval);
+      setStatus("error");
+      setError(err instanceof Error ? err.message : "Something went wrong");
     }
   }
 
+  // Auto-start on mount
   useEffect(() => {
-    // Auto-start research on mount
-    if (!started && !starting) {
-      startResearch();
-    }
+    checkStatus().then(() => {
+      // Only auto-start if project is in DRAFT
+      fetch(`/api/projects/${projectId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.status === "DRAFT") startResearch();
+          else if (d.status === "ANALYZED" || d.status === "COMPLETE") {
+            setStatus("complete");
+            setProgress(100);
+          }
+        });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isComplete = status === "complete";
-  const isError = status === "error";
-
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-lg mx-auto space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Research Progress</CardTitle>
+            <CardTitle className="text-lg">Research Progress</CardTitle>
             <Badge
-              variant={isComplete ? "default" : isError ? "destructive" : "secondary"}
+              variant={
+                status === "complete"
+                  ? "default"
+                  : status === "error"
+                    ? "destructive"
+                    : "secondary"
+              }
             >
-              {isComplete
+              {status === "complete"
                 ? "Complete"
-                : isError
+                : status === "error"
                   ? "Error"
                   : status === "running"
-                    ? "Running"
-                    : "Starting..."}
+                    ? "Running..."
+                    : "Ready"}
             </Badge>
           </div>
         </CardHeader>
@@ -81,84 +132,88 @@ export default function ResearchPage() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Overall Progress</span>
-              <span className="font-medium">{progress}%</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-3" />
           </div>
 
           <div className="space-y-3">
-            {steps.map((step) => (
-              <div
-                key={step.name}
-                className="flex items-center gap-3 rounded-lg border p-3"
-              >
-                {step.status === "complete" ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                ) : step.status === "error" ? (
-                  <XCircle className="h-5 w-5 text-red-500 shrink-0" />
-                ) : step.status === "running" ? (
-                  <Loader2 className="h-5 w-5 text-blue-500 animate-spin shrink-0" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{step.name}</p>
-                  {step.log.length > 0 && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {step.log[step.log.length - 1]}
-                    </p>
+            {STEPS.map((step, i) => {
+              const Icon = step.icon;
+              const stepProgress = (progress / 100) * STEPS.length;
+              const isComplete = stepProgress > i + 1;
+              const isRunning = stepProgress > i && stepProgress <= i + 1;
+              const isError = status === "error" && isRunning;
+
+              return (
+                <div
+                  key={step.name}
+                  className="flex items-center gap-3 rounded-lg border p-3"
+                >
+                  {isComplete ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                  ) : isError ? (
+                    <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                  ) : isRunning ? (
+                    <Loader2 className="h-5 w-5 text-blue-500 animate-spin shrink-0" />
+                  ) : (
+                    <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
                   )}
-                </div>
-                {step.status === "running" && (
-                  <span className="text-xs text-muted-foreground">
-                    {step.progress}%
+                  <span
+                    className={`text-sm font-medium ${
+                      isComplete
+                        ? "text-green-700"
+                        : isRunning
+                          ? "text-blue-700"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {step.name}
                   </span>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
 
-          {messages.length > 0 && (
-            <div className="max-h-40 overflow-y-auto rounded-lg bg-muted p-3 space-y-1">
-              {messages.slice(-10).map((msg, i) => (
-                <p key={i} className="text-xs text-muted-foreground font-mono">
-                  {msg}
-                </p>
-              ))}
-            </div>
+          {status === "running" && (
+            <p className="text-xs text-muted-foreground text-center animate-pulse">
+              Crawling websites, searching YouTube, and running AI analysis...
+            </p>
           )}
         </CardContent>
       </Card>
 
-      {isComplete && (
-        <div className="flex gap-3">
-          <Button
-            onClick={() => router.push(`/projects/${projectId}/overview`)}
-            size="lg"
-            className="flex-1"
-          >
-            View Dashboard
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+      {status === "complete" && (
+        <Button
+          onClick={() => router.push(`/projects/${projectId}/overview`)}
+          size="lg"
+          className="w-full"
+        >
+          View Dashboard
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
       )}
 
-      {isError && (
-        <div className="flex gap-3">
-          <Button onClick={startResearch} variant="outline" disabled={starting}>
-            {starting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
+      {status === "error" && (
+        <div className="space-y-3">
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button onClick={startResearch} variant="outline" className="flex-1">
               <Play className="mr-2 h-4 w-4" />
-            )}
-            Retry Research
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => router.push(`/projects/${projectId}/overview`)}
-          >
-            View Partial Results
-          </Button>
+              Retry
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/projects/${projectId}/overview`)}
+              className="flex-1"
+            >
+              View Partial Results
+            </Button>
+          </div>
         </div>
       )}
     </div>

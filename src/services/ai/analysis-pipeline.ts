@@ -8,6 +8,10 @@ import { buildCompetitorIntelPrompt } from "./prompts/competitor-intel";
 import type { CrawlResult } from "@/services/research/website-crawler";
 import type { YouTubeVideo } from "@/services/research/youtube-service";
 import { jobManager } from "@/services/job-manager";
+
+function updateJob(jobId: string, fn: () => void) {
+  if (jobId) { try { fn(); } catch { /* ignore in serverless */ } }
+}
 import { NarrativeType } from "@/generated/prisma/enums";
 
 const brandAnalysisSchema = z.object({
@@ -99,10 +103,10 @@ export async function runAnalysisPipeline(
   if (!project) throw new Error("Project not found");
 
   const stepName = "AI Analysis";
-  jobManager.startStep(jobId, stepName);
+  updateJob(jobId, () => jobManager.startStep(jobId, stepName));
 
   // Step 1: Brand analysis
-  jobManager.updateStepProgress(jobId, stepName, 10, "Analyzing brand attributes...");
+  updateJob(jobId, () => jobManager.updateStepProgress(jobId, stepName, 10, "Analyzing brand attributes..."));
   if (brandCrawl && project.brand) {
     try {
       const prompt = buildBrandAnalysisPrompt(project.brandName, brandCrawl);
@@ -133,7 +137,7 @@ export async function runAnalysisPipeline(
   }
 
   // Step 2: Competitor analysis
-  jobManager.updateStepProgress(jobId, stepName, 25, "Analyzing competitors...");
+  updateJob(jobId, () => jobManager.updateStepProgress(jobId, stepName, 25, "Analyzing competitors..."));
   for (const comp of project.competitors) {
     const crawl = competitorCrawls.get(comp.id);
     if (!crawl) continue;
@@ -185,7 +189,7 @@ export async function runAnalysisPipeline(
   }
 
   // Step 3: Content scoring
-  jobManager.updateStepProgress(jobId, stepName, 45, "Scoring content assets...");
+  updateJob(jobId, () => jobManager.updateStepProgress(jobId, stepName, 45, "Scoring content assets..."));
   const allVideos = [...brandVideos];
   const videoCompetitorMap = new Map<string, string | null>();
   brandVideos.forEach((v) => videoCompetitorMap.set(v.videoId, null));
@@ -249,7 +253,7 @@ export async function runAnalysisPipeline(
   }
 
   // Step 4: Pattern mining
-  jobManager.updateStepProgress(jobId, stepName, 70, "Mining narrative patterns...");
+  updateJob(jobId, () => jobManager.updateStepProgress(jobId, stepName, 70, "Mining narrative patterns..."));
   const scoredAssets = await prisma.contentAsset.findMany({
     where: { projectId },
     orderBy: { overallScore: "desc" },
@@ -337,6 +341,6 @@ export async function runAnalysisPipeline(
     }
   }
 
-  jobManager.updateStepProgress(jobId, stepName, 100, "Analysis complete");
-  jobManager.completeStep(jobId, stepName);
+  updateJob(jobId, () => jobManager.updateStepProgress(jobId, stepName, 100, "Analysis complete"));
+  updateJob(jobId, () => jobManager.completeStep(jobId, stepName));
 }
