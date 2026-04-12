@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectStatus {
+  DRAFT
+  RESEARCHING
+  ANALYZED
+  GENERATING
+  COMPLETE
+  ERROR
+}
+
+enum DataSource {
+  OFFICIAL_API
+  PUBLIC_WEB
+  USER_INPUT
+  AI_INFERRED
+}
+
+enum ContentType {
+  YOUTUBE_VIDEO
+  WEBSITE_PAGE
+  SOCIAL_POST
+  WEB_MENTION
+  REVIEW
+}
+
+enum NarrativeType {
+  PROBLEM_SOLUTION
+  TESTIMONIAL
+  DEMONSTRATION
+  LIFESTYLE
+  EDUCATIONAL
+  COMPARISON
+  STORY_ARC
+  UGC_STYLE
+  TREND_RIDING
+  BEFORE_AFTER
+}
+
+model Project {
+  id        String        @id @default(cuid())
+  name      String
+  status    ProjectStatus @default(DRAFT)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  brandName    String
+  brandUrl     String?
+  category     String?
+  campaignGoal String?
+
+  brandHealthScore Float?
+  opportunityScore Float?
+  topSignals       Json?
+
+  brand             Brand?
+  competitors       Competitor[]
+  contentAssets     ContentAsset[]
+  insights          Insight[]
+  narrativePatterns NarrativePattern[]
+  sellingPoints     SellingPoint[]
+  scripts           Script[]
+  storyboards       Storyboard[]
+  creativeVariants  CreativeVariant[]
+  previewAssets     PreviewAsset[]
+  researchJobs      ResearchJob[]
+}
+
+model Brand {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name             String
+  url              String?
+  brandPromise     String?
+  valueProposition String?
+  toneOfVoice      String?
+  targetAudience   String?
+  pricingTheme     String?
+  socialProof      Json?
+  ctaLanguage      Json?
+  productFeatures  Json?
+
+  dataSource   DataSource @default(AI_INFERRED)
+  rawCrawlData Json?
+  createdAt    DateTime   @default(now())
+}
+
+model Competitor {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name             String
+  url              String?
+  brandPromise     String?
+  valueProposition String?
+  toneOfVoice      String?
+  pricingTheme     String?
+  productFeatures  Json?
+  ctaLanguage      Json?
+  socialProof      Json?
+  strengths        Json?
+  weaknesses       Json?
+
+  contentAssets ContentAsset[]
+
+  dataSource   DataSource @default(AI_INFERRED)
+  rawCrawlData Json?
+  createdAt    DateTime   @default(now())
+}
+
+model ContentAsset {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  competitorId String?
+  competitor   Competitor? @relation(fields: [competitorId], references: [id], onDelete: SetNull)
+
+  type         ContentType
+  title        String
+  url          String
+  thumbnailUrl String?
+  description  String?
+  publishedAt  DateTime?
+  platform     String?
+
+  viewCount      Int?
+  likeCount      Int?
+  commentCount   Int?
+  engagementRate Float?
+  metricsSource  DataSource @default(AI_INFERRED)
+
+  overallScore      Float?
+  hookStrength      Float?
+  productVisibility Float?
+  storytellingArc   Float?
+  ctaQuality        Float?
+  emotionalAppeal   Float?
+  pacing            Float?
+
+  hookText      String?
+  narrativeType NarrativeType?
+  keyMessages   Json?
+  transcript    String?
+
+  isBrandOwned Boolean    @default(false)
+  dataSource   DataSource @default(OFFICIAL_API)
+  rawData      Json?
+  createdAt    DateTime   @default(now())
+
+  insights Insight[]
+
+  @@index([projectId, type])
+  @@index([projectId, overallScore])
+}
+
+model Insight {
+  id             String        @id @default(cuid())
+  projectId      String
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contentAssetId String?
+  contentAsset   ContentAsset? @relation(fields: [contentAssetId], references: [id], onDelete: SetNull)
+
+  category       String
+  title          String
+  description    String
+  importance     Float?
+  evidence       Json?
+  recommendation String?
+
+  dataSource DataSource @default(AI_INFERRED)
+  createdAt  DateTime   @default(now())
+
+  @@index([projectId, category])
+}
+
+model NarrativePattern {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type           NarrativeType
+  name           String
+  description    String
+  frequency      Int    @default(0)
+  avgPerformance Float?
+  examples       Json?
+  bestPractices  Json?
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, type])
+}
+
+model SellingPoint {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  point           String
+  category        String
+  strength        Float?
+  frequency       Int     @default(0)
+  competitorUsage Boolean @default(false)
+  uniqueness      Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, category])
+}
+
+model Script {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title          String
+  angle          String
+  format         String
+  duration       String
+  hookVariants   Json
+  body           String
+  ctaVariants    Json
+  narrativeType  NarrativeType?
+  targetEmotion  String?
+  predictedScore Float?
+
+  createdAt DateTime @default(now())
+}
+
+model Storyboard {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scriptId  String?
+
+  title         String
+  frames        Json
+  totalDuration String?
+  style         String?
+
+  createdAt DateTime @default(now())
+}
+
+model CreativeVariant {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  hookVariant    String
+  narrativeType  NarrativeType
+  ctaVariant     String
+  format         String
+  predictedScore Float?
+  rationale      String?
+  scriptOutline  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, predictedScore])
+}
+
+model PreviewAsset {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  prompt     String
+  imageUrl   String?
+  style      String?
+  dimensions String?
+  status     String  @default("pending")
+
+  createdAt DateTime @default(now())
+}
+
+model ResearchJob {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  status      String    @default("pending")
+  progress    Float     @default(0)
+  currentStep String?
+  steps       Json?
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([projectId, status])
+}

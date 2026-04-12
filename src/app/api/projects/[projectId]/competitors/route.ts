@@ -1,0 +1,30 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  const { projectId } = await params;
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      brand: true,
+      competitors: {
+        include: {
+          _count: { select: { contentAssets: true } },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    brand: project.brand,
+    competitors: project.competitors,
+  });
+}
