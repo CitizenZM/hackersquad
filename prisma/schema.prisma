@@ -7,295 +7,278 @@ datasource db {
   provider = "postgresql"
 }
 
-enum ProjectStatus {
+// ──────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────
+
+enum PlanType {
+  FREE
+  BASIC
+  PREMIUM
+}
+
+enum AgeGroup {
+  AGE_3_4
+  AGE_5_6
+  AGE_7_9
+}
+
+enum LearningMode {
+  LISTEN
+  READ_ALONG
+  INTERACTIVE
+}
+
+enum SourceType {
+  TEXT_PASTE
+  PDF_UPLOAD
+  DOC_UPLOAD
+  TXT_UPLOAD
+}
+
+enum StoryGoal {
+  ENTERTAIN
+  EDUCATE
+  MORAL_LESSON
+  VOCABULARY
+  BEDTIME
+}
+
+enum NarrationMode {
+  DEFAULT_TTS
+  PARENT_VOICE
+}
+
+enum VisualStyle {
+  CARTOON
+  WATERCOLOR
+  STORYBOOK
+  PIXEL_ART
+}
+
+enum StoryPackStatus {
   DRAFT
-  RESEARCHING
-  ANALYZED
-  GENERATING
+  PROCESSING
+  REVIEW_READY
+  APPROVED
+  PUBLISHED
+  ERROR
+}
+
+enum VoiceProfileStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum PipelineJobStatus {
+  PENDING
+  RUNNING
   COMPLETE
   ERROR
 }
 
-enum DataSource {
-  OFFICIAL_API
-  PUBLIC_WEB
-  USER_INPUT
-  AI_INFERRED
+enum SessionEventType {
+  PLAY_START
+  PLAY_PAUSE
+  PLAY_RESUME
+  PLAY_COMPLETE
+  EPISODE_START
+  EPISODE_COMPLETE
+  FLASHCARD_VIEW
+  VOCABULARY_TAP
 }
 
-enum ContentType {
-  YOUTUBE_VIDEO
-  WEBSITE_PAGE
-  SOCIAL_POST
-  WEB_MENTION
-  REVIEW
+// ──────────────────────────────────────────
+// Models
+// ──────────────────────────────────────────
+
+model ParentAccount {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  planType     PlanType @default(FREE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  children       ChildProfile[]
+  storySources   StorySource[]
+  voiceProfiles  VoiceProfile[]
+  avatarProfiles AvatarProfile[]
+  storyPacks     StoryPack[]
 }
 
-enum NarrativeType {
-  PROBLEM_SOLUTION
-  TESTIMONIAL
-  DEMONSTRATION
-  LIFESTYLE
-  EDUCATIONAL
-  COMPARISON
-  STORY_ARC
-  UGC_STYLE
-  TREND_RIDING
-  BEFORE_AFTER
+model ChildProfile {
+  id           String       @id @default(cuid())
+  parentId     String
+  parent       ParentAccount @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  name         String
+  age          Int
+  ageGroup     AgeGroup
+  language     String       @default("en")
+  interests    Json         @default("[]")
+  learningMode LearningMode @default(LISTEN)
+  avatarUrl    String?
+  pin          String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  storyPacks    StoryPack[]
+  sessionEvents SessionEvent[]
+
+  @@index([parentId])
 }
 
-model Project {
-  id        String        @id @default(cuid())
-  name      String
-  status    ProjectStatus @default(DRAFT)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  brandName    String
-  brandUrl     String?
-  category     String?
-  campaignGoal String?
-
-  brandHealthScore Float?
-  opportunityScore Float?
-  topSignals       Json?
-
-  brand             Brand?
-  competitors       Competitor[]
-  contentAssets     ContentAsset[]
-  insights          Insight[]
-  narrativePatterns NarrativePattern[]
-  sellingPoints     SellingPoint[]
-  scripts           Script[]
-  storyboards       Storyboard[]
-  creativeVariants  CreativeVariant[]
-  previewAssets     PreviewAsset[]
-  researchJobs      ResearchJob[]
-}
-
-model Brand {
-  id        String  @id @default(cuid())
-  projectId String  @unique
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  name             String
-  url              String?
-  brandPromise     String?
-  valueProposition String?
-  toneOfVoice      String?
-  targetAudience   String?
-  pricingTheme     String?
-  socialProof      Json?
-  ctaLanguage      Json?
-  productFeatures  Json?
-
-  dataSource   DataSource @default(AI_INFERRED)
-  rawCrawlData Json?
-  createdAt    DateTime   @default(now())
-}
-
-model Competitor {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  name             String
-  url              String?
-  brandPromise     String?
-  valueProposition String?
-  toneOfVoice      String?
-  pricingTheme     String?
-  productFeatures  Json?
-  ctaLanguage      Json?
-  socialProof      Json?
-  strengths        Json?
-  weaknesses       Json?
-
-  contentAssets ContentAsset[]
-
-  dataSource   DataSource @default(AI_INFERRED)
-  rawCrawlData Json?
-  createdAt    DateTime   @default(now())
-}
-
-model ContentAsset {
-  id           String      @id @default(cuid())
-  projectId    String
-  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  competitorId String?
-  competitor   Competitor? @relation(fields: [competitorId], references: [id], onDelete: SetNull)
-
-  type         ContentType
-  title        String
-  url          String
-  thumbnailUrl String?
-  description  String?
-  publishedAt  DateTime?
-  platform     String?
-
-  viewCount      Int?
-  likeCount      Int?
-  commentCount   Int?
-  engagementRate Float?
-  metricsSource  DataSource @default(AI_INFERRED)
-
-  overallScore      Float?
-  hookStrength      Float?
-  productVisibility Float?
-  storytellingArc   Float?
-  ctaQuality        Float?
-  emotionalAppeal   Float?
-  pacing            Float?
-
-  hookText      String?
-  narrativeType NarrativeType?
-  keyMessages   Json?
-  transcript    String?
-
-  isBrandOwned Boolean    @default(false)
-  dataSource   DataSource @default(OFFICIAL_API)
-  rawData      Json?
-  createdAt    DateTime   @default(now())
-
-  insights Insight[]
-
-  @@index([projectId, type])
-  @@index([projectId, overallScore])
-}
-
-model Insight {
-  id             String        @id @default(cuid())
-  projectId      String
-  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  contentAssetId String?
-  contentAsset   ContentAsset? @relation(fields: [contentAssetId], references: [id], onDelete: SetNull)
-
-  category       String
-  title          String
-  description    String
-  importance     Float?
-  evidence       Json?
-  recommendation String?
-
-  dataSource DataSource @default(AI_INFERRED)
+model StorySource {
+  id         String     @id @default(cuid())
+  parentId   String
+  parent     ParentAccount @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  sourceType SourceType
+  title      String
+  rawText    String     @db.Text
+  fileUrl    String?
+  wordCount  Int
+  language   String     @default("en")
   createdAt  DateTime   @default(now())
 
-  @@index([projectId, category])
+  storyPacks StoryPack[]
+
+  @@index([parentId])
 }
 
-model NarrativePattern {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  type           NarrativeType
-  name           String
-  description    String
-  frequency      Int    @default(0)
-  avgPerformance Float?
-  examples       Json?
-  bestPractices  Json?
-
-  createdAt DateTime @default(now())
-
-  @@unique([projectId, type])
-}
-
-model SellingPoint {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  point           String
-  category        String
-  strength        Float?
-  frequency       Int     @default(0)
-  competitorUsage Boolean @default(false)
-  uniqueness      Float?
-
-  createdAt DateTime @default(now())
-
-  @@index([projectId, category])
-}
-
-model Script {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
+model StoryPack {
+  id             String          @id @default(cuid())
+  sourceId       String
+  source         StorySource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  childProfileId String
+  childProfile   ChildProfile    @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
+  parentId       String
+  parent         ParentAccount   @relation(fields: [parentId], references: [id], onDelete: Cascade)
   title          String
-  angle          String
-  format         String
-  duration       String
-  hookVariants   Json
-  body           String
-  ctaVariants    Json
-  narrativeType  NarrativeType?
-  targetEmotion  String?
-  predictedScore Float?
+  storyGoal      StoryGoal       @default(ENTERTAIN)
+  narrationMode  NarrationMode   @default(DEFAULT_TTS)
+  visualStyle    VisualStyle     @default(CARTOON)
+  status         StoryPackStatus @default(DRAFT)
+  episodeCount   Int             @default(0)
+  coverImageUrl  String?
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  createdAt DateTime @default(now())
+  episodes      Episode[]
+  pipelineJobs  PipelineJob[]
+  sessionEvents SessionEvent[]
+
+  @@index([parentId])
+  @@index([childProfileId])
+  @@index([sourceId])
 }
 
-model Storyboard {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  scriptId  String?
+model Episode {
+  id             String   @id @default(cuid())
+  storyPackId    String
+  storyPack      StoryPack @relation(fields: [storyPackId], references: [id], onDelete: Cascade)
+  episodeNumber  Int
+  title          String
+  scriptText     String   @db.Text
+  sourceExcerpt  String?  @db.Text
+  wordBudget     Int
+  durationTarget Int
+  audioUrl       String?
+  createdAt      DateTime @default(now())
 
-  title         String
-  frames        Json
-  totalDuration String?
-  style         String?
+  flashcardScenes FlashcardScene[]
+  vocabularyCards VocabularyCard[]
+  sessionEvents   SessionEvent[]
 
-  createdAt DateTime @default(now())
+  @@unique([storyPackId, episodeNumber])
+  @@index([storyPackId])
 }
 
-model CreativeVariant {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+model FlashcardScene {
+  id          String  @id @default(cuid())
+  episodeId   String
+  episode     Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  sceneOrder  Int
+  prompt      String
+  imageUrl    String?
+  textSnippet String
+  duration    Int?
+  createdAt   DateTime @default(now())
 
-  hookVariant    String
-  narrativeType  NarrativeType
-  ctaVariant     String
-  format         String
-  predictedScore Float?
-  rationale      String?
-  scriptOutline  String?
-
-  createdAt DateTime @default(now())
-
-  @@index([projectId, predictedScore])
+  @@unique([episodeId, sceneOrder])
+  @@index([episodeId])
 }
 
-model PreviewAsset {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  prompt     String
+model VocabularyCard {
+  id         String  @id @default(cuid())
+  episodeId  String
+  episode    Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  word       String
+  definition String
+  example    String?
   imageUrl   String?
-  style      String?
-  dimensions String?
-  status     String  @default("pending")
+  createdAt  DateTime @default(now())
 
-  createdAt DateTime @default(now())
+  @@index([episodeId])
 }
 
-model ResearchJob {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+model VoiceProfile {
+  id             String             @id @default(cuid())
+  parentId       String
+  parent         ParentAccount      @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  voiceType      String             @default("default")
+  sampleAudioUrl String?
+  status         VoiceProfileStatus @default(PENDING)
+  createdAt      DateTime           @default(now())
 
-  status      String    @default("pending")
-  progress    Float     @default(0)
-  currentStep String?
-  steps       Json?
-  error       String?
-  startedAt   DateTime?
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
+  @@index([parentId])
+}
 
-  @@index([projectId, status])
+model AvatarProfile {
+  id           String @id @default(cuid())
+  parentId     String
+  parent       ParentAccount @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  imageUrl     String?
+  cartoonStyle String @default("friendly")
+  assignedName String?
+  createdAt    DateTime @default(now())
+
+  @@index([parentId])
+}
+
+model PipelineJob {
+  id           String            @id @default(cuid())
+  storyPackId  String
+  storyPack    StoryPack         @relation(fields: [storyPackId], references: [id], onDelete: Cascade)
+  status       PipelineJobStatus @default(PENDING)
+  progress     Float             @default(0)
+  currentStep  String?
+  steps        Json?
+  error        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+
+  @@index([storyPackId, status])
+}
+
+model SessionEvent {
+  id             String           @id @default(cuid())
+  childProfileId String
+  childProfile   ChildProfile     @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
+  storyPackId    String
+  storyPack      StoryPack        @relation(fields: [storyPackId], references: [id], onDelete: Cascade)
+  episodeId      String?
+  episode        Episode?         @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  eventType      SessionEventType
+  duration       Int?
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+
+  @@index([childProfileId])
+  @@index([storyPackId])
+  @@index([createdAt])
 }

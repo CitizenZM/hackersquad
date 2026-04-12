@@ -1,27 +1,20 @@
 import type { Metadata } from "next";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Sidebar } from "@/components/layout/sidebar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CreativeIntel OS",
+  title: "StoryNest Kids",
   description:
-    "AI-powered brand intelligence and creative strategy platform for e-commerce brands",
+    "Transform any content into personalized 5-minute story episodes for children",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full font-sans">
-        <TooltipProvider>
-          <Sidebar />
-          <main className="ml-64 min-h-screen">{children}</main>
-        </TooltipProvider>
-      </body>
+    <html lang="en">
+      <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
 }

@@ -1,63 +1,72 @@
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "CreativeIntel OS";
-
-export const CATEGORIES = [
-  "Beauty & Skincare",
-  "Health & Wellness",
-  "Fashion & Apparel",
-  "Food & Beverage",
-  "Electronics & Tech",
-  "Home & Living",
-  "Fitness & Sports",
-  "Pet Products",
-  "Baby & Kids",
-  "Jewelry & Accessories",
-  "Outdoor & Travel",
-  "Automotive",
-  "Financial Services",
-  "SaaS & Software",
-  "Education",
-  "Entertainment",
-  "Other",
-] as const;
-
-export const CAMPAIGN_GOALS = [
-  "Direct Conversion",
-  "Product Education",
-  "Creator Seeding",
-  "Affiliate Content",
-  "Seasonal Sale",
-  "New Product Launch",
-  "Landing Page Hero Video",
-  "Amazon PDP Video",
-  "TikTok Shop Ad",
-  "Brand Awareness",
-  "Retargeting",
-] as const;
-
-export const NARRATIVE_TYPE_LABELS: Record<string, string> = {
-  PROBLEM_SOLUTION: "Problem / Solution",
-  TESTIMONIAL: "Testimonial",
-  DEMONSTRATION: "Demonstration",
-  LIFESTYLE: "Lifestyle",
-  EDUCATIONAL: "Educational",
-  COMPARISON: "Comparison",
-  STORY_ARC: "Story Arc",
-  UGC_STYLE: "UGC Style",
-  TREND_RIDING: "Trend Riding",
-  BEFORE_AFTER: "Before / After",
+export const AGE_GROUP_LABELS: Record<string, string> = {
+  AGE_3_4: "Ages 3-4",
+  AGE_5_6: "Ages 5-6",
+  AGE_7_9: "Ages 7-9",
 };
 
-export const DATA_SOURCE_LABELS: Record<string, string> = {
-  OFFICIAL_API: "Official API",
-  PUBLIC_WEB: "Public Web",
-  USER_INPUT: "User Input",
-  AI_INFERRED: "AI Inferred",
+export const STORY_GOAL_LABELS: Record<string, string> = {
+  ENTERTAIN: "Entertain",
+  EDUCATE: "Educate",
+  MORAL_LESSON: "Moral Lesson",
+  VOCABULARY: "Vocabulary",
+  BEDTIME: "Bedtime",
 };
 
-export const CONTENT_TYPE_LABELS: Record<string, string> = {
-  YOUTUBE_VIDEO: "YouTube Video",
-  WEBSITE_PAGE: "Website Page",
-  SOCIAL_POST: "Social Post",
-  WEB_MENTION: "Web Mention",
-  REVIEW: "Review",
+export const STORY_GOAL_DESCRIPTIONS: Record<string, string> = {
+  ENTERTAIN: "Fun and engaging stories for pure enjoyment",
+  EDUCATE: "Educational content that teaches new concepts",
+  MORAL_LESSON: "Stories with valuable life lessons",
+  VOCABULARY: "Focus on building word knowledge",
+  BEDTIME: "Calm, soothing stories for winding down",
 };
+
+export const VISUAL_STYLE_LABELS: Record<string, string> = {
+  CARTOON: "Cartoon",
+  WATERCOLOR: "Watercolor",
+  STORYBOOK: "Storybook",
+  PIXEL_ART: "Pixel Art",
+};
+
+export const NARRATION_MODE_LABELS: Record<string, string> = {
+  DEFAULT_TTS: "Default Narrator",
+  PARENT_VOICE: "Parent Voice",
+};
+
+export const STORY_PACK_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  PROCESSING: "Processing",
+  REVIEW_READY: "Ready for Review",
+  APPROVED: "Approved",
+  PUBLISHED: "Published",
+  ERROR: "Error",
+};
+
+export const LEARNING_MODE_LABELS: Record<string, string> = {
+  LISTEN: "Listen",
+  READ_ALONG: "Read Along",
+  INTERACTIVE: "Interactive",
+};
+
+export const SOURCE_TYPE_LABELS: Record<string, string> = {
+  TEXT_PASTE: "Pasted Text",
+  PDF_UPLOAD: "PDF Upload",
+  DOC_UPLOAD: "Document Upload",
+  TXT_UPLOAD: "Text File Upload",
+};
+
+export const WORDS_PER_EPISODE = 1000;
+export const MAX_EPISODE_DURATION_SECONDS = 300;
+export const FLASHCARDS_PER_EPISODE_MIN = 6;
+export const FLASHCARDS_PER_EPISODE_MAX = 10;
+export const VOCAB_WORDS_PER_EPISODE_MIN = 3;
+export const VOCAB_WORDS_PER_EPISODE_MAX = 8;
+
+export function ageToAgeGroup(age: number): "AGE_3_4" | "AGE_5_6" | "AGE_7_9" {
+  if (age <= 4) return "AGE_3_4";
+  if (age <= 6) return "AGE_5_6";
+  return "AGE_7_9";
+}
+
+export function estimateEpisodeCount(wordCount: number): number {
+  return Math.max(1, Math.ceil(wordCount / WORDS_PER_EPISODE));
+}
