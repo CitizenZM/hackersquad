@@ -13,6 +13,7 @@ export default async function EpisodePlayerPage({
     where: { id: episodeId, storyPackId },
     include: {
       flashcardScenes: { orderBy: { sceneOrder: "asc" } },
+      vocabularyCards: true,
       storyPack: {
         select: {
           id: true,
@@ -46,6 +47,7 @@ export default async function EpisodePlayerPage({
       episodeNumber={episode.episodeNumber}
       audioUrl={episode.audioUrl}
       scenes={episode.flashcardScenes}
+      vocabWords={episode.vocabularyCards}
       nextEpisodeId={nextEpisode?.id}
       totalEpisodes={allEpisodes.length}
     />

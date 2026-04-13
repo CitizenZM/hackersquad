@@ -6,7 +6,9 @@ interface AudioPlayerState {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
+  progress: number;
   isLoaded: boolean;
+  hasEnded: boolean;
 }
 
 export function useAudioPlayer(audioUrl: string | null) {
@@ -15,7 +17,9 @@ export function useAudioPlayer(audioUrl: string | null) {
     isPlaying: false,
     currentTime: 0,
     duration: 0,
+    progress: 0,
     isLoaded: false,
+    hasEnded: false,
   });
 
   useEffect(() => {
@@ -29,11 +33,16 @@ export function useAudioPlayer(audioUrl: string | null) {
     });
 
     audio.addEventListener("timeupdate", () => {
-      setState((s) => ({ ...s, currentTime: audio.currentTime }));
+      const progress = audio.duration > 0 ? audio.currentTime / audio.duration : 0;
+      setState((s) => ({
+        ...s,
+        currentTime: audio.currentTime,
+        progress,
+      }));
     });
 
     audio.addEventListener("ended", () => {
-      setState((s) => ({ ...s, isPlaying: false }));
+      setState((s) => ({ ...s, isPlaying: false, hasEnded: true }));
     });
 
     audio.addEventListener("pause", () => {
@@ -41,7 +50,7 @@ export function useAudioPlayer(audioUrl: string | null) {
     });
 
     audio.addEventListener("play", () => {
-      setState((s) => ({ ...s, isPlaying: true }));
+      setState((s) => ({ ...s, isPlaying: true, hasEnded: false }));
     });
 
     return () => {
@@ -72,6 +81,12 @@ export function useAudioPlayer(audioUrl: string | null) {
     }
   }, []);
 
+  const seekToPercent = useCallback((pct: number) => {
+    if (audioRef.current && audioRef.current.duration) {
+      audioRef.current.currentTime = pct * audioRef.current.duration;
+    }
+  }, []);
+
   const restart = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
@@ -85,6 +100,7 @@ export function useAudioPlayer(audioUrl: string | null) {
     pause,
     togglePlay,
     seek,
+    seekToPercent,
     restart,
   };
 }
