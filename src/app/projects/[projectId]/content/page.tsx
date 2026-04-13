@@ -4,10 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   NARRATIVE_TYPE_LABELS,
-  DATA_SOURCE_LABELS,
   CONTENT_TYPE_LABELS,
 } from "@/lib/constants";
-import { ExternalLink, Eye, ThumbsUp, MessageSquare } from "lucide-react";
+import { Eye, ThumbsUp, MessageSquare } from "lucide-react";
 
 export default async function ContentPage({
   params,
@@ -24,90 +23,95 @@ export default async function ContentPage({
 
   function scoreColor(score: number | null) {
     if (!score) return "bg-gray-200";
-    if (score >= 70) return "bg-green-500";
-    if (score >= 40) return "bg-yellow-500";
-    return "bg-red-500";
+    if (score >= 70) return "gradient-cool";
+    if (score >= 40) return "bg-amber-400";
+    return "bg-red-400";
+  }
+
+  function scoreMedal(score: number | null) {
+    if (!score) return "⬜";
+    if (score >= 80) return "🥇";
+    if (score >= 60) return "🥈";
+    if (score >= 40) return "🥉";
+    return "💪";
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Content Intelligence</h2>
-          <p className="text-sm text-muted-foreground">
-            {assets.length} content assets analyzed and scored
-          </p>
-        </div>
+    <div className="space-y-5">
+      <div className="text-center">
+        <h2 className="text-lg font-black text-purple-900">🎬 Content Scored</h2>
+        <p className="text-xs text-purple-400 font-bold">
+          {assets.length} pieces of content ranked by AI
+        </p>
       </div>
 
       {assets.length === 0 ? (
-        <Card>
+        <Card className="rounded-3xl border-2 border-purple-200 bg-white">
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              No content analyzed yet. Run research to discover content.
+            <div className="text-4xl mb-2">🔍</div>
+            <p className="text-purple-400 font-bold">
+              No content yet. Run research first!
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-          {assets.map((asset) => (
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+          {assets.map((asset, index) => (
             <Link
               key={asset.id}
               href={`/projects/${projectId}/insights/${asset.id}`}
             >
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                <CardContent className="pt-4 space-y-3">
-                  {/* Thumbnail */}
-                  {asset.thumbnailUrl ? (
-                    <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                      <img
-                        src={asset.thumbnailUrl}
-                        alt={asset.title}
-                        className="w-full h-full object-cover"
-                      />
+              <Card className="rounded-3xl border-2 border-purple-200 bg-white fun-shadow-sm hover:border-purple-400 transition-all active:scale-[0.98] h-full">
+                <CardContent className="pt-4 pb-3 space-y-2.5">
+                  {/* Rank + Thumbnail */}
+                  <div className="flex gap-3">
+                    <div className="text-center shrink-0">
+                      <div className="text-2xl">{scoreMedal(asset.overallScore)}</div>
+                      <span className="text-[10px] font-black text-purple-400">#{index + 1}</span>
                     </div>
-                  ) : (
-                    <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
-                      <span className="text-xs text-muted-foreground">
-                        {CONTENT_TYPE_LABELS[asset.type]}
-                      </span>
-                    </div>
-                  )}
+                    {asset.thumbnailUrl ? (
+                      <div className="aspect-video rounded-2xl overflow-hidden bg-purple-50 flex-1">
+                        <img
+                          src={asset.thumbnailUrl}
+                          alt={asset.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-video rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center flex-1">
+                        <span className="text-xs font-bold text-purple-300">
+                          {CONTENT_TYPE_LABELS[asset.type]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Title and badges */}
-                  <div>
-                    <h3 className="text-sm font-medium line-clamp-2">
-                      {asset.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        {CONTENT_TYPE_LABELS[asset.type]}
+                  {/* Title */}
+                  <h3 className="text-sm font-bold text-purple-900 line-clamp-2">
+                    {asset.title}
+                  </h3>
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-1">
+                    {asset.narrativeType && (
+                      <Badge className="rounded-full text-[10px] font-bold bg-pink-50 text-pink-600 border border-pink-200">
+                        {NARRATIVE_TYPE_LABELS[asset.narrativeType]}
                       </Badge>
-                      {asset.narrativeType && (
-                        <Badge variant="secondary" className="text-xs">
-                          {NARRATIVE_TYPE_LABELS[asset.narrativeType]}
-                        </Badge>
-                      )}
-                      {asset.competitor && (
-                        <Badge variant="secondary" className="text-xs">
-                          {asset.competitor.name}
-                        </Badge>
-                      )}
-                      {asset.isBrandOwned && (
-                        <Badge className="text-xs bg-blue-100 text-blue-700">Brand</Badge>
-                      )}
-                    </div>
+                    )}
+                    {asset.competitor && (
+                      <Badge className="rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200">
+                        {asset.competitor.name}
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Score bar */}
                   <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">AI Score</span>
-                      <span className="font-medium">
-                        {asset.overallScore ?? "—"}
-                      </span>
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-purple-400">AI Score</span>
+                      <span className="text-purple-700">{asset.overallScore ?? "—"}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-3 rounded-full bg-purple-100 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${scoreColor(asset.overallScore)}`}
                         style={{ width: `${asset.overallScore || 0}%` }}
@@ -116,7 +120,7 @@ export default async function ContentPage({
                   </div>
 
                   {/* Metrics */}
-                  <div className="flex gap-4 text-xs text-muted-foreground">
+                  <div className="flex gap-3 text-[10px] font-bold text-purple-400">
                     {asset.viewCount != null && (
                       <span className="flex items-center gap-1">
                         <Eye className="h-3 w-3" />
@@ -135,13 +139,6 @@ export default async function ContentPage({
                         {asset.commentCount.toLocaleString()}
                       </span>
                     )}
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <Badge variant="outline" className="text-[10px]">
-                      {DATA_SOURCE_LABELS[asset.dataSource]}
-                    </Badge>
-                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
                   </div>
                 </CardContent>
               </Card>

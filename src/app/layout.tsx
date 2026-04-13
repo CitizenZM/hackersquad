@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Sidebar } from "@/components/layout/sidebar";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CreativeIntel OS",
-  description:
-    "AI-powered brand intelligence and creative strategy platform for e-commerce brands",
+  description: "AI-powered brand intelligence platform",
 };
 
 export default function RootLayout({
@@ -16,10 +15,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full font-sans">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-full font-sans pb-20">
         <TooltipProvider>
-          <Sidebar />
-          <main className="pt-14 lg:pt-0 lg:ml-64 min-h-screen">{children}</main>
+          <main className="min-h-screen">{children}</main>
+          <BottomNav />
         </TooltipProvider>
       </body>
     </html>

@@ -1,17 +1,8 @@
 import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NARRATIVE_TYPE_LABELS, DATA_SOURCE_LABELS } from "@/lib/constants";
 import { OverviewCharts } from "@/components/dashboard/overview-charts";
-import {
-  Activity,
-  Target,
-  TrendingUp,
-  Users,
-  Film,
-  Lightbulb,
-  BarChart3,
-} from "lucide-react";
 
 export default async function OverviewPage({
   params,
@@ -51,7 +42,6 @@ export default async function OverviewPage({
   const brand = project.brand;
   const topSignals = (project.topSignals as string[]) || [];
 
-  // Prepare chart data
   const narrativeData = patterns.map((p) => ({
     name: NARRATIVE_TYPE_LABELS[p.type] || p.type,
     value: p.frequency,
@@ -67,72 +57,59 @@ export default async function OverviewPage({
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Score cards */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Brand Health</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
+    <div className="space-y-5">
+      {/* Score Cards - Fun Tiles */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="rounded-3xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 fun-shadow-sm overflow-hidden">
+          <CardContent className="pt-4 pb-3 text-center">
+            <div className="text-3xl mb-1">💪</div>
+            <div className="text-3xl font-black text-purple-700">
               {project.brandHealthScore ?? "—"}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              AI Predicted Score
-            </p>
+            <p className="text-xs font-bold text-purple-400">Brand Health</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Opportunity</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
+        <Card className="rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 fun-shadow-sm overflow-hidden">
+          <CardContent className="pt-4 pb-3 text-center">
+            <div className="text-3xl mb-1">🎯</div>
+            <div className="text-3xl font-black text-amber-700">
               {project.opportunityScore ?? "—"}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Content Gap Score
-            </p>
+            <p className="text-xs font-bold text-amber-400">Opportunity</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Content Analyzed</CardTitle>
-            <Film className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{contentAssets.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total assets</p>
+        <Card className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 fun-shadow-sm overflow-hidden">
+          <CardContent className="pt-4 pb-3 text-center">
+            <div className="text-3xl mb-1">🎬</div>
+            <div className="text-3xl font-black text-blue-700">
+              {contentAssets.length}
+            </div>
+            <p className="text-xs font-bold text-blue-400">Content</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Competitors</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{competitors.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Tracked</p>
+        <Card className="rounded-3xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 fun-shadow-sm overflow-hidden">
+          <CardContent className="pt-4 pb-3 text-center">
+            <div className="text-3xl mb-1">⚔️</div>
+            <div className="text-3xl font-black text-pink-700">
+              {competitors.length}
+            </div>
+            <p className="text-xs font-bold text-pink-400">Competitors</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Top Signals */}
       {topSignals.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Top Market Signals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="rounded-3xl border-2 border-emerald-200 bg-white fun-shadow-sm">
+          <CardContent className="pt-4">
+            <p className="text-sm font-black text-emerald-700 mb-3">🔥 Top Signals</p>
             <div className="flex flex-wrap gap-2">
               {topSignals.map((signal, i) => (
-                <Badge key={i} variant="secondary" className="text-sm py-1 px-3">
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="rounded-full px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border-2 border-emerald-200"
+                >
                   {signal}
                 </Badge>
               ))}
@@ -141,85 +118,58 @@ export default async function OverviewPage({
         </Card>
       )}
 
-      {/* Brand Summary */}
+      {/* Brand Intel */}
       {brand && brand.brandPromise && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Brand Intelligence</CardTitle>
-              <Badge variant="outline" className="text-xs">
+        <Card className="rounded-3xl border-2 border-purple-200 bg-white fun-shadow-sm">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-black text-purple-700">🧠 Brand Intel</p>
+              <Badge variant="outline" className="rounded-full text-[10px] font-bold">
                 {DATA_SOURCE_LABELS[brand.dataSource]}
               </Badge>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Brand Promise</p>
-                  <p className="text-sm mt-1">{brand.brandPromise}</p>
+            <div className="space-y-3">
+              {[
+                { label: "Promise", value: brand.brandPromise, emoji: "🎯" },
+                { label: "Value", value: brand.valueProposition, emoji: "💎" },
+                { label: "Audience", value: brand.targetAudience, emoji: "👥" },
+                { label: "Tone", value: brand.toneOfVoice, emoji: "🗣️" },
+                { label: "Pricing", value: brand.pricingTheme, emoji: "💰" },
+              ].filter(item => item.value).map((item) => (
+                <div key={item.label} className="bg-purple-50 rounded-2xl p-3">
+                  <p className="text-[10px] font-bold text-purple-400 uppercase">
+                    {item.emoji} {item.label}
+                  </p>
+                  <p className="text-sm font-semibold text-purple-900 mt-0.5">{item.value}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Value Proposition</p>
-                  <p className="text-sm mt-1">{brand.valueProposition}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Target Audience</p>
-                  <p className="text-sm mt-1">{brand.targetAudience}</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Tone of Voice</p>
-                  <p className="text-sm mt-1">{brand.toneOfVoice}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Pricing Theme</p>
-                  <p className="text-sm mt-1">{brand.pricingTheme}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Key CTAs</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {((brand.ctaLanguage as string[]) || []).slice(0, 6).map((cta, i) => (
-                      <Badge key={i} variant="outline" className="text-xs">{cta}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Charts */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <OverviewCharts
-          narrativeData={narrativeData}
-          scoreDistribution={scoreDistribution}
-        />
-      </div>
+      <OverviewCharts
+        narrativeData={narrativeData}
+        scoreDistribution={scoreDistribution}
+      />
 
-      {/* Key Insights */}
+      {/* Insights */}
       {insights.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5" />
-              Key Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+        <Card className="rounded-3xl border-2 border-amber-200 bg-white fun-shadow-sm">
+          <CardContent className="pt-4">
+            <p className="text-sm font-black text-amber-700 mb-3">💡 Key Insights</p>
+            <div className="space-y-2">
               {insights.slice(0, 5).map((insight) => (
-                <div key={insight.id} className="flex gap-3 p-3 rounded-lg border">
-                  <Badge variant="secondary" className="text-xs shrink-0 h-fit">
-                    {insight.category}
-                  </Badge>
-                  <div>
-                    <p className="text-sm font-medium">{insight.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {insight.description}
-                    </p>
+                <div key={insight.id} className="bg-amber-50 rounded-2xl p-3">
+                  <div className="flex items-start gap-2">
+                    <Badge className="rounded-full text-[10px] font-bold bg-amber-200 text-amber-700 shrink-0">
+                      {insight.category}
+                    </Badge>
+                    <div>
+                      <p className="text-sm font-bold text-amber-900">{insight.title}</p>
+                      <p className="text-xs text-amber-600 mt-0.5">{insight.description}</p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -228,32 +178,26 @@ export default async function OverviewPage({
         </Card>
       )}
 
-      {/* Top Selling Points */}
+      {/* Selling Points */}
       {sellingPoints.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Selling Points
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="rounded-3xl border-2 border-blue-200 bg-white fun-shadow-sm">
+          <CardContent className="pt-4">
+            <p className="text-sm font-black text-blue-700 mb-3">⭐ Selling Points</p>
             <div className="space-y-2">
-              {sellingPoints.slice(0, 8).map((sp) => (
+              {sellingPoints.slice(0, 6).map((sp) => (
                 <div key={sp.id} className="flex items-center gap-3">
                   <div className="flex-1">
-                    <p className="text-sm">{sp.point}</p>
+                    <p className="text-sm font-bold">{sp.point}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">{sp.category}</Badge>
-                  <div className="w-24">
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="w-20 shrink-0">
+                    <div className="h-3 rounded-full bg-blue-100 overflow-hidden">
                       <div
-                        className="h-full bg-primary rounded-full"
+                        className="h-full rounded-full gradient-cool"
                         style={{ width: `${sp.strength || 0}%` }}
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground w-8 text-right">
+                  <span className="text-xs font-black text-blue-600 w-8 text-right">
                     {sp.strength}
                   </span>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   PieChart,
   Pie,
@@ -9,15 +9,13 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 
 const COLORS = [
-  "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a",
-  "#0891b2", "#4f46e5", "#c026d3", "#d97706", "#059669",
+  "#a78bfa", "#f472b6", "#60a5fa", "#34d399", "#fbbf24",
+  "#fb923c", "#c084fc", "#22d3ee", "#f87171", "#4ade80",
 ];
 
 interface OverviewChartsProps {
@@ -30,22 +28,22 @@ export function OverviewCharts({
   scoreDistribution,
 }: OverviewChartsProps) {
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Narrative Types</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Card className="rounded-3xl border-2 border-pink-200 bg-white fun-shadow-sm">
+        <CardContent className="pt-4">
+          <p className="text-sm font-black text-pink-700 mb-2">📊 Story Types</p>
           {narrativeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
                   data={narrativeData}
                   cx="50%"
                   cy="50%"
-                  outerRadius={80}
+                  outerRadius={70}
+                  innerRadius={30}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
+                  strokeWidth={3}
+                  stroke="#fff"
                 >
                   {narrativeData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -55,35 +53,36 @@ export function OverviewCharts({
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-              No data yet. Run research first.
+            <div className="flex items-center justify-center h-[200px] text-sm text-purple-300 font-bold">
+              Run research first! 🔍
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Score Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="rounded-3xl border-2 border-blue-200 bg-white fun-shadow-sm">
+        <CardContent className="pt-4">
+          <p className="text-sm font-black text-blue-700 mb-2">📈 Score Spread</p>
           {scoreDistribution.some((d) => d.count > 0) ? (
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={scoreDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" />
-                <YAxis />
+                <XAxis dataKey="range" tick={{ fontSize: 10, fontWeight: 700 }} />
+                <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                  {scoreDistribution.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-              No content scored yet.
+            <div className="flex items-center justify-center h-[200px] text-sm text-blue-300 font-bold">
+              No scores yet! 📊
             </div>
           )}
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

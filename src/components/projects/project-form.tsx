@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,9 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CATEGORIES, CAMPAIGN_GOALS } from "@/lib/constants";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Rocket } from "lucide-react";
 
 interface CompetitorField {
   name: string;
@@ -60,7 +58,7 @@ export function ProjectForm() {
 
     const validCompetitors = competitors.filter((c) => c.name.trim());
     if (validCompetitors.length === 0) {
-      setError("Add at least one competitor");
+      setError("Add at least one competitor!");
       setLoading(false);
       return;
     }
@@ -83,7 +81,7 @@ export function ProjectForm() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create project");
+        throw new Error(data.error || "Oops! Something went wrong.");
       }
 
       const project = await res.json();
@@ -96,124 +94,120 @@ export function ProjectForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Brand Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="brandName">Brand Name *</Label>
-            <Input
-              id="brandName"
-              placeholder="e.g. Nike"
-              value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
-              required
-            />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Brand */}
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-bold text-purple-700">🏷️ Brand Name</Label>
+          <Input
+            placeholder="e.g. Nike, Tesla, Segway..."
+            value={brandName}
+            onChange={(e) => setBrandName(e.target.value)}
+            required
+            className="rounded-2xl h-12 text-base border-2 border-purple-200 focus:border-purple-500 bg-purple-50/50 font-semibold"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-bold text-purple-700">🌐 Website</Label>
+          <Input
+            type="url"
+            placeholder="https://www.brand.com"
+            value={brandUrl}
+            onChange={(e) => setBrandUrl(e.target.value)}
+            className="rounded-2xl h-12 text-base border-2 border-purple-200 focus:border-purple-500 bg-purple-50/50"
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-bold text-purple-700">📂 Category</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v ?? "")}>
+              <SelectTrigger className="rounded-2xl h-12 border-2 border-purple-200 bg-purple-50/50">
+                <SelectValue placeholder="Pick one..." />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="brandUrl">Website URL</Label>
-            <Input
-              id="brandUrl"
-              type="url"
-              placeholder="https://www.nike.com"
-              value={brandUrl}
-              onChange={(e) => setBrandUrl(e.target.value)}
-            />
+          <div className="space-y-1.5">
+            <Label className="text-sm font-bold text-purple-700">🎯 Goal</Label>
+            <Select value={campaignGoal} onValueChange={(v) => setCampaignGoal(v ?? "")}>
+              <SelectTrigger className="rounded-2xl h-12 border-2 border-purple-200 bg-purple-50/50">
+                <SelectValue placeholder="Pick one..." />
+              </SelectTrigger>
+              <SelectContent>
+                {CAMPAIGN_GOALS.map((goal) => (
+                  <SelectItem key={goal} value={goal}>{goal}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Campaign Goal</Label>
-              <Select value={campaignGoal} onValueChange={(v) => setCampaignGoal(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select goal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CAMPAIGN_GOALS.map((goal) => (
-                    <SelectItem key={goal} value={goal}>
-                      {goal}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Competitors</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addCompetitor}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add Competitor
-            </Button>
+      {/* Competitors */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-bold text-purple-700">⚔️ Competitors</Label>
+          <button
+            type="button"
+            onClick={addCompetitor}
+            className="text-xs font-bold text-purple-500 hover:text-purple-700 flex items-center gap-1"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add More
+          </button>
+        </div>
+        {competitors.map((comp, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <Input
+              placeholder="Competitor name"
+              value={comp.name}
+              onChange={(e) => updateCompetitor(i, "name", e.target.value)}
+              className="rounded-2xl h-11 border-2 border-pink-200 focus:border-pink-500 bg-pink-50/50 font-semibold flex-1"
+            />
+            <Input
+              type="url"
+              placeholder="URL (optional)"
+              value={comp.url}
+              onChange={(e) => updateCompetitor(i, "url", e.target.value)}
+              className="rounded-2xl h-11 border-2 border-pink-200 focus:border-pink-500 bg-pink-50/50 flex-1 hidden sm:block"
+            />
+            {competitors.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeCompetitor(i)}
+                className="text-pink-300 hover:text-pink-600 p-2"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {competitors.map((comp, i) => (
-            <div key={i} className="flex gap-3 items-start">
-              <div className="flex-1 space-y-2">
-                <Input
-                  placeholder="Competitor name"
-                  value={comp.name}
-                  onChange={(e) => updateCompetitor(i, "name", e.target.value)}
-                />
-              </div>
-              <div className="flex-1 space-y-2">
-                <Input
-                  type="url"
-                  placeholder="https://competitor.com"
-                  value={comp.url}
-                  onChange={(e) => updateCompetitor(i, "url", e.target.value)}
-                />
-              </div>
-              {competitors.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeCompetitor(i)}
-                >
-                  <Trash2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        ))}
+      </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-          {error}
+        <div className="rounded-2xl bg-red-50 border-2 border-red-200 p-3 text-sm text-red-600 font-bold text-center">
+          😢 {error}
         </div>
       )}
 
-      <Button type="submit" size="lg" disabled={loading || !brandName.trim()}>
+      <Button
+        type="submit"
+        disabled={loading || !brandName.trim()}
+        className="w-full h-14 rounded-2xl text-lg font-black gradient-fun border-0 shadow-lg shadow-purple-400/30 hover:shadow-purple-400/50 transition-all active:scale-[0.98]"
+      >
         {loading ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating Project...
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Launching...
           </>
         ) : (
-          "Create Project & Start Research"
+          <>
+            <Rocket className="mr-2 h-5 w-5" />
+            Launch Research!
+          </>
         )}
       </Button>
     </form>

@@ -3,53 +3,45 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Film,
-  Lightbulb,
-  Wand2,
-  Palette,
-} from "lucide-react";
 
 interface TabNavProps {
   projectId: string;
 }
 
 const tabs = [
-  { segment: "overview", label: "Overview", icon: LayoutDashboard },
-  { segment: "content", label: "Content", icon: Film },
-  { segment: "insights", label: "Insights", icon: Lightbulb },
-  { segment: "creative", label: "Creative", icon: Wand2 },
-  { segment: "studio", label: "Studio", icon: Palette },
+  { segment: "overview", label: "Overview", emoji: "🏠" },
+  { segment: "content", label: "Content", emoji: "🎬" },
+  { segment: "insights", label: "Insights", emoji: "💡" },
+  { segment: "creative", label: "Create", emoji: "✨" },
+  { segment: "studio", label: "Studio", emoji: "🎨" },
 ];
 
 export function TabNav({ projectId }: TabNavProps) {
   const pathname = usePathname();
 
   return (
-    <div className="border-b bg-card overflow-x-auto scrollbar-none">
-      <nav className="flex gap-0 min-w-max px-2 sm:px-4 md:px-8 -mb-px">
+    <div className="bg-white/80 backdrop-blur-sm border-b-2 border-purple-100 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 min-w-max px-3 sm:px-6 py-2 max-w-4xl mx-auto">
         {tabs.map((tab) => {
           const href = `/projects/${projectId}/${tab.segment}`;
           const isActive = pathname.startsWith(href);
-          const Icon = tab.icon;
           return (
             <Link
               key={tab.segment}
               href={href}
               className={cn(
-                "flex items-center gap-1.5 sm:gap-2 border-b-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap",
+                "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
                 isActive
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-300/50"
+                  : "bg-purple-50 text-purple-400 hover:bg-purple-100"
               )}
             >
-              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>{tab.emoji}</span>
               {tab.label}
             </Link>
           );
         })}
-      </nav>
+      </div>
     </div>
   );
 }
