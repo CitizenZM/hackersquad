@@ -10,17 +10,29 @@ import {
   Sparkles,
   Menu,
   X,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Projects", icon: LayoutDashboard },
   { href: "/projects/new", label: "New Project", icon: FolderPlus },
+  { href: "/all", label: "All Projects", icon: FolderOpen },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // Extract projectId from URL if we're in a project context
+  const projectMatch = pathname.match(/\/projects\/([^/]+)/);
+  const projectId = projectMatch?.[1];
+  const isInProject = !!projectId && projectId !== "new";
+
+  const projectTabs = isInProject
+    ? [
+        { href: `/projects/${projectId}/overview`, label: "Overview", icon: LayoutDashboard },
+      ]
+    : [];
 
   return (
     <>
@@ -53,10 +65,10 @@ export function Sidebar() {
         )}
       >
         <div className="flex h-14 items-center justify-between border-b px-5">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
             <Brain className="h-5 w-5 text-primary" />
             <span className="font-bold tracking-tight">CreativeIntel OS</span>
-          </div>
+          </Link>
           <button
             onClick={() => setOpen(false)}
             className="lg:hidden rounded-lg p-1 hover:bg-muted"
@@ -65,12 +77,33 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="flex-1 space-y-1 p-3">
+          {projectTabs.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  pathname.startsWith(item.href)
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+
+          {isInProject && (
+            <div className="my-2 border-t" />
+          )}
+
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
+            const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
