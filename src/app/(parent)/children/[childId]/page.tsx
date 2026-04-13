@@ -1,6 +1,6 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { ChildProfileForm } from "@/components/parent/child-profile-form";
 
@@ -9,12 +9,11 @@ export default async function EditChildPage({
 }: {
   params: Promise<{ childId: string }>;
 }) {
-  const auth = await getAuthFromCookies();
-  if (!auth) redirect("/login");
+  const { parentId } = await getDefaultParent();
 
   const { childId } = await params;
   const child = await prisma.childProfile.findFirst({
-    where: { id: childId, parentId: auth.parentId },
+    where: { id: childId, parentId },
   });
 
   if (!child) notFound();

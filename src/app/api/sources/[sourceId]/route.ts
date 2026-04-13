@@ -1,16 +1,15 @@
 import { prisma } from "@/lib/db";
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ sourceId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { sourceId } = await params;
   const source = await prisma.storySource.findFirst({
-    where: { id: sourceId, parentId: auth.parentId },
+    where: { id: sourceId, parentId: parentId },
   });
 
   if (!source) {
@@ -24,12 +23,11 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ sourceId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { sourceId } = await params;
   const result = await prisma.storySource.deleteMany({
-    where: { id: sourceId, parentId: auth.parentId },
+    where: { id: sourceId, parentId: parentId },
   });
 
   if (result.count === 0) {

@@ -1,16 +1,15 @@
 import { prisma } from "@/lib/db";
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ voiceId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { voiceId } = await params;
   const result = await prisma.voiceProfile.deleteMany({
-    where: { id: voiceId, parentId: auth.parentId },
+    where: { id: voiceId, parentId: parentId },
   });
 
   if (result.count === 0) {

@@ -1,18 +1,17 @@
 import { prisma } from "@/lib/db";
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ storyPackId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { storyPackId } = await params;
   const result = await prisma.storyPack.updateMany({
     where: {
       id: storyPackId,
-      parentId: auth.parentId,
+      parentId: parentId,
       status: "REVIEW_READY",
     },
     data: { status: "PUBLISHED" },

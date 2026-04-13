@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smile, Info } from "lucide-react";
@@ -8,11 +7,10 @@ import { Smile, Info } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function AvatarsPage() {
-  const auth = await getAuthFromCookies();
-  if (!auth) redirect("/login");
+  const { parentId } = await getDefaultParent();
 
   const avatars = await prisma.avatarProfile.findMany({
-    where: { parentId: auth.parentId },
+    where: { parentId },
     orderBy: { createdAt: "desc" },
   });
 

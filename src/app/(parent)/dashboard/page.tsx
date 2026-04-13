@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getAuthFromCookies } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, FileText, Mic } from "lucide-react";
@@ -9,18 +8,17 @@ import { BookOpen, Users, FileText, Mic } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const auth = await getAuthFromCookies();
-  if (!auth) redirect("/login");
+  const { parentId } = await getDefaultParent();
 
   const [childCount, sourceCount, storyCount, publishedCount] = await Promise.all([
-    prisma.childProfile.count({ where: { parentId: auth.parentId } }),
-    prisma.storySource.count({ where: { parentId: auth.parentId } }),
-    prisma.storyPack.count({ where: { parentId: auth.parentId } }),
-    prisma.storyPack.count({ where: { parentId: auth.parentId, status: "PUBLISHED" } }),
+    prisma.childProfile.count({ where: { parentId } }),
+    prisma.storySource.count({ where: { parentId } }),
+    prisma.storyPack.count({ where: { parentId } }),
+    prisma.storyPack.count({ where: { parentId, status: "PUBLISHED" } }),
   ]);
 
   const recentStories = await prisma.storyPack.findMany({
-    where: { parentId: auth.parentId },
+    where: { parentId },
     orderBy: { createdAt: "desc" },
     take: 5,
     include: { childProfile: { select: { name: true } } },

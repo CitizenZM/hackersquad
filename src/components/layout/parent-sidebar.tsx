@@ -9,7 +9,6 @@ import {
   BookOpen,
   Mic,
   Smile,
-  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,11 +23,6 @@ const navItems = [
 
 export function ParentSidebar() {
   const pathname = usePathname();
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
-  }
 
   return (
     <aside className="fixed left-0 top-0 z-30 flex h-full w-60 flex-col border-r bg-sidebar">
@@ -60,13 +54,9 @@ export function ParentSidebar() {
         })}
       </nav>
       <div className="border-t p-3">
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
+        <div className="px-3 py-2 text-xs text-sidebar-foreground/50">
+          StoryNest Kids
+        </div>
       </div>
     </aside>
   );

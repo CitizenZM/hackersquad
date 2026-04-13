@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,11 +10,10 @@ import { Plus, User } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ChildrenPage() {
-  const auth = await getAuthFromCookies();
-  if (!auth) redirect("/login");
+  const { parentId } = await getDefaultParent();
 
   const children = await prisma.childProfile.findMany({
-    where: { parentId: auth.parentId },
+    where: { parentId },
     orderBy: { createdAt: "desc" },
   });
 

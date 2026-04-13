@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 import { updateChildSchema } from "@/lib/validations";
 import { ageToAgeGroup } from "@/lib/constants";
 
@@ -7,12 +7,11 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ childId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { childId } = await params;
   const child = await prisma.childProfile.findFirst({
-    where: { id: childId, parentId: auth.parentId },
+    where: { id: childId, parentId: parentId },
   });
 
   if (!child) {
@@ -26,8 +25,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ childId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { childId } = await params;
 
@@ -41,7 +39,7 @@ export async function PUT(
     }
 
     const child = await prisma.childProfile.updateMany({
-      where: { id: childId, parentId: auth.parentId },
+      where: { id: childId, parentId: parentId },
       data: updateData,
     });
 
@@ -64,12 +62,11 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ childId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { childId } = await params;
   const result = await prisma.childProfile.deleteMany({
-    where: { id: childId, parentId: auth.parentId },
+    where: { id: childId, parentId: parentId },
   });
 
   if (result.count === 0) {

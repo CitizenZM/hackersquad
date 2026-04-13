@@ -1,14 +1,13 @@
 import { prisma } from "@/lib/db";
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 import { createStoryPackSchema } from "@/lib/validations";
 import { estimateEpisodeCount } from "@/lib/constants";
 
 export async function GET(request: Request) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const storyPacks = await prisma.storyPack.findMany({
-    where: { parentId: auth.parentId },
+    where: { parentId: parentId },
     orderBy: { createdAt: "desc" },
     include: {
       childProfile: { select: { name: true, ageGroup: true } },
@@ -21,8 +20,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   try {
     const body = await request.json();
@@ -31,10 +29,10 @@ export async function POST(request: Request) {
     // Verify source and child belong to this parent
     const [source, child] = await Promise.all([
       prisma.storySource.findFirst({
-        where: { id: data.sourceId, parentId: auth.parentId },
+        where: { id: data.sourceId, parentId: parentId },
       }),
       prisma.childProfile.findFirst({
-        where: { id: data.childProfileId, parentId: auth.parentId },
+        where: { id: data.childProfileId, parentId: parentId },
       }),
     ]);
 
@@ -49,7 +47,7 @@ export async function POST(request: Request) {
       data: {
         sourceId: data.sourceId,
         childProfileId: data.childProfileId,
-        parentId: auth.parentId,
+        parentId: parentId,
         title: data.title,
         storyGoal: data.storyGoal,
         narrationMode: data.narrationMode,

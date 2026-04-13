@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,12 +19,11 @@ export default async function StoryPackDetailPage({
 }: {
   params: Promise<{ storyPackId: string }>;
 }) {
-  const auth = await getAuthFromCookies();
-  if (!auth) redirect("/login");
+  const { parentId } = await getDefaultParent();
 
   const { storyPackId } = await params;
   const storyPack = await prisma.storyPack.findFirst({
-    where: { id: storyPackId, parentId: auth.parentId },
+    where: { id: storyPackId, parentId },
     include: {
       source: { select: { title: true, wordCount: true } },
       childProfile: { select: { id: true, name: true, age: true } },

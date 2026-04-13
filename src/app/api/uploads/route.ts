@@ -1,11 +1,10 @@
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 import { saveFile } from "@/services/upload/file-storage";
 import { parsePdf, parseDoc, parseTxt } from "@/lib/file-parser";
 import { estimateEpisodeCount } from "@/lib/constants";
 
 export async function POST(request: Request) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   try {
     const formData = await request.formData();

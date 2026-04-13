@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/db";
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 import { createVoiceProfileSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const voices = await prisma.voiceProfile.findMany({
-    where: { parentId: auth.parentId },
+    where: { parentId: parentId },
     orderBy: { createdAt: "desc" },
   });
 
@@ -15,8 +14,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   try {
     const body = await request.json();
@@ -24,7 +22,7 @@ export async function POST(request: Request) {
 
     const voice = await prisma.voiceProfile.create({
       data: {
-        parentId: auth.parentId,
+        parentId: parentId,
         voiceType: data.voiceType,
         sampleAudioUrl: data.sampleAudioUrl,
       },

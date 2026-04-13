@@ -1,4 +1,4 @@
-import { getAuthParent, unauthorized } from "@/lib/auth-middleware";
+import { getDefaultParent } from "@/lib/default-parent";
 import { jobManager } from "@/services/job-manager";
 import { prisma } from "@/lib/db";
 
@@ -6,8 +6,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ storyPackId: string }> }
 ) {
-  const auth = await getAuthParent(request);
-  if (!auth) return unauthorized();
+  const { parentId } = await getDefaultParent();
 
   const { storyPackId } = await params;
 
