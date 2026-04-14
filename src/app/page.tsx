@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+import { ModeSelector } from "./mode-selector";
+
+export const dynamic = "force-dynamic";
 
 export default function Home() {
-  redirect("/dashboard");
+  return <ModeSelector />;
 }

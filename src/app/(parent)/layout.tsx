@@ -1,10 +1,16 @@
+import { redirect } from "next/navigation";
+import { hasParentAccess } from "@/lib/parent-access";
 import { ParentSidebar } from "@/components/layout/parent-sidebar";
 
-export default function ParentLayout({
+export default async function ParentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  if (!(await hasParentAccess())) {
+    redirect("/parent-access");
+  }
+
   return (
     <div className="flex min-h-screen">
       <ParentSidebar />
