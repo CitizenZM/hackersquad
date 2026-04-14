@@ -2,7 +2,9 @@ import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smile, Info } from "lucide-react";
+import { Smile } from "lucide-react";
+import { AvatarUploader } from "@/components/parent/avatar-uploader";
+import { AvatarProfileList } from "@/components/parent/avatar-profile-list";
 
 export const dynamic = "force-dynamic";
 
@@ -18,61 +20,41 @@ export default async function AvatarsPage() {
     <div>
       <ParentHeader
         title="Avatar Studio"
-        description="Create a fun storytelling avatar from your photo"
+        description="Create fun cartoon avatars from photos — use them in stories"
       />
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Info className="h-4 w-4" /> Parent Avatar (Beta)
+              <Smile className="h-4 w-4" />
+              Create an Avatar
             </CardTitle>
             <CardDescription>
-              Upload a photo to generate a cartoon avatar that appears during story playback.
-              This feature is coming soon — your child will see a friendly default narrator icon.
+              Upload a photo or snap one with your camera, then pick a cartoon style
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border-2 border-dashed p-8 text-center">
-              <Smile className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <p className="mt-4 text-lg font-medium">Avatar Creator</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Photo upload and cartoon avatar generation will be available soon.
-              </p>
-            </div>
+            <AvatarUploader />
           </CardContent>
         </Card>
 
-        {avatars.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Avatars</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {avatars.map((avatar) => (
-                  <div
-                    key={avatar.id}
-                    className="flex flex-col items-center rounded-lg border p-4"
-                  >
-                    {avatar.imageUrl ? (
-                      <img
-                        src={avatar.imageUrl}
-                        alt={avatar.assignedName || "Avatar"}
-                        className="h-20 w-20 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                        <Smile className="h-8 w-8 text-primary" />
-                      </div>
-                    )}
-                    <p className="mt-2 font-medium">{avatar.assignedName || "Unnamed"}</p>
-                    <p className="text-xs text-muted-foreground">{avatar.cartoonStyle}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Avatars</CardTitle>
+            <CardDescription>Saved avatars for use with stories</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AvatarProfileList
+              avatars={avatars.map((a) => ({
+                id: a.id,
+                imageUrl: a.imageUrl,
+                cartoonStyle: a.cartoonStyle,
+                assignedName: a.assignedName,
+                createdAt: a.createdAt.toISOString(),
+              }))}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
