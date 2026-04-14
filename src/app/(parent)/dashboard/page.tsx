@@ -4,6 +4,7 @@ import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, FileText, Mic } from "lucide-react";
+import { DemoSeedButton } from "@/components/parent/demo-seed-button";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
       <ParentHeader
         title="Dashboard"
         description="Welcome to StoryNest Kids"
+        action={storyCount === 0 ? <DemoSeedButton /> : undefined}
       />
       <div className="p-6 space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

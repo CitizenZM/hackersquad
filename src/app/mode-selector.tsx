@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Mascot } from "@/components/child/mascot";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { Sparkles, ShieldCheck, Wand2, Loader2 } from "lucide-react";
 
 export function ModeSelector() {
+  const router = useRouter();
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     // Voice greeting after first user interaction
@@ -82,6 +85,41 @@ export function ModeSelector() {
       >
         Pick a mode to start
       </motion.p>
+
+      {/* Try Demo link */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.25 }}
+        onClick={async () => {
+          play("sparkle");
+          setSeeding(true);
+          try {
+            const res = await fetch("/api/demo-seed", { method: "POST" });
+            const data = await res.json();
+            if (data.childId) {
+              speak("Demo ready! Let's go!", { pitch: 1.3 });
+              router.push(`/play/${data.childId}`);
+            }
+          } catch {
+            setSeeding(false);
+          }
+        }}
+        disabled={seeding}
+        className="mb-6 flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-5 py-2.5 text-sm font-semibold text-child-primary shadow-sm active:scale-95 transition-transform disabled:opacity-70"
+      >
+        {seeding ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading demo...
+          </>
+        ) : (
+          <>
+            <Wand2 className="h-4 w-4" />
+            Try Demo Story
+          </>
+        )}
+      </motion.button>
 
       {/* Mode buttons */}
       <div className="w-full max-w-sm space-y-4">

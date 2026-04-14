@@ -6,9 +6,10 @@ import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAudioPlayer } from "@/lib/hooks/use-audio-player";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
+import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
 import { CelebrationScreen } from "./celebration-screen";
 import { VocabCardDrawer } from "./vocab-card-drawer";
-import { ChevronLeft, RotateCcw, Play, Pause, SkipForward } from "lucide-react";
+import { ChevronLeft, RotateCcw, Play, Pause, SkipForward, Volume2 } from "lucide-react";
 
 interface FlashcardScene {
   id: string;
@@ -40,12 +41,13 @@ interface StoryPlayerProps {
 }
 
 const SCENE_EMOJIS = ["🌟", "🌈", "🦊", "🌙", "🌻", "🐻", "🦋", "🌸", "🐬", "🎈"];
+const DEFAULT_SCENE_DURATION = 6; // seconds per scene when no audio
 
 export function StoryPlayer({
   childId,
   storyPackId,
   episodeId,
-  episodeTitle,
+  episodeTitle: _episodeTitle,
   episodeNumber,
   audioUrl,
   scenes,
@@ -59,18 +61,88 @@ export function StoryPlayer({
   const [showVocab, setShowVocab] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const { play: playSfx } = useSoundEffects();
-  const {
-    isPlaying,
-    currentTime,
-    duration,
-    progress,
-    hasEnded,
-    togglePlay,
-    restart,
-    seekToPercent,
-  } = useAudioPlayer(audioUrl);
+  const { speak, stop: stopSpeech } = useVoiceGuide();
 
-  // Auto-advance scenes based on timing
+  const audio = useAudioPlayer(audioUrl);
+  const hasAudio = !!audioUrl;
+
+  // Fallback: timer-driven playback when no audio
+  const [timerPlaying, setTimerPlaying] = useState(false);
+  const [timerElapsed, setTimerElapsed] = useState(0);
+  const timerTotalDuration = scenes.reduce(
+    (a, s) => a + (s.duration || DEFAULT_SCENE_DURATION),
+    0
+  );
+
+  useEffect(() => {
+    if (hasAudio || !timerPlaying) return;
+    const interval = setInterval(() => {
+      setTimerElapsed((t) => {
+        const next = t + 0.25;
+        if (next >= timerTotalDuration) {
+          setTimerPlaying(false);
+          return timerTotalDuration;
+        }
+        return next;
+      });
+    }, 250);
+    return () => clearInterval(interval);
+  }, [hasAudio, timerPlaying, timerTotalDuration]);
+
+  // When using fallback: speak each scene's text when active
+  useEffect(() => {
+    if (hasAudio) return;
+    if (!timerPlaying) {
+      stopSpeech();
+      return;
+    }
+    const snippet = scenes[currentScene]?.textSnippet;
+    if (snippet) {
+      speak(snippet, { pitch: 1.15, rate: 0.92 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScene, timerPlaying, hasAudio]);
+
+  // Derived values that work for both audio + timer modes
+  const isPlaying = hasAudio ? audio.isPlaying : timerPlaying;
+  const currentTime = hasAudio ? audio.currentTime : timerElapsed;
+  const duration = hasAudio ? audio.duration : timerTotalDuration;
+  const progress = hasAudio ? audio.progress : duration > 0 ? timerElapsed / duration : 0;
+  const hasEnded = hasAudio
+    ? audio.hasEnded
+    : timerElapsed >= timerTotalDuration && timerTotalDuration > 0 && !timerPlaying;
+
+  function togglePlay() {
+    if (hasAudio) {
+      audio.togglePlay();
+    } else {
+      if (timerElapsed >= timerTotalDuration) {
+        setTimerElapsed(0);
+        setCurrentScene(0);
+      }
+      setTimerPlaying((p) => !p);
+    }
+  }
+
+  function restart() {
+    if (hasAudio) {
+      audio.restart();
+    } else {
+      setTimerElapsed(0);
+      setCurrentScene(0);
+      setTimerPlaying(true);
+    }
+  }
+
+  function seekToPercent(pct: number) {
+    if (hasAudio) {
+      audio.seekToPercent(pct);
+    } else {
+      setTimerElapsed(pct * timerTotalDuration);
+    }
+  }
+
+  // Auto-advance scenes based on timing (works for both audio + timer)
   useEffect(() => {
     if (!isPlaying || scenes.length === 0 || duration === 0) return;
 
@@ -86,20 +158,24 @@ export function StoryPlayer({
         break;
       }
     }
-  }, [currentTime, isPlaying, scenes, duration, currentScene]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTime, isPlaying, scenes, duration]);
 
-  // Show celebration when audio ends
+  // Show celebration when playback ends
   useEffect(() => {
     if (hasEnded && !showCelebration) {
       logEvent("PLAY_COMPLETE");
       logEvent("EPISODE_COMPLETE");
       setShowCelebration(true);
     }
-  }, [hasEnded, showCelebration]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasEnded]);
 
   // Log episode start
   useEffect(() => {
     logEvent("EPISODE_START");
+    return () => stopSpeech();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function logEvent(eventType: string) {
@@ -117,9 +193,18 @@ export function StoryPlayer({
 
   const goToScene = useCallback(
     (index: number) => {
-      setCurrentScene(Math.max(0, Math.min(scenes.length - 1, index)));
+      const clamped = Math.max(0, Math.min(scenes.length - 1, index));
+      setCurrentScene(clamped);
+      if (!hasAudio) {
+        // Sync timer to this scene's start
+        let t = 0;
+        for (let i = 0; i < clamped; i++) {
+          t += scenes[i].duration || DEFAULT_SCENE_DURATION;
+        }
+        setTimerElapsed(t);
+      }
     },
-    [scenes.length]
+    [scenes, hasAudio]
   );
 
   const swipeHandlers = useSwipeable({
@@ -171,7 +256,7 @@ export function StoryPlayer({
 
   const scene = scenes[currentScene];
 
-  // Calculate scene boundary markers for progress bar
+  // Scene boundary markers for progress bar
   const sceneMarkers: number[] = [];
   if (scenes.length > 1 && duration > 0) {
     let elapsed = 0;
@@ -182,19 +267,27 @@ export function StoryPlayer({
   }
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col bg-child-bg">
+    <div className="relative flex min-h-[100dvh] flex-col bg-gradient-to-b from-sky-100 via-violet-50 to-rose-100">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2 safe-top safe-x">
         <button
           onClick={() => router.push(`/play/${childId}/${storyPackId}`)}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-child-surface/80 backdrop-blur-sm shadow"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="rounded-full bg-child-surface/80 backdrop-blur-sm px-3 py-1.5 shadow">
-          <span className="child-caption text-foreground/60">
-            {episodeNumber}/{totalEpisodes}
-          </span>
+        <div className="flex items-center gap-2">
+          {!hasAudio && (
+            <div className="rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-1.5 shadow flex items-center gap-1">
+              <Volume2 className="h-3.5 w-3.5 text-child-primary" />
+              <span className="text-xs font-semibold text-child-primary">Read-aloud</span>
+            </div>
+          )}
+          <div className="rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 shadow">
+            <span className="child-caption text-foreground/60">
+              {episodeNumber}/{totalEpisodes}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -212,12 +305,12 @@ export function StoryPlayer({
                 className="absolute inset-0 flex flex-col"
               >
                 {/* Image */}
-                <div className="flex-1 overflow-hidden rounded-3xl bg-child-surface shadow-lg">
+                <div className="flex-1 overflow-hidden rounded-3xl bg-white shadow-lg">
                   {scene.imageUrl ? (
                     <img
                       src={scene.imageUrl}
                       alt={`Scene ${scene.sceneOrder}`}
-                      className="h-full w-full object-contain bg-gradient-to-b from-sky-50 to-violet-50"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 via-violet-50 to-rose-100">
@@ -229,8 +322,8 @@ export function StoryPlayer({
                 </div>
 
                 {/* Text overlay */}
-                <div className="mt-3 rounded-2xl bg-white/80 backdrop-blur-xl p-4 shadow-sm">
-                  <p className="child-body text-center text-foreground/80 line-clamp-3">
+                <div className="mt-3 rounded-2xl bg-white/90 backdrop-blur-xl p-4 shadow-sm">
+                  <p className="child-body text-center text-foreground/80">
                     {scene.textSnippet}
                   </p>
                 </div>
@@ -248,12 +341,10 @@ export function StoryPlayer({
           className="relative h-11 flex items-center cursor-pointer"
         >
           <div className="relative w-full h-1.5 rounded-full bg-foreground/10">
-            {/* Filled progress */}
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-child-primary transition-all duration-200"
               style={{ width: `${progress * 100}%` }}
             />
-            {/* Scene markers */}
             {sceneMarkers.map((pos, i) => (
               <div
                 key={i}
@@ -273,7 +364,7 @@ export function StoryPlayer({
               playSfx("tap");
               goToScene(Math.max(0, currentScene - 1));
             }}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-child-surface shadow-md active:scale-90 transition-transform"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-md active:scale-90 transition-transform"
           >
             <RotateCcw className="h-6 w-6 text-foreground/60" />
           </button>
@@ -281,8 +372,9 @@ export function StoryPlayer({
           <button
             onClick={() => {
               playSfx("pop");
+              const wasPlaying = isPlaying;
               togglePlay();
-              if (isPlaying) logEvent("PLAY_PAUSE");
+              if (wasPlaying) logEvent("PLAY_PAUSE");
               else logEvent("PLAY_RESUME");
             }}
             className="flex h-20 w-20 items-center justify-center rounded-full bg-child-primary shadow-xl shadow-child-primary/30 active:scale-90 transition-transform"
@@ -299,7 +391,7 @@ export function StoryPlayer({
               playSfx("tap");
               goToScene(Math.min(scenes.length - 1, currentScene + 1));
             }}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-child-surface shadow-md active:scale-90 transition-transform"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-md active:scale-90 transition-transform"
           >
             <SkipForward className="h-6 w-6 text-foreground/60" />
           </button>

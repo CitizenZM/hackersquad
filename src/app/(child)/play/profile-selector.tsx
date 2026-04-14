@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ProfileBubble } from "@/components/child/profile-bubble";
 import { Mascot } from "@/components/child/mascot";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
+import { Wand2, Loader2 } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -14,9 +16,26 @@ interface Profile {
 }
 
 export function ProfileSelector({ profiles }: { profiles: Profile[] }) {
+  const router = useRouter();
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
   const [greeted, setGreeted] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  async function seedDemo() {
+    play("sparkle");
+    setSeeding(true);
+    try {
+      const res = await fetch("/api/demo-seed", { method: "POST" });
+      const data = await res.json();
+      if (data.childId) {
+        router.push(`/play/${data.childId}`);
+        router.refresh();
+      }
+    } catch {
+      setSeeding(false);
+    }
+  }
 
   // Voice greeting after first user interaction
   useEffect(() => {
@@ -93,10 +112,24 @@ export function ProfileSelector({ profiles }: { profiles: Profile[] }) {
           transition={{ delay: 0.6 }}
           className="text-center"
         >
-          <p className="child-body text-foreground/40">No profiles yet!</p>
-          <p className="child-caption text-foreground/30 mt-1">
-            Ask a parent to create one.
-          </p>
+          <p className="child-body text-foreground/40 mb-4">No profiles yet!</p>
+          <button
+            onClick={seedDemo}
+            disabled={seeding}
+            className="inline-flex items-center gap-2 rounded-full bg-child-primary px-6 py-3 text-base font-semibold text-white shadow-lg active:scale-95 transition-transform disabled:opacity-70"
+          >
+            {seeding ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading demo...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-5 w-5" />
+                Try Demo Story
+              </>
+            )}
+          </button>
         </motion.div>
       ) : (
         <div
