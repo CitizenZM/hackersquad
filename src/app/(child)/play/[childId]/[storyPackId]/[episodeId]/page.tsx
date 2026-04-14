@@ -1,6 +1,22 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { StoryPlayer } from "@/components/child/story-player";
+import type { StorytellerTone } from "@/lib/hooks/use-voice-guide";
+
+// Map story goal → default storyteller tone
+function toneForStoryGoal(goal: string): StorytellerTone {
+  switch (goal) {
+    case "BEDTIME":
+      return "bedtime";
+    case "ENTERTAIN":
+    case "MORAL_LESSON":
+      return "playful";
+    case "EDUCATE":
+    case "VOCABULARY":
+    default:
+      return "gentle";
+  }
+}
 
 export default async function EpisodePlayerPage({
   params,
@@ -18,6 +34,7 @@ export default async function EpisodePlayerPage({
         select: {
           id: true,
           title: true,
+          storyGoal: true,
           childProfileId: true,
           episodes: {
             orderBy: { episodeNumber: "asc" },
@@ -43,6 +60,7 @@ export default async function EpisodePlayerPage({
       childId={childId}
       storyPackId={storyPackId}
       episodeId={episodeId}
+      defaultTone={toneForStoryGoal(episode.storyPack.storyGoal)}
       episodeTitle={episode.title}
       episodeNumber={episode.episodeNumber}
       audioUrl={episode.audioUrl}

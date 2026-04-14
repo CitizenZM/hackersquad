@@ -6,11 +6,12 @@ import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAudioPlayer } from "@/lib/hooks/use-audio-player";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
-import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
+import { useVoiceGuide, STORYTELLER_TONES, type StorytellerTone } from "@/lib/hooks/use-voice-guide";
 import { CelebrationScreen } from "./celebration-screen";
 import { VocabCardDrawer } from "./vocab-card-drawer";
 import { InteractiveScene } from "./interactive-scene";
-import { ChevronLeft, RotateCcw, Play, Pause, SkipForward, Volume2 } from "lucide-react";
+import { TonePicker } from "./tone-picker";
+import { ChevronLeft, RotateCcw, Play, Pause, SkipForward } from "lucide-react";
 
 interface FlashcardScene {
   id: string;
@@ -33,6 +34,7 @@ interface StoryPlayerProps {
   childId: string;
   storyPackId: string;
   episodeId: string;
+  defaultTone?: StorytellerTone;
   episodeTitle: string;
   episodeNumber: number;
   audioUrl: string | null;
@@ -49,6 +51,7 @@ export function StoryPlayer({
   childId,
   storyPackId,
   episodeId,
+  defaultTone,
   episodeTitle: _episodeTitle,
   episodeNumber,
   audioUrl,
@@ -61,6 +64,7 @@ export function StoryPlayer({
   const [currentScene, setCurrentScene] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showVocab, setShowVocab] = useState(false);
+  const [tone, setTone] = useState<StorytellerTone>(defaultTone || "gentle");
   const progressRef = useRef<HTMLDivElement>(null);
   const { play: playSfx } = useSoundEffects();
   const { speakStory, stop: stopSpeech } = useVoiceGuide();
@@ -107,6 +111,7 @@ export function StoryPlayer({
 
     let aborted = false;
     const cancel = speakStory(snippet, {
+      tone,
       onComplete: () => {
         if (aborted) return;
         // Snap elapsed time to the end of the current scene
@@ -133,7 +138,7 @@ export function StoryPlayer({
       cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentScene, timerPlaying, hasAudio]);
+  }, [currentScene, timerPlaying, hasAudio, tone]);
 
   // Derived values that work for both audio + timer modes
   const isPlaying = hasAudio ? audio.isPlaying : timerPlaying;
@@ -313,12 +318,7 @@ export function StoryPlayer({
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-2">
-          {!hasAudio && (
-            <div className="rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-1.5 shadow flex items-center gap-1">
-              <Volume2 className="h-3.5 w-3.5 text-child-primary" />
-              <span className="text-xs font-semibold text-child-primary">Read-aloud</span>
-            </div>
-          )}
+          {!hasAudio && <TonePicker tone={tone} onChange={setTone} />}
           <div className="rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 shadow">
             <span className="child-caption text-foreground/60">
               {episodeNumber}/{totalEpisodes}

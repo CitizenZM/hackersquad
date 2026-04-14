@@ -2,12 +2,24 @@
 
 import { useCallback, useRef, useEffect } from "react";
 
-type Tone = "ui" | "narrator" | "character" | "excited";
+export type Tone =
+  | "ui"
+  | "narrator"
+  | "character"
+  | "excited"
+  // Childish storytelling tones
+  | "bedtime"
+  | "playful"
+  | "gentle";
+
+export type StorytellerTone = "bedtime" | "playful" | "gentle";
 
 interface ToneSettings {
   rate: number;
   pitch: number;
   volume: number;
+  // Optional character pitch override when inside "quotes"
+  characterPitch?: number;
 }
 
 const TONES: Record<Tone, ToneSettings> = {
@@ -15,7 +27,42 @@ const TONES: Record<Tone, ToneSettings> = {
   narrator: { rate: 0.88, pitch: 1.05, volume: 0.85 },
   character: { rate: 1.0, pitch: 1.35, volume: 0.85 },
   excited: { rate: 1.05, pitch: 1.25, volume: 0.9 },
+
+  // Bedtime — slow, soft, soothing. Low volume, longer sentences feel calm.
+  bedtime: { rate: 0.82, pitch: 1.0, volume: 0.72, characterPitch: 1.2 },
+
+  // Playful — bouncy, bright, a little faster. Great for entertainment.
+  playful: { rate: 1.0, pitch: 1.3, volume: 0.9, characterPitch: 1.55 },
+
+  // Gentle — warm, clear, balanced. A storyteller-aunt tone.
+  gentle: { rate: 0.9, pitch: 1.15, volume: 0.85, characterPitch: 1.4 },
 };
+
+export const STORYTELLER_TONES: Array<{
+  id: StorytellerTone;
+  label: string;
+  description: string;
+  emoji: string;
+}> = [
+  {
+    id: "gentle",
+    label: "Gentle",
+    description: "Warm, clear, balanced — perfect for every story",
+    emoji: "🌿",
+  },
+  {
+    id: "playful",
+    label: "Playful",
+    description: "Bouncy, bright, full of wonder",
+    emoji: "🎉",
+  },
+  {
+    id: "bedtime",
+    label: "Bedtime",
+    description: "Slow, soft, soothing — for sleepy eyes",
+    emoji: "🌙",
+  },
+];
 
 /**
  * Uses Web Speech Synthesis API with storytelling tone presets.
@@ -77,13 +124,30 @@ export function useVoiceGuide() {
    * - Fires `onComplete` when all chunks finish (not fired if cancelled)
    */
   const speakStory = useCallback(
-    (text: string, opts?: { onComplete?: () => void }): (() => void) => {
+    (
+      text: string,
+      opts?: { onComplete?: () => void; tone?: StorytellerTone }
+    ): (() => void) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) {
         opts?.onComplete?.();
         return () => {};
       }
       let cancelled = false;
       let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+      // Pick the base storyteller tone (narrator-like). Prose uses this
+      // tone; inside "quotes" we switch to a higher-pitched character
+      // voice derived from the base tone.
+      const baseToneId: Tone = opts?.tone || "narrator";
+      const baseTone = TONES[baseToneId];
+      const dialogueTone: ToneSettings = {
+        rate: baseTone.rate + 0.08,
+        pitch: baseTone.characterPitch || baseTone.pitch + 0.3,
+        volume: Math.min(1, baseTone.volume + 0.05),
+      };
+
+      // Bedtime tone gets longer sentence pauses for soothing cadence.
+      const sentencePause = baseToneId === "bedtime" ? 360 : baseToneId === "playful" ? 140 : 200;
 
       try {
         window.speechSynthesis.cancel();
@@ -93,7 +157,7 @@ export function useVoiceGuide() {
           .map((s) => s.trim())
           .filter(Boolean);
 
-        const chunks: { text: string; tone: Tone }[] = [];
+        const chunks: { text: string; settings: ToneSettings }[] = [];
         for (const s of sentences) {
           const parts = s.split(/("[^"]*"|'[^']*')/g).filter(Boolean);
           for (const p of parts) {
@@ -102,7 +166,7 @@ export function useVoiceGuide() {
             const isQuoted = /^["'].*["']$/.test(trimmed);
             chunks.push({
               text: isQuoted ? trimmed.replace(/^["']|["']$/g, "") : trimmed,
-              tone: isQuoted ? "character" : "narrator",
+              settings: isQuoted ? dialogueTone : baseTone,
             });
           }
         }
@@ -120,15 +184,14 @@ export function useVoiceGuide() {
             return;
           }
           const chunk = chunks[i++];
-          const tone = TONES[chunk.tone];
           const u = new SpeechSynthesisUtterance(chunk.text);
           if (voiceRef.current) u.voice = voiceRef.current;
-          u.rate = tone.rate;
-          u.pitch = tone.pitch;
-          u.volume = tone.volume;
+          u.rate = chunk.settings.rate;
+          u.pitch = chunk.settings.pitch;
+          u.volume = chunk.settings.volume;
           u.onend = () => {
             if (cancelled) return;
-            pendingTimeout = setTimeout(speakNext, 180);
+            pendingTimeout = setTimeout(speakNext, sentencePause);
           };
           u.onerror = () => {
             if (cancelled) return;
