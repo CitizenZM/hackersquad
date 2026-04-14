@@ -1,41 +1,45 @@
-import { Badge } from "@/components/ui/badge";
+import { ReactNode } from "react";
 
 interface HeaderProps {
   title: string;
   status?: string;
   description?: string;
-  emoji?: string;
+  actions?: ReactNode;
 }
 
-const statusConfig: Record<string, { color: string; emoji: string }> = {
-  DRAFT: { color: "bg-gray-100 text-gray-600", emoji: "📝" },
-  RESEARCHING: { color: "bg-blue-100 text-blue-700 animate-pulse", emoji: "🔍" },
-  ANALYZED: { color: "bg-green-100 text-green-700", emoji: "✅" },
-  GENERATING: { color: "bg-purple-100 text-purple-700 animate-pulse", emoji: "🎨" },
-  COMPLETE: { color: "bg-emerald-100 text-emerald-700", emoji: "🎉" },
-  ERROR: { color: "bg-red-100 text-red-700", emoji: "😢" },
+const statusStyles: Record<string, string> = {
+  DRAFT: "bg-muted text-muted-foreground",
+  RESEARCHING: "bg-[var(--status-ai-bg)] text-[var(--status-ai-fg)]",
+  ANALYZED: "bg-[var(--status-healthy-bg)] text-[var(--status-healthy-fg)]",
+  GENERATING: "bg-[var(--status-ai-bg)] text-[var(--status-ai-fg)]",
+  COMPLETE: "bg-[var(--status-healthy-bg)] text-[var(--status-healthy-fg)]",
+  ERROR: "bg-[var(--status-urgent-bg)] text-[var(--status-urgent-fg)]",
 };
 
-export function Header({ title, status, description, emoji }: HeaderProps) {
-  const config = status ? statusConfig[status] : null;
-
+export function Header({ title, status, description, actions }: HeaderProps) {
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-b-2 border-purple-100 px-4 py-4 sm:px-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-2 flex-wrap">
-          {emoji && <span className="text-2xl">{emoji}</span>}
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-purple-900">
-            {title}
-          </h1>
-          {status && config && (
-            <Badge className={`${config.color} rounded-full px-3 py-1 text-xs font-bold`} variant="secondary">
-              {config.emoji} {status.charAt(0) + status.slice(1).toLowerCase()}
-            </Badge>
-          )}
+    <div className="border-b border-border bg-background">
+      <div className="px-4 py-5 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">
+                {title}
+              </h1>
+              {status && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[status] || "bg-muted text-muted-foreground"}`}
+                >
+                  {status.charAt(0) + status.slice(1).toLowerCase()}
+                </span>
+              )}
+            </div>
+            {description && (
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            )}
+          </div>
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
-        {description && (
-          <p className="mt-1 text-sm text-purple-400 font-semibold">{description}</p>
-        )}
       </div>
     </div>
   );

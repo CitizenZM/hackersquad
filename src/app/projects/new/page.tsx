@@ -3,14 +3,13 @@ import { ProjectForm } from "@/components/projects/project-form";
 
 export default function NewProjectPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 via-background to-purple-50">
+    <div>
       <Header
-        title="New Project"
-        emoji="🔍"
-        description="Let's discover what makes a brand tick!"
+        title="New project"
+        description="Set up a brand intelligence workspace"
       />
-      <div className="px-4 py-5 sm:px-6 max-w-lg mx-auto">
-        <div className="bg-white rounded-3xl p-5 fun-shadow">
+      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+        <div className="rounded-lg border border-border bg-card p-6">
           <ProjectForm />
         </div>
       </div>

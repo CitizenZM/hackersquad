@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import {
   PieChart,
   Pie,
@@ -11,11 +10,20 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  CartesianGrid,
 } from "recharts";
 
-const COLORS = [
-  "#a78bfa", "#f472b6", "#60a5fa", "#34d399", "#fbbf24",
-  "#fb923c", "#c084fc", "#22d3ee", "#f87171", "#4ade80",
+const CHART_COLORS = [
+  "#18181b",
+  "#3f3f46",
+  "#71717a",
+  "#a1a1aa",
+  "#d4d4d8",
+  "#6366f1",
+  "#16a34a",
+  "#d97706",
+  "#dc2626",
+  "#2563eb",
 ];
 
 interface OverviewChartsProps {
@@ -28,61 +36,84 @@ export function OverviewCharts({
   scoreDistribution,
 }: OverviewChartsProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <Card className="rounded-3xl border-2 border-pink-200 bg-white fun-shadow-sm">
-        <CardContent className="pt-4">
-          <p className="text-sm font-black text-pink-700 mb-2">📊 Story Types</p>
-          {narrativeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={narrativeData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={70}
-                  innerRadius={30}
-                  dataKey="value"
-                  strokeWidth={3}
-                  stroke="#fff"
-                >
-                  {narrativeData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[200px] text-sm text-purple-300 font-bold">
-              Run research first! 🔍
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold tracking-tight">Narrative Types</p>
+          <p className="text-xs text-muted-foreground">Frequency</p>
+        </div>
+        {narrativeData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie
+                data={narrativeData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                innerRadius={50}
+                dataKey="value"
+                paddingAngle={2}
+                stroke="#fff"
+                strokeWidth={1}
+              >
+                {narrativeData.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  background: "#fff",
+                  border: "1px solid #e4e4e7",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
+            No data yet
+          </div>
+        )}
+      </div>
 
-      <Card className="rounded-3xl border-2 border-blue-200 bg-white fun-shadow-sm">
-        <CardContent className="pt-4">
-          <p className="text-sm font-black text-blue-700 mb-2">📈 Score Spread</p>
-          {scoreDistribution.some((d) => d.count > 0) ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={scoreDistribution}>
-                <XAxis dataKey="range" tick={{ fontSize: 10, fontWeight: 700 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                  {scoreDistribution.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[200px] text-sm text-blue-300 font-bold">
-              No scores yet! 📊
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold tracking-tight">Score Distribution</p>
+          <p className="text-xs text-muted-foreground">Content count by score range</p>
+        </div>
+        {scoreDistribution.some((d) => d.count > 0) ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={scoreDistribution} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
+              <XAxis
+                dataKey="range"
+                tick={{ fontSize: 11, fill: "#71717a" }}
+                stroke="#e4e4e7"
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#71717a" }}
+                stroke="#e4e4e7"
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "#fff",
+                  border: "1px solid #e4e4e7",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                }}
+                cursor={{ fill: "#f4f4f5" }}
+              />
+              <Bar dataKey="count" fill="#18181b" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
+            No data yet
+          </div>
+        )}
+      </div>
     </div>
   );
 }

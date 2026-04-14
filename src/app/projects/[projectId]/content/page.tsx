@@ -1,12 +1,8 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  NARRATIVE_TYPE_LABELS,
-  CONTENT_TYPE_LABELS,
-} from "@/lib/constants";
-import { Eye, ThumbsUp, MessageSquare } from "lucide-react";
+import { NARRATIVE_TYPE_LABELS, CONTENT_TYPE_LABELS } from "@/lib/constants";
+import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
+import { ChevronRight, Eye, ThumbsUp, MessageSquare } from "lucide-react";
 
 export default async function ContentPage({
   params,
@@ -21,130 +17,168 @@ export default async function ContentPage({
     include: { competitor: { select: { name: true } } },
   });
 
-  function scoreColor(score: number | null) {
-    if (!score) return "bg-gray-200";
-    if (score >= 70) return "gradient-cool";
-    if (score >= 40) return "bg-amber-400";
-    return "bg-red-400";
-  }
-
-  function scoreMedal(score: number | null) {
-    if (!score) return "⬜";
-    if (score >= 80) return "🥇";
-    if (score >= 60) return "🥈";
-    if (score >= 40) return "🥉";
-    return "💪";
-  }
-
   return (
-    <div className="space-y-5">
-      <div className="text-center">
-        <h2 className="text-lg font-black text-purple-900">🎬 Content Scored</h2>
-        <p className="text-xs text-purple-400 font-bold">
-          {assets.length} pieces of content ranked by AI
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-base font-semibold tracking-tight">Content Intelligence</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {assets.length} content asset{assets.length !== 1 ? "s" : ""} analyzed and scored
         </p>
       </div>
 
       {assets.length === 0 ? (
-        <Card className="rounded-3xl border-2 border-purple-200 bg-white">
-          <CardContent className="py-12 text-center">
-            <div className="text-4xl mb-2">🔍</div>
-            <p className="text-purple-400 font-bold">
-              No content yet. Run research first!
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-border bg-card py-16 text-center">
+          <p className="text-sm text-muted-foreground">
+            No content analyzed yet. Run research first.
+          </p>
+        </div>
       ) : (
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-          {assets.map((asset, index) => (
-            <Link
-              key={asset.id}
-              href={`/projects/${projectId}/insights/${asset.id}`}
-            >
-              <Card className="rounded-3xl border-2 border-purple-200 bg-white fun-shadow-sm hover:border-purple-400 transition-all active:scale-[0.98] h-full">
-                <CardContent className="pt-4 pb-3 space-y-2.5">
-                  {/* Rank + Thumbnail */}
-                  <div className="flex gap-3">
-                    <div className="text-center shrink-0">
-                      <div className="text-2xl">{scoreMedal(asset.overallScore)}</div>
-                      <span className="text-[10px] font-black text-purple-400">#{index + 1}</span>
-                    </div>
-                    {asset.thumbnailUrl ? (
-                      <div className="aspect-video rounded-2xl overflow-hidden bg-purple-50 flex-1">
-                        <img
-                          src={asset.thumbnailUrl}
-                          alt={asset.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="aspect-video rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center flex-1">
-                        <span className="text-xs font-bold text-purple-300">
-                          {CONTENT_TYPE_LABELS[asset.type]}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+        <>
+          {/* Desktop: Data Table */}
+          <div className="hidden md:block rounded-lg border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border">
+                  <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="text-left font-medium px-4 py-2.5 w-12">#</th>
+                    <th className="text-left font-medium px-3 py-2.5">Content</th>
+                    <th className="text-left font-medium px-3 py-2.5">Narrative</th>
+                    <th className="text-left font-medium px-3 py-2.5">Score</th>
+                    <th className="text-right font-medium px-3 py-2.5">Views</th>
+                    <th className="text-right font-medium px-3 py-2.5">Engagement</th>
+                    <th className="text-left font-medium px-3 py-2.5">Source</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {assets.map((asset, index) => (
+                    <tr
+                      key={asset.id}
+                      className="group hover:bg-muted/40 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-xs text-muted-foreground num">
+                        {index + 1}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Link
+                          href={`/projects/${projectId}/insights/${asset.id}`}
+                          className="flex gap-3 items-center"
+                        >
+                          {asset.thumbnailUrl ? (
+                            <div className="w-16 h-10 rounded overflow-hidden bg-muted shrink-0">
+                              <img
+                                src={asset.thumbnailUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-16 h-10 rounded bg-muted shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate max-w-xs">
+                              {asset.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {asset.platform || CONTENT_TYPE_LABELS[asset.type]}
+                            </p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3 text-xs text-muted-foreground">
+                        {asset.narrativeType
+                          ? NARRATIVE_TYPE_LABELS[asset.narrativeType]
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-3">
+                        <ScoreBar score={asset.overallScore} />
+                      </td>
+                      <td className="px-3 py-3 text-right num text-muted-foreground">
+                        {asset.viewCount?.toLocaleString() || "—"}
+                      </td>
+                      <td className="px-3 py-3 text-right num text-muted-foreground">
+                        {asset.engagementRate ? `${asset.engagementRate.toFixed(2)}%` : "—"}
+                      </td>
+                      <td className="px-3 py-3">
+                        {asset.isBrandOwned ? (
+                          <StatusBadge level="ai">Brand</StatusBadge>
+                        ) : asset.competitor ? (
+                          <span className="text-xs text-muted-foreground">
+                            {asset.competitor.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Link
+                          href={`/projects/${projectId}/insights/${asset.id}`}
+                          className="text-muted-foreground group-hover:text-foreground"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-                  {/* Title */}
-                  <h3 className="text-sm font-bold text-purple-900 line-clamp-2">
-                    {asset.title}
-                  </h3>
-
-                  {/* Badges */}
-                  <div className="flex flex-wrap gap-1">
-                    {asset.narrativeType && (
-                      <Badge className="rounded-full text-[10px] font-bold bg-pink-50 text-pink-600 border border-pink-200">
-                        {NARRATIVE_TYPE_LABELS[asset.narrativeType]}
-                      </Badge>
-                    )}
-                    {asset.competitor && (
-                      <Badge className="rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200">
-                        {asset.competitor.name}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Score bar */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-bold">
-                      <span className="text-purple-400">AI Score</span>
-                      <span className="text-purple-700">{asset.overallScore ?? "—"}</span>
-                    </div>
-                    <div className="h-3 rounded-full bg-purple-100 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${scoreColor(asset.overallScore)}`}
-                        style={{ width: `${asset.overallScore || 0}%` }}
+          {/* Mobile: Cards */}
+          <div className="md:hidden space-y-2">
+            {assets.map((asset, index) => (
+              <Link
+                key={asset.id}
+                href={`/projects/${projectId}/insights/${asset.id}`}
+                className="block rounded-lg border border-border bg-card p-4 hover:border-foreground/30 transition-colors"
+              >
+                <div className="flex gap-3">
+                  <span className="text-xs text-muted-foreground num mt-0.5">
+                    {index + 1}
+                  </span>
+                  {asset.thumbnailUrl ? (
+                    <div className="w-20 h-12 rounded overflow-hidden bg-muted shrink-0">
+                      <img
+                        src={asset.thumbnailUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
                       />
                     </div>
+                  ) : (
+                    <div className="w-20 h-12 rounded bg-muted shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium line-clamp-2">{asset.title}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <ScoreBar score={asset.overallScore} />
+                    </div>
+                    <div className="flex gap-3 text-[11px] text-muted-foreground mt-1.5">
+                      {asset.viewCount != null && (
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {asset.viewCount.toLocaleString()}
+                        </span>
+                      )}
+                      {asset.likeCount != null && (
+                        <span className="flex items-center gap-1">
+                          <ThumbsUp className="h-3 w-3" />
+                          {asset.likeCount.toLocaleString()}
+                        </span>
+                      )}
+                      {asset.commentCount != null && (
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3" />
+                          {asset.commentCount.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Metrics */}
-                  <div className="flex gap-3 text-[10px] font-bold text-purple-400">
-                    {asset.viewCount != null && (
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {asset.viewCount.toLocaleString()}
-                      </span>
-                    )}
-                    {asset.likeCount != null && (
-                      <span className="flex items-center gap-1">
-                        <ThumbsUp className="h-3 w-3" />
-                        {asset.likeCount.toLocaleString()}
-                      </span>
-                    )}
-                    {asset.commentCount != null && (
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        {asset.commentCount.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

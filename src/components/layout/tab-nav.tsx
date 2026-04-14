@@ -3,44 +3,54 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  Film,
+  Lightbulb,
+  Wand2,
+  Palette,
+} from "lucide-react";
 
 interface TabNavProps {
   projectId: string;
 }
 
 const tabs = [
-  { segment: "overview", label: "Overview", emoji: "🏠" },
-  { segment: "content", label: "Content", emoji: "🎬" },
-  { segment: "insights", label: "Insights", emoji: "💡" },
-  { segment: "creative", label: "Create", emoji: "✨" },
-  { segment: "studio", label: "Studio", emoji: "🎨" },
+  { segment: "overview", label: "Overview", icon: LayoutDashboard },
+  { segment: "content", label: "Content", icon: Film },
+  { segment: "insights", label: "Insights", icon: Lightbulb },
+  { segment: "creative", label: "Create", icon: Wand2 },
+  { segment: "studio", label: "Studio", icon: Palette },
 ];
 
 export function TabNav({ projectId }: TabNavProps) {
   const pathname = usePathname();
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-b-2 border-purple-100 overflow-x-auto scrollbar-none">
-      <div className="flex gap-1 min-w-max px-3 sm:px-6 py-2 max-w-4xl mx-auto">
-        {tabs.map((tab) => {
-          const href = `/projects/${projectId}/${tab.segment}`;
-          const isActive = pathname.startsWith(href);
-          return (
-            <Link
-              key={tab.segment}
-              href={href}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
-                isActive
-                  ? "bg-purple-600 text-white shadow-md shadow-purple-300/50"
-                  : "bg-purple-50 text-purple-400 hover:bg-purple-100"
-              )}
-            >
-              <span>{tab.emoji}</span>
-              {tab.label}
-            </Link>
-          );
-        })}
+    <div className="border-b border-border bg-background sticky top-14 lg:top-0 z-30">
+      <div className="overflow-x-auto scrollbar-none max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav className="flex gap-6 min-w-max -mb-px">
+          {tabs.map((tab) => {
+            const href = `/projects/${projectId}/${tab.segment}`;
+            const isActive = pathname.startsWith(href);
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.segment}
+                href={href}
+                className={cn(
+                  "flex items-center gap-1.5 border-b-2 py-3 text-sm font-medium transition-colors whitespace-nowrap",
+                  isActive
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

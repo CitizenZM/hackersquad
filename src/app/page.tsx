@@ -19,18 +19,21 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-100 via-pink-50 to-amber-50">
-      <div className="px-4 py-8 sm:px-6 max-w-lg mx-auto">
-        <div className="text-center mb-8 bounce-in">
-          <div className="text-6xl mb-3">🧠</div>
-          <h1 className="text-3xl font-black text-purple-900 mb-2">
-            CreativeIntel OS
-          </h1>
-          <p className="text-purple-400 font-bold text-sm">
-            Your AI brand detective! Enter a brand and let the magic begin.
+    <div>
+      <div className="border-b border-border">
+        <div className="px-4 py-8 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <h1 className="text-2xl font-semibold tracking-tight">CreativeIntel OS</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Turn brand and competitor intelligence into production-ready creative.
           </p>
         </div>
-        <div className="bg-white rounded-3xl p-5 fun-shadow">
+      </div>
+      <div className="px-4 py-8 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+        <div className="rounded-lg border border-border bg-card p-6">
+          <h2 className="text-base font-semibold tracking-tight">Start a new analysis</h2>
+          <p className="text-xs text-muted-foreground mt-1 mb-5">
+            Enter a brand and its competitors. We&apos;ll crawl, analyze, and generate creative strategies.
+          </p>
           <ProjectForm />
         </div>
       </div>

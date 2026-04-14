@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Topbar } from "@/components/layout/topbar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import "./globals.css";
 
@@ -16,14 +18,24 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full font-sans pb-20">
+      <body className="min-h-full font-sans bg-background text-foreground">
         <TooltipProvider>
-          <main className="min-h-screen">{children}</main>
+          <Sidebar />
+          <Topbar />
+          <main className="min-h-screen pt-14 pb-16 lg:ml-60 lg:pt-0 lg:pb-0">
+            {children}
+          </main>
           <BottomNav />
         </TooltipProvider>
       </body>

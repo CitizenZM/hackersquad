@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIES, CAMPAIGN_GOALS } from "@/lib/constants";
-import { Plus, Trash2, Loader2, Rocket } from "lucide-react";
+import { Plus, Trash2, Loader2, ArrowRight } from "lucide-react";
 
 interface CompetitorField {
   name: string;
@@ -58,7 +58,7 @@ export function ProjectForm() {
 
     const validCompetitors = competitors.filter((c) => c.name.trim());
     if (validCompetitors.length === 0) {
-      setError("Add at least one competitor!");
+      setError("Add at least one competitor.");
       setLoading(false);
       return;
     }
@@ -81,7 +81,7 @@ export function ProjectForm() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Oops! Something went wrong.");
+        throw new Error(data.error || "Failed to create project");
       }
 
       const project = await res.json();
@@ -95,34 +95,41 @@ export function ProjectForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Brand */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="space-y-1.5">
-          <Label className="text-sm font-bold text-purple-700">🏷️ Brand Name</Label>
+          <Label htmlFor="brandName" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Brand name
+          </Label>
           <Input
-            placeholder="e.g. Nike, Tesla, Segway..."
+            id="brandName"
+            placeholder="e.g. Segway, Nike, Tesla"
             value={brandName}
             onChange={(e) => setBrandName(e.target.value)}
             required
-            className="rounded-2xl h-12 text-base border-2 border-purple-200 focus:border-purple-500 bg-purple-50/50 font-semibold"
+            className="h-10 rounded-md"
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-sm font-bold text-purple-700">🌐 Website</Label>
+          <Label htmlFor="brandUrl" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Website URL
+          </Label>
           <Input
+            id="brandUrl"
             type="url"
             placeholder="https://www.brand.com"
             value={brandUrl}
             onChange={(e) => setBrandUrl(e.target.value)}
-            className="rounded-2xl h-12 text-base border-2 border-purple-200 focus:border-purple-500 bg-purple-50/50"
+            className="h-10 rounded-md"
           />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-sm font-bold text-purple-700">📂 Category</Label>
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Category
+            </Label>
             <Select value={category} onValueChange={(v) => setCategory(v ?? "")}>
-              <SelectTrigger className="rounded-2xl h-12 border-2 border-purple-200 bg-purple-50/50">
-                <SelectValue placeholder="Pick one..." />
+              <SelectTrigger className="h-10 rounded-md">
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
@@ -132,10 +139,12 @@ export function ProjectForm() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-sm font-bold text-purple-700">🎯 Goal</Label>
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Campaign goal
+            </Label>
             <Select value={campaignGoal} onValueChange={(v) => setCampaignGoal(v ?? "")}>
-              <SelectTrigger className="rounded-2xl h-12 border-2 border-purple-200 bg-purple-50/50">
-                <SelectValue placeholder="Pick one..." />
+              <SelectTrigger className="h-10 rounded-md">
+                <SelectValue placeholder="Select goal" />
               </SelectTrigger>
               <SelectContent>
                 {CAMPAIGN_GOALS.map((goal) => (
@@ -147,16 +156,17 @@ export function ProjectForm() {
         </div>
       </div>
 
-      {/* Competitors */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-bold text-purple-700">⚔️ Competitors</Label>
+      <div className="space-y-3 pt-2 border-t border-border">
+        <div className="flex items-center justify-between pt-3">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Competitors
+          </Label>
           <button
             type="button"
             onClick={addCompetitor}
-            className="text-xs font-bold text-purple-500 hover:text-purple-700 flex items-center gap-1"
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" /> Add More
+            <Plus className="h-3.5 w-3.5" /> Add
           </button>
         </div>
         {competitors.map((comp, i) => (
@@ -165,20 +175,21 @@ export function ProjectForm() {
               placeholder="Competitor name"
               value={comp.name}
               onChange={(e) => updateCompetitor(i, "name", e.target.value)}
-              className="rounded-2xl h-11 border-2 border-pink-200 focus:border-pink-500 bg-pink-50/50 font-semibold flex-1"
+              className="h-10 rounded-md flex-1"
             />
             <Input
               type="url"
               placeholder="URL (optional)"
               value={comp.url}
               onChange={(e) => updateCompetitor(i, "url", e.target.value)}
-              className="rounded-2xl h-11 border-2 border-pink-200 focus:border-pink-500 bg-pink-50/50 flex-1 hidden sm:block"
+              className="h-10 rounded-md flex-1 hidden sm:block"
             />
             {competitors.length > 1 && (
               <button
                 type="button"
                 onClick={() => removeCompetitor(i)}
-                className="text-pink-300 hover:text-pink-600 p-2"
+                className="text-muted-foreground hover:text-foreground p-2 transition-colors"
+                aria-label="Remove competitor"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -188,25 +199,25 @@ export function ProjectForm() {
       </div>
 
       {error && (
-        <div className="rounded-2xl bg-red-50 border-2 border-red-200 p-3 text-sm text-red-600 font-bold text-center">
-          😢 {error}
+        <div className="rounded-md border border-[var(--status-urgent)] bg-[var(--status-urgent-bg)] px-3 py-2 text-xs text-[var(--status-urgent-fg)]">
+          {error}
         </div>
       )}
 
       <Button
         type="submit"
         disabled={loading || !brandName.trim()}
-        className="w-full h-14 rounded-2xl text-lg font-black gradient-fun border-0 shadow-lg shadow-purple-400/30 hover:shadow-purple-400/50 transition-all active:scale-[0.98]"
+        className="w-full h-10 rounded-md bg-foreground text-background hover:bg-foreground/90 font-medium"
       >
         {loading ? (
           <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Launching...
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Creating project...
           </>
         ) : (
           <>
-            <Rocket className="mr-2 h-5 w-5" />
-            Launch Research!
+            Launch research
+            <ArrowRight className="ml-2 h-4 w-4" />
           </>
         )}
       </Button>

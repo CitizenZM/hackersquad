@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { NARRATIVE_TYPE_LABELS, DATA_SOURCE_LABELS } from "@/lib/constants";
 import { ScoreRadar } from "@/components/dashboard/score-radar";
-import { ExternalLink, Eye, ThumbsUp, MessageSquare } from "lucide-react";
+import { StatusBadge, ScoreBar } from "@/components/dashboard/status-badge";
+import {
+  ExternalLink,
+  Eye,
+  ThumbsUp,
+  MessageSquare,
+  ArrowLeft,
+} from "lucide-react";
 import Link from "next/link";
 
 export default async function AssetInsightPage({
@@ -34,19 +39,20 @@ export default async function AssetInsightPage({
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-5 max-w-5xl mx-auto">
       <Link
         href={`/projects/${projectId}/content`}
-        className="text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
-        &larr; Back to Content
+        <ArrowLeft className="h-3 w-3" />
+        Back to content
       </Link>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+      <div className="flex flex-col sm:flex-row gap-5">
         {asset.thumbnailUrl && (
-          <div className="w-full sm:w-64 shrink-0">
-            <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <div className="w-full sm:w-56 shrink-0">
+            <div className="aspect-video rounded-lg overflow-hidden bg-muted border border-border">
               <img
                 src={asset.thumbnailUrl}
                 alt={asset.title}
@@ -55,34 +61,34 @@ export default async function AssetInsightPage({
             </div>
           </div>
         )}
-        <div className="space-y-2">
-          <h2 className="text-xl font-bold">{asset.title}</h2>
-          <div className="flex flex-wrap gap-2">
+        <div className="flex-1 min-w-0 space-y-2">
+          <h2 className="text-lg font-semibold tracking-tight">{asset.title}</h2>
+          <div className="flex flex-wrap gap-1.5">
             {asset.narrativeType && (
-              <Badge variant="secondary">
+              <StatusBadge level="neutral">
                 {NARRATIVE_TYPE_LABELS[asset.narrativeType]}
-              </Badge>
+              </StatusBadge>
             )}
-            <Badge variant="outline">{DATA_SOURCE_LABELS[asset.dataSource]}</Badge>
+            {asset.platform && <StatusBadge level="neutral">{asset.platform}</StatusBadge>}
             {asset.competitor && (
-              <Badge variant="outline">{asset.competitor.name}</Badge>
+              <StatusBadge level="neutral">{asset.competitor.name}</StatusBadge>
             )}
-            {asset.platform && <Badge variant="outline">{asset.platform}</Badge>}
+            {asset.isBrandOwned && <StatusBadge level="ai">Brand</StatusBadge>}
           </div>
-          <div className="flex gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
             {asset.viewCount != null && (
-              <span className="flex items-center gap-1">
-                <Eye className="h-4 w-4" /> {asset.viewCount.toLocaleString()} views
+              <span className="flex items-center gap-1 num">
+                <Eye className="h-3.5 w-3.5" /> {asset.viewCount.toLocaleString()}
               </span>
             )}
             {asset.likeCount != null && (
-              <span className="flex items-center gap-1">
-                <ThumbsUp className="h-4 w-4" /> {asset.likeCount.toLocaleString()} likes
+              <span className="flex items-center gap-1 num">
+                <ThumbsUp className="h-3.5 w-3.5" /> {asset.likeCount.toLocaleString()}
               </span>
             )}
             {asset.commentCount != null && (
-              <span className="flex items-center gap-1">
-                <MessageSquare className="h-4 w-4" /> {asset.commentCount.toLocaleString()} comments
+              <span className="flex items-center gap-1 num">
+                <MessageSquare className="h-3.5 w-3.5" /> {asset.commentCount.toLocaleString()}
               </span>
             )}
           </div>
@@ -91,107 +97,101 @@ export default async function AssetInsightPage({
               href={asset.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
             >
-              View Original <ExternalLink className="h-3 w-3" />
+              View original <ExternalLink className="h-3 w-3" />
             </a>
+          )}
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+            Source: {DATA_SOURCE_LABELS[asset.dataSource]}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Score Radar */}
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold tracking-tight">Score breakdown</p>
+            <span className="text-xs text-muted-foreground">AI predicted</span>
+          </div>
+          <ScoreRadar data={radarData} />
+          <div className="mt-3 text-center">
+            <p className="text-3xl font-semibold tracking-tight num">
+              {asset.overallScore}
+            </p>
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-0.5">
+              Overall score
+            </p>
+          </div>
+        </div>
+
+        {/* Hook Analysis */}
+        <div className="lg:col-span-3 rounded-lg border border-border bg-card p-5 space-y-4">
+          <p className="text-sm font-semibold tracking-tight">Hook analysis</p>
+          {asset.hookText && (
+            <div>
+              <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-1.5">
+                Opening hook
+              </p>
+              <p className="text-sm italic border-l-2 border-foreground pl-3">
+                &ldquo;{asset.hookText}&rdquo;
+              </p>
+            </div>
+          )}
+          <div>
+            <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-1.5">
+              Hook strength
+            </p>
+            <ScoreBar score={asset.hookStrength} />
+          </div>
+          {((asset.keyMessages as string[]) || []).length > 0 && (
+            <div>
+              <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-1.5">
+                Key messages
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {((asset.keyMessages as string[]) || []).map((msg, i) => (
+                  <StatusBadge key={i} level="neutral">
+                    {msg}
+                  </StatusBadge>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Score Radar */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Score Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScoreRadar data={radarData} />
-            <div className="text-center mt-2">
-              <span className="text-3xl font-bold">{asset.overallScore}</span>
-              <span className="text-sm text-muted-foreground ml-1">/ 100</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Hook Analysis */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Hook Analysis</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {asset.hookText && (
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase">
-                  Opening Hook
-                </p>
-                <p className="text-sm mt-1 italic">&ldquo;{asset.hookText}&rdquo;</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase">
-                Hook Strength
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ width: `${asset.hookStrength || 0}%` }}
-                  />
-                </div>
-                <span className="text-sm font-medium">{asset.hookStrength}</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase">
-                Key Messages
-              </p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {((asset.keyMessages as string[]) || []).map((msg, i) => (
-                  <Badge key={i} variant="outline" className="text-xs">
-                    {msg}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Description */}
       {asset.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Description / Transcript</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {asset.description}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-border bg-card p-5">
+          <p className="text-sm font-semibold tracking-tight mb-2">Description</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+            {asset.description}
+          </p>
+        </div>
       )}
 
       {/* Related Insights */}
       {asset.insights.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Related Insights</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="rounded-lg border border-border bg-card p-5">
+          <p className="text-sm font-semibold tracking-tight mb-3">Related insights</p>
+          <div className="space-y-2">
             {asset.insights.map((insight) => (
-              <div key={insight.id} className="flex gap-3 p-2 rounded border">
-                <Badge variant="secondary" className="text-xs shrink-0 h-fit">
+              <div key={insight.id} className="flex gap-3 items-start py-2">
+                <StatusBadge level="neutral" className="shrink-0 mt-0.5">
                   {insight.category}
-                </Badge>
+                </StatusBadge>
                 <div>
                   <p className="text-sm font-medium">{insight.title}</p>
-                  <p className="text-xs text-muted-foreground">{insight.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {insight.description}
+                  </p>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );

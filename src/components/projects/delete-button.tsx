@@ -21,13 +21,14 @@ export function DeleteButton({ projectId }: { projectId: string }) {
   return (
     <button
       onClick={handleDelete}
-      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600"
+      className="p-1.5 rounded-md text-muted-foreground hover:text-[var(--status-urgent-fg)] hover:bg-[var(--status-urgent-bg)] transition-colors"
       title="Delete project"
+      aria-label="Delete project"
     >
       {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
-        <Trash2 className="h-3.5 w-3.5" />
+        <Trash2 className="h-4 w-4" />
       )}
     </button>
   );

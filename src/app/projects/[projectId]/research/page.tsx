@@ -3,22 +3,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Circle,
   ArrowRight,
   Play,
+  Globe,
+  Video,
+  MessageSquare,
+  Brain,
+  BarChart3,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { name: "Crawling websites", emoji: "🌐" },
-  { name: "YouTube research", emoji: "📺" },
-  { name: "Collecting mentions", emoji: "💬" },
-  { name: "AI analysis", emoji: "🧠" },
-  { name: "Scoring content", emoji: "⭐" },
+  { name: "Crawling websites", icon: Globe },
+  { name: "YouTube research", icon: Video },
+  { name: "Collecting mentions", icon: MessageSquare },
+  { name: "AI analysis", icon: Brain },
+  { name: "Scoring content", icon: BarChart3 },
 ];
 
 type Status = "idle" | "running" | "complete" | "error";
@@ -41,9 +46,11 @@ export default function ResearchPage() {
         setProgress(100);
       } else if (data.status === "ERROR") {
         setStatus("error");
-        setError("Something went wrong. Try again!");
+        setError("Research failed. Try again.");
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [projectId]);
 
   async function startResearch() {
@@ -87,64 +94,81 @@ export default function ResearchPage() {
   }, []);
 
   return (
-    <div className="max-w-md mx-auto space-y-5">
-      <Card className="rounded-3xl border-2 border-purple-200 bg-white fun-shadow overflow-hidden">
-        <CardContent className="pt-5 pb-5 space-y-5">
-          <div className="text-center">
-            <div className="text-5xl mb-2">
-              {status === "complete" ? "🎉" : status === "error" ? "😢" : "🔬"}
-            </div>
-            <h2 className="text-xl font-black text-purple-900">
+    <div className="max-w-xl mx-auto">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-tight">Research Pipeline</h2>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                status === "complete" && "bg-[var(--status-healthy-bg)] text-[var(--status-healthy-fg)]",
+                status === "error" && "bg-[var(--status-urgent-bg)] text-[var(--status-urgent-fg)]",
+                (status === "running" || status === "idle") && "bg-[var(--status-ai-bg)] text-[var(--status-ai-fg)]"
+              )}
+            >
               {status === "complete"
-                ? "Research Complete!"
+                ? "Complete"
                 : status === "error"
-                  ? "Oops!"
+                  ? "Error"
                   : status === "running"
-                    ? "Researching..."
-                    : "Ready to Launch"}
-            </h2>
+                    ? "Running"
+                    : "Starting"}
+            </span>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-bold text-purple-500">
-              <span>Progress</span>
-              <span>{Math.round(progress)}%</span>
+        <div className="px-5 py-5 space-y-5">
+          {/* Progress bar */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground font-medium">Overall progress</span>
+              <span className="num font-medium">{Math.round(progress)}%</span>
             </div>
-            <div className="h-4 rounded-full bg-purple-100 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full gradient-fun transition-all duration-500"
+                className="h-full rounded-full bg-foreground transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
+          {/* Steps */}
+          <div className="space-y-1">
             {STEPS.map((step, i) => {
               const stepProgress = (progress / 100) * STEPS.length;
               const isComplete = stepProgress > i + 1;
               const isRunning = stepProgress > i && stepProgress <= i + 1;
+              const Icon = step.icon;
 
               return (
                 <div
                   key={step.name}
-                  className={`flex items-center gap-3 rounded-2xl p-3 transition-all ${
-                    isComplete
-                      ? "bg-green-50 border-2 border-green-200"
-                      : isRunning
-                        ? "bg-purple-50 border-2 border-purple-300"
-                        : "bg-gray-50 border-2 border-gray-100"
-                  }`}
+                  className="flex items-center gap-3 py-2"
                 >
-                  {isComplete ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                  ) : isRunning ? (
-                    <Loader2 className="h-5 w-5 text-purple-500 animate-spin shrink-0" />
-                  ) : (
-                    <span className="text-xl shrink-0">{step.emoji}</span>
-                  )}
-                  <span className={`text-sm font-bold ${
-                    isComplete ? "text-green-700" : isRunning ? "text-purple-700" : "text-gray-400"
-                  }`}>
+                  <div className="shrink-0">
+                    {isComplete ? (
+                      <CheckCircle2 className="h-4 w-4 text-[var(--status-healthy-fg)]" />
+                    ) : isRunning ? (
+                      <Loader2 className="h-4 w-4 text-[var(--status-ai-fg)] animate-spin" />
+                    ) : status === "error" && i === Math.floor(stepProgress) ? (
+                      <XCircle className="h-4 w-4 text-[var(--status-urgent-fg)]" />
+                    ) : (
+                      <Circle className="h-4 w-4 text-muted-foreground/40" />
+                    )}
+                  </div>
+                  <Icon className={cn(
+                    "h-4 w-4 shrink-0",
+                    isComplete || isRunning ? "text-foreground" : "text-muted-foreground/60"
+                  )} />
+                  <span className={cn(
+                    "text-sm font-medium",
+                    isComplete
+                      ? "text-foreground"
+                      : isRunning
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                  )}>
                     {step.name}
                   </span>
                 </div>
@@ -153,36 +177,47 @@ export default function ResearchPage() {
           </div>
 
           {status === "running" && (
-            <p className="text-xs text-purple-400 text-center font-bold animate-pulse">
-              Hang tight! Our AI is working its magic... ✨
+            <p className="text-xs text-muted-foreground">
+              Crawling websites, searching YouTube, and running AI analysis. This takes ~30–60 seconds.
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {status === "complete" && (
         <Button
           onClick={() => router.push(`/projects/${projectId}/overview`)}
-          className="w-full h-14 rounded-2xl text-lg font-black gradient-fun border-0 shadow-lg shadow-purple-400/30 active:scale-[0.98] transition-all"
+          className="w-full mt-4 h-10 rounded-md bg-foreground text-background hover:bg-foreground/90"
         >
-          See Results! 🎉
-          <ArrowRight className="ml-2 h-5 w-5" />
+          View dashboard
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       )}
 
       {status === "error" && (
-        <div className="space-y-3">
+        <div className="mt-4 space-y-3">
           {error && (
-            <div className="rounded-2xl bg-red-50 border-2 border-red-200 p-3 text-sm text-red-600 font-bold text-center">
-              😢 {error}
+            <div className="rounded-md border border-[var(--status-urgent)] bg-[var(--status-urgent-bg)] p-3 text-sm text-[var(--status-urgent-fg)]">
+              {error}
             </div>
           )}
-          <Button
-            onClick={startResearch}
-            className="w-full h-12 rounded-2xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 active:scale-[0.98]"
-          >
-            <Play className="mr-2 h-4 w-4" /> Try Again
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={startResearch}
+              variant="outline"
+              className="flex-1 h-10 rounded-md"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+            <Button
+              onClick={() => router.push(`/projects/${projectId}/overview`)}
+              variant="secondary"
+              className="flex-1 h-10 rounded-md"
+            >
+              View partial results
+            </Button>
+          </div>
         </div>
       )}
     </div>
