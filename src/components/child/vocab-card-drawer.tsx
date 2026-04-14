@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, Volume2 } from "lucide-react";
+import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
+import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
 
 interface VocabWord {
   id: string;
@@ -30,12 +32,33 @@ const CARD_COLORS = [
 
 export function VocabCardDrawer({ visible, words, onClose }: VocabCardDrawerProps) {
   const [current, setCurrent] = useState(0);
+  const { play } = useSoundEffects();
+  const { speak } = useVoiceGuide();
+
+  useEffect(() => {
+    if (visible && words.length > 0) {
+      play("sparkle");
+      setTimeout(() => speak("Let's learn some new words!", { pitch: 1.2 }), 400);
+    }
+  }, [visible, words.length, play, speak]);
 
   const handlers = useSwipeable({
-    onSwipedLeft: () => setCurrent((c) => Math.min(words.length - 1, c + 1)),
-    onSwipedRight: () => setCurrent((c) => Math.max(0, c - 1)),
+    onSwipedLeft: () => {
+      play("whoosh");
+      setCurrent((c) => Math.min(words.length - 1, c + 1));
+    },
+    onSwipedRight: () => {
+      play("whoosh");
+      setCurrent((c) => Math.max(0, c - 1));
+    },
     trackMouse: true,
   });
+
+  function speakWord() {
+    if (!words[current]) return;
+    play("pop");
+    speak(`${words[current].word}. ${words[current].definition}`, { pitch: 1.2 });
+  }
 
   if (words.length === 0) return null;
 
@@ -71,12 +94,17 @@ export function VocabCardDrawer({ visible, words, onClose }: VocabCardDrawerProp
             <AnimatePresence mode="wait">
               <motion.div
                 key={word.id}
+                onClick={speakWord}
                 initial={{ opacity: 0, x: 60 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -60 }}
                 transition={{ duration: 0.3 }}
-                className={`w-full max-w-[300px] rounded-3xl bg-gradient-to-br ${color} p-6 shadow-xl`}
+                whileTap={{ scale: 0.97 }}
+                className={`relative w-full max-w-[300px] rounded-3xl bg-gradient-to-br ${color} p-6 shadow-xl cursor-pointer`}
               >
+                <div className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                  <Volume2 className="h-4 w-4 text-white" />
+                </div>
                 {word.imageUrl && (
                   <img
                     src={word.imageUrl}

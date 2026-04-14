@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAudioPlayer } from "@/lib/hooks/use-audio-player";
+import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { CelebrationScreen } from "./celebration-screen";
 import { VocabCardDrawer } from "./vocab-card-drawer";
 import { ChevronLeft, RotateCcw, Play, Pause, SkipForward } from "lucide-react";
@@ -57,6 +58,7 @@ export function StoryPlayer({
   const [showCelebration, setShowCelebration] = useState(false);
   const [showVocab, setShowVocab] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
+  const { play: playSfx } = useSoundEffects();
   const {
     isPlaying,
     currentTime,
@@ -78,6 +80,7 @@ export function StoryPlayer({
       if (currentTime < elapsed) {
         if (i !== currentScene) {
           setCurrentScene(i);
+          playSfx("whoosh");
           logEvent("FLASHCARD_VIEW");
         }
         break;
@@ -267,6 +270,7 @@ export function StoryPlayer({
         <div className="flex items-center justify-center gap-6">
           <button
             onClick={() => {
+              playSfx("tap");
               goToScene(Math.max(0, currentScene - 1));
             }}
             className="flex h-14 w-14 items-center justify-center rounded-full bg-child-surface shadow-md active:scale-90 transition-transform"
@@ -276,6 +280,7 @@ export function StoryPlayer({
 
           <button
             onClick={() => {
+              playSfx("pop");
               togglePlay();
               if (isPlaying) logEvent("PLAY_PAUSE");
               else logEvent("PLAY_RESUME");
@@ -290,7 +295,10 @@ export function StoryPlayer({
           </button>
 
           <button
-            onClick={() => goToScene(Math.min(scenes.length - 1, currentScene + 1))}
+            onClick={() => {
+              playSfx("tap");
+              goToScene(Math.min(scenes.length - 1, currentScene + 1));
+            }}
             className="flex h-14 w-14 items-center justify-center rounded-full bg-child-surface shadow-md active:scale-90 transition-transform"
           >
             <SkipForward className="h-6 w-6 text-foreground/60" />
