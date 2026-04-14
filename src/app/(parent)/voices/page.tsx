@@ -2,7 +2,9 @@ import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Info } from "lucide-react";
+import { Mic } from "lucide-react";
+import { VoiceRecorder } from "@/components/parent/voice-recorder";
+import { VoiceProfileList } from "@/components/parent/voice-profile-list";
 
 export const dynamic = "force-dynamic";
 
@@ -18,58 +20,44 @@ export default async function VoicesPage() {
     <div>
       <ParentHeader
         title="Voice Studio"
-        description="Record your voice to personalize story narration"
+        description="Record your voice so stories feel like you're reading them"
       />
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Info className="h-4 w-4" /> Voice Cloning (Beta)
+              <Mic className="h-4 w-4" />
+              Record a Voice Sample
             </CardTitle>
             <CardDescription>
-              Record sample phrases so we can create a voice similar to yours for story narration.
-              This feature is in beta — for now, stories use our default AI narrator.
+              Read the sample script out loud. We&apos;ll use this to make the
+              narrator sound familiar to your child.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border-2 border-dashed p-8 text-center">
-              <Mic className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <p className="mt-4 text-lg font-medium">Voice Recording</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Voice recording and cloning will be available soon. Currently, all stories
-                use the default AI narrator voice which is warm and child-friendly.
-              </p>
-            </div>
+            <VoiceRecorder />
           </CardContent>
         </Card>
 
-        {voices.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Voice Profiles</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {voices.map((voice) => (
-                  <div
-                    key={voice.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Mic className="h-5 w-5 text-primary" />
-                      <div>
-                        <div className="font-medium">{voice.voiceType}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Status: {voice.status}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Voice Profiles</CardTitle>
+            <CardDescription>
+              Saved recordings for use in story narration
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VoiceProfileList
+              profiles={voices.map((v) => ({
+                id: v.id,
+                voiceType: v.voiceType,
+                sampleAudioUrl: v.sampleAudioUrl,
+                status: v.status,
+                createdAt: v.createdAt.toISOString(),
+              }))}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

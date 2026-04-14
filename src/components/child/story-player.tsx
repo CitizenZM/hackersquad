@@ -9,6 +9,7 @@ import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
 import { CelebrationScreen } from "./celebration-screen";
 import { VocabCardDrawer } from "./vocab-card-drawer";
+import { InteractiveScene } from "./interactive-scene";
 import { ChevronLeft, RotateCcw, Play, Pause, SkipForward, Volume2 } from "lucide-react";
 
 interface FlashcardScene {
@@ -17,6 +18,7 @@ interface FlashcardScene {
   imageUrl: string | null;
   textSnippet: string;
   duration: number | null;
+  prompt?: string | null;
 }
 
 interface VocabWord {
@@ -61,45 +63,75 @@ export function StoryPlayer({
   const [showVocab, setShowVocab] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const { play: playSfx } = useSoundEffects();
-  const { speak, stop: stopSpeech } = useVoiceGuide();
+  const { speakStory, stop: stopSpeech } = useVoiceGuide();
 
   const audio = useAudioPlayer(audioUrl);
   const hasAudio = !!audioUrl;
 
-  // Fallback: timer-driven playback when no audio
+  // Fallback: voice-driven playback when no audio. Scenes advance when
+  // the narration for the current scene finishes (with a small pause),
+  // so the flashcard stays up as long as the voice is talking.
   const [timerPlaying, setTimerPlaying] = useState(false);
   const [timerElapsed, setTimerElapsed] = useState(0);
-  const timerTotalDuration = scenes.reduce(
-    (a, s) => a + (s.duration || DEFAULT_SCENE_DURATION),
-    0
+  const speechCancelRef = useRef<(() => void) | null>(null);
+  const allSceneDurations = scenes.map(
+    (s) => s.duration || DEFAULT_SCENE_DURATION
   );
+  const timerTotalDuration = allSceneDurations.reduce((a, d) => a + d, 0);
 
+  // Clock that tracks roughly how much of the episode has elapsed, for
+  // the progress bar. Resets when user scrubs or jumps scenes.
   useEffect(() => {
     if (hasAudio || !timerPlaying) return;
     const interval = setInterval(() => {
       setTimerElapsed((t) => {
         const next = t + 0.25;
-        if (next >= timerTotalDuration) {
-          setTimerPlaying(false);
-          return timerTotalDuration;
-        }
-        return next;
+        return next > timerTotalDuration ? timerTotalDuration : next;
       });
     }, 250);
     return () => clearInterval(interval);
   }, [hasAudio, timerPlaying, timerTotalDuration]);
 
-  // When using fallback: speak each scene's text when active
+  // Voice drives scene advance: when narration for the current scene
+  // ends, snap the clock to the next scene's boundary and advance.
   useEffect(() => {
     if (hasAudio) return;
     if (!timerPlaying) {
       stopSpeech();
+      speechCancelRef.current?.();
+      speechCancelRef.current = null;
       return;
     }
     const snippet = scenes[currentScene]?.textSnippet;
-    if (snippet) {
-      speak(snippet, { pitch: 1.15, rate: 0.92 });
-    }
+    if (!snippet) return;
+
+    let aborted = false;
+    const cancel = speakStory(snippet, {
+      onComplete: () => {
+        if (aborted) return;
+        // Snap elapsed time to the end of the current scene
+        const boundary = allSceneDurations
+          .slice(0, currentScene + 1)
+          .reduce((a, d) => a + d, 0);
+        setTimerElapsed(boundary);
+
+        if (currentScene < scenes.length - 1) {
+          // Advance scene
+          setCurrentScene(currentScene + 1);
+          playSfx("whoosh");
+          logEvent("FLASHCARD_VIEW");
+        } else {
+          // Last scene done → end playback, let celebration trigger
+          setTimerPlaying(false);
+        }
+      },
+    });
+    speechCancelRef.current = cancel;
+
+    return () => {
+      aborted = true;
+      cancel();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentScene, timerPlaying, hasAudio]);
 
@@ -110,7 +142,10 @@ export function StoryPlayer({
   const progress = hasAudio ? audio.progress : duration > 0 ? timerElapsed / duration : 0;
   const hasEnded = hasAudio
     ? audio.hasEnded
-    : timerElapsed >= timerTotalDuration && timerTotalDuration > 0 && !timerPlaying;
+    : !timerPlaying &&
+      currentScene >= scenes.length - 1 &&
+      timerElapsed >= timerTotalDuration - 0.5 &&
+      timerTotalDuration > 0;
 
   function togglePlay() {
     if (hasAudio) {
@@ -142,9 +177,10 @@ export function StoryPlayer({
     }
   }
 
-  // Auto-advance scenes based on timing (works for both audio + timer)
+  // Audio-mode: advance scenes based on audio timestamps.
+  // (Voice-mode advances via speakStory's onComplete above.)
   useEffect(() => {
-    if (!isPlaying || scenes.length === 0 || duration === 0) return;
+    if (!hasAudio || !isPlaying || scenes.length === 0 || duration === 0) return;
 
     let elapsed = 0;
     for (let i = 0; i < scenes.length; i++) {
@@ -159,7 +195,7 @@ export function StoryPlayer({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTime, isPlaying, scenes, duration]);
+  }, [currentTime, isPlaying, scenes, duration, hasAudio]);
 
   // Show celebration when playback ends
   useEffect(() => {
@@ -291,7 +327,7 @@ export function StoryPlayer({
         </div>
       </div>
 
-      {/* Flashcard area */}
+      {/* Flashcard area — swipe to navigate, tap whitespace to play/pause */}
       <div className="flex-1 flex flex-col px-4 pb-2" {...swipeHandlers}>
         <div className="flex-1 relative" onClick={togglePlay}>
           <AnimatePresence mode="wait">
@@ -302,31 +338,19 @@ export function StoryPlayer({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -80 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="absolute inset-0 flex flex-col"
+                className="absolute inset-0"
+                onClick={(e) => e.stopPropagation()}
               >
-                {/* Image */}
-                <div className="flex-1 overflow-hidden rounded-3xl bg-white shadow-lg">
-                  {scene.imageUrl ? (
-                    <img
-                      src={scene.imageUrl}
-                      alt={`Scene ${scene.sceneOrder}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 via-violet-50 to-rose-100">
-                      <span className="text-8xl">
-                        {SCENE_EMOJIS[scene.sceneOrder % SCENE_EMOJIS.length]}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Text overlay */}
-                <div className="mt-3 rounded-2xl bg-white/90 backdrop-blur-xl p-4 shadow-sm">
-                  <p className="child-body text-center text-foreground/80">
-                    {scene.textSnippet}
-                  </p>
-                </div>
+                <InteractiveScene
+                  sceneId={scene.id}
+                  sceneOrder={scene.sceneOrder}
+                  imageUrl={scene.imageUrl}
+                  textSnippet={scene.textSnippet}
+                  promptMetadata={scene.prompt ?? null}
+                  fallbackEmoji={
+                    SCENE_EMOJIS[scene.sceneOrder % SCENE_EMOJIS.length]
+                  }
+                />
               </motion.div>
             )}
           </AnimatePresence>
