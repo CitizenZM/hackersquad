@@ -45,8 +45,8 @@ const EPISODE_1: SeedEpisode = {
   scenes: [
     {
       text:
-        "In a cozy little den at the edge of the deep forest lived a young bear cub named Milo. Milo had soft brown fur, round cheeks, and the biggest, curious eyes you ever saw. Every night, Mama Bear tucked him in under a warm patchwork blanket. She kissed his nose, whispered \"Sweet dreams, my little star,\" and turned out the lamp. But tonight, Milo was not sleepy at all. His paws wiggled. His tail twitched. His tummy felt like it had a hundred butterflies dancing inside.",
-      duration: 18,
+        "In a cozy little den at the edge of the deep, deep forest, there lived a young bear cub named Milo. Milo had soft, shaggy brown fur, round pink cheeks, and the biggest, most curious eyes you ever saw. Every single night, Mama Bear tucked him in under a warm patchwork blanket that smelled like pine trees and honey. She kissed his black button nose and whispered, \"Sweet dreams, my little star.\" Then she turned the lamp down low, until the room was filled with a soft golden glow. But tonight, Milo was not sleepy at all, not even one little bit. His paws wiggled under the covers. His tail twitched this way and that. His tummy felt like it had a hundred tiny butterflies dancing all at once. Something exciting was going to happen tonight. He just knew it in his bones.",
+      duration: 22,
       theme: "indoor",
       character: { emoji: "🐻", position: "bottom-right" },
       hotspots: [
@@ -56,8 +56,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "Very quietly, Milo tiptoed to the round window of his den. Outside, the night sky was dark and velvety, sprinkled with a thousand silver stars. The moon was as round as a pancake. A soft breeze made the leaves whisper. Milo pressed his wet little nose against the glass and sighed a happy sigh. \"Hello, moon,\" he whispered. \"Hello, stars.\" And just as he spoke, something magical happened.",
-      duration: 16,
+        "Very quietly, oh so quietly, Milo tiptoed out of bed and across the wooden floor. He stopped at the round window of his den and peeked outside. The night sky was dark and velvety, sprinkled with a thousand shimmering silver stars. The moon was as round and bright as a big pancake made of light. A soft breeze made all the leaves whisper little secrets. Milo pressed his wet little nose against the cool glass and sighed a long, happy sigh. \"Hello, moon,\" he whispered. \"Hello, stars. Hello, sleepy whole wide world.\" And just as he spoke those last words, something truly magical happened up in the sky.",
+      duration: 20,
       theme: "night",
       character: { emoji: "🐻", position: "bottom-left" },
       hotspots: [
@@ -67,8 +67,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "Whoosh! A tiny shooting star zipped across the sky. It sparkled gold and pink and blue. It swooped down, down, down, and landed somewhere deep in the forest with a soft, glittery thump. Milo's eyes went as wide as saucers. A real falling star, right here in his forest! He just had to find it. He put on his favorite red scarf and very, very quietly slipped out the door.",
-      duration: 15,
+        "Whoosh! A tiny shooting star zipped across the whole sky. It sparkled gold and pink and bright blue, leaving a trail of shimmering dust behind it. It swooped down, down, down, faster and faster, and landed somewhere deep in the forest with a soft, glittery thump. Milo's round eyes went as wide as two shiny saucers. A real falling star, right here in his very own forest! He just had to find it, he simply had to. He pulled on his favorite red scarf, the one Grandma Bear had knitted for him, and very, very, very quietly slipped out the little round door.",
+      duration: 19,
       theme: "sky",
       character: { emoji: "🐻", position: "bottom-right" },
       hotspots: [
@@ -78,8 +78,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "The meadow was bathed in silver moonlight. Tall grass tickled Milo's belly. Sleepy flowers nodded their heads. A family of fireflies blinked hello, floating like tiny yellow lanterns. Milo walked softly so he wouldn't wake anybody. Every few steps he looked up to follow the trail of sparkles the star had left behind. The sparkles led him to the edge of the willow woods.",
-      duration: 15,
+        "The meadow was bathed in cool silver moonlight, soft and calm. Tall grass tickled Milo's round belly as he waded through. Sleepy flowers nodded their colorful heads and puffed out little yawns. A whole family of twinkling fireflies blinked a friendly hello, floating here and there like tiny yellow lanterns. Milo walked softly, softly on his padded paws, so he wouldn't wake up anybody. Every few steps he tipped his head back and looked up, following the long glittery trail of sparkles the shooting star had left behind. The shimmer led him on, right to the edge of the tall, whispering willow woods.",
+      duration: 19,
       theme: "meadow",
       character: { emoji: "🐻", position: "bottom-left" },
       hotspots: [
@@ -89,8 +89,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "Under the tallest willow tree sat Old Hootie the owl, smoothing her feathers with her beak. \"Hoo goes there?\" she called softly. \"It is only me, Milo,\" said Milo. \"Did you see the shooting star?\" Old Hootie nodded her wise round head. \"Follow the shimmer,\" she hooted. \"It fell by the singing stream.\" She pointed a feathery wing, and Milo said thank you and hurried along.",
-      duration: 16,
+        "Under the very tallest willow tree, with its long sweeping branches, sat Old Hootie the wise owl, carefully smoothing her soft grey feathers with her curved beak. \"Hoo goes there in the middle of the night?\" she called softly into the dark. \"It is only me, Hootie. It's Milo the bear cub,\" said Milo in his politest voice. \"Please, did you see the shooting star come down?\" Old Hootie blinked her big amber eyes and nodded her wise round head up and down. \"Follow the shimmer, little one,\" she hooted. \"The star fell by the singing stream, just past the mossy rocks.\" She pointed the way with one soft feathery wing. Milo said a big thank you, bowed his head, and hurried off along the moonlit path.",
+      duration: 22,
       theme: "forest",
       character: { emoji: "🦉", position: "top-right" },
       hotspots: [
@@ -100,8 +100,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "The singing stream giggled and bubbled over smooth round stones. On a shiny lily pad sat a little green frog named Pip. \"Ribbit ribbit,\" said Pip. \"Are you looking for the falling star?\" \"Yes!\" said Milo. Pip hopped twice and splashed. \"The shimmer went that way, to the old stone well.\" Pip showed Milo the way, hopping from stone to stone across the water.",
-      duration: 15,
+        "The singing stream giggled and bubbled happily over smooth, round, speckled stones. Silver fish darted under the water, and tiny bubbles floated up to the surface and popped with a pretty sound. On a shiny green lily pad sat a little round frog named Pip. He had bright yellow eyes and a friendly smile. \"Ribbit, ribbit,\" said Pip, puffing out his bumpy throat. \"Are you looking for the falling star, Mister Bear?\" \"Yes!\" said Milo, nodding so hard his ears wobbled. Pip hopped twice on his lily pad and made a silly splash that got Milo's paws wet. \"The shimmer went that way, past the mossy rocks, all the way to the old stone well.\" And Pip showed Milo the way, hopping brightly from stone to stone across the stream.",
+      duration: 22,
       theme: "water",
       character: { emoji: "🐸", position: "bottom-left" },
       hotspots: [
@@ -111,8 +111,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "Deep in the woods stood an old, old well, covered in soft green moss. A warm golden glow spilled up from inside. Milo peeked over the edge. Way down at the bottom, curled up in a tiny ball, was the little lost star. Her light was soft and trembly, like a flickering candle. She looked very small and very scared. \"Don't be afraid,\" Milo whispered. \"I'm here to help.\"",
-      duration: 17,
+        "Deep, deep in the quiet woods stood an old, old stone well, all covered in soft green moss and twisty little vines. A warm golden glow, like sunshine caught in a jar, spilled up from somewhere inside. Milo held his breath and stood on his tippy-toes to peek right over the edge of the well. Way, way down at the bottom, curled up in a tiny glowing ball, was the little lost star. Her light was soft and trembly, like a flickering candle in the breeze. She looked so very small, and so very scared, and so very far from home. \"Don't be afraid, little star,\" Milo whispered gently. \"I'm right here. I came to help you get back home.\"",
+      duration: 22,
       theme: "magic",
       character: { emoji: "🐻", position: "bottom-right" },
       hotspots: [
@@ -122,8 +122,8 @@ const EPISODE_1: SeedEpisode = {
     },
     {
       text:
-        "The little star peeked up with shiny, tear-drop eyes. \"I flew too low,\" she said in a voice like a tinkle of bells. \"And now I can't get back home.\" Milo's heart felt warm. He thought and he thought and he thought. Then his whiskers twitched. \"I have a brave idea,\" said Milo. \"Wait right here, little star. I'll be back with friends, and together we'll get you home.\"",
-      duration: 16,
+        "The little star slowly peeked up with shiny, tear-drop eyes. \"I was flying through the sky, playing catch with the clouds, and I flew too low,\" she said in a small voice like a tinkle of tiny bells. \"And now I can't get back up. The well is too deep and my light is too small.\" Milo's warm bear heart felt full of kindness. He sat down by the edge of the well and he thought and he thought and he thought some more. Then his whiskers twitched and his eyes lit up. \"I have a brave idea!\" said Milo with a smile. \"Wait right here, little star. Don't be scared. I'll be back soon with my forest friends, and together, all of us, we will find a way to get you home.\"",
+      duration: 22,
       theme: "magic",
       character: { emoji: "🐻", position: "bottom-left" },
       hotspots: [
@@ -165,8 +165,8 @@ const EPISODE_2: SeedEpisode = {
   scenes: [
     {
       text:
-        "Milo hurried back through the moonlit meadow. \"Friends! Friends!\" he called softly. \"I need your help!\" First he found Pip the frog by the stream, polishing a shiny pebble. Pip listened, eyes wide. \"A real falling star?\" he gasped. \"I'll help! Ribbit!\" Pip hopped high into the air and splashed back down, ready for adventure.",
-      duration: 14,
+        "Milo hurried back through the silver, moonlit meadow, his red scarf bouncing. \"Friends! Friends!\" he called in an excited whisper. \"I need your help! Please come quickly!\" First he found Pip the frog by the stream, happily polishing a shiny round pebble with a leaf. Pip stopped polishing. His big yellow eyes went wide, and his throat puffed out. \"A real, real, real falling star? A true one?\" he gasped. \"Of course I'll help! Ribbit!\" Pip hopped high, high up into the air and splashed right back down with the biggest splash you ever saw, ready for a grand adventure.",
+      duration: 19,
       theme: "water",
       character: { emoji: "🐸", position: "bottom-right" },
       hotspots: [
@@ -176,8 +176,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "Next, Milo went back to Old Hootie's willow tree. The wise owl fluffed her feathers. \"A little star trapped in the old stone well?\" she said. \"Oh my. Oh my indeed.\" She spread her big soft wings. \"I know exactly what we need. Pinecones! Big strong pinecones. We can stack them up so the star can climb out.\" Milo clapped his paws. \"Pinecones! What a wonderful idea!\"",
-      duration: 16,
+        "Next, Milo and Pip went back to Old Hootie's willow tree. The wise owl fluffed her big grey feathers and listened very carefully, head tilted to one side. \"A little lost star, trapped at the bottom of the old stone well?\" she said slowly. \"Oh my. Oh my goodness, indeed.\" She spread out her big soft wings wide. \"I know exactly what we need to do. Pinecones! Big, strong, round pinecones! If we all gather a lot of them, we can stack them up, one on top of another, so the little star can climb right out.\" Milo clapped his paws together with joy. \"Pinecones! Oh, what a wonderful, wonderful idea, Hootie!\"",
+      duration: 22,
       theme: "forest",
       character: { emoji: "🦉", position: "top-right" },
       hotspots: [
@@ -187,8 +187,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "Along the path they met Rosie the rabbit, with her twitchy pink nose, and Nutty the squirrel, who had three acorns tucked in his cheeks. \"A tower of pinecones?\" said Rosie. \"I am very good at finding things.\" \"I am very good at climbing,\" said Nutty, spitting out the acorns. \"We will help!\" cheered the friends. Together they scampered off to the tall pine trees.",
-      duration: 16,
+        "Along the winding path they met Rosie the rabbit, with her long floppy ears and her twitchy pink nose, and Nutty the squirrel, who had three fat acorns tucked inside his chubby cheeks. Milo explained everything in a hurry. \"A tower of pinecones, you say?\" said Rosie, giving a big hop of excitement. \"I am very, very good at finding things in the forest.\" \"And I am very, very good at climbing and tossing,\" said Nutty, spitting out all three of his acorns at once. \"We will help! We will help!\" cheered the friends all together. And with that, the whole merry group scampered off to the tall, fragrant pine trees on the hill.",
+      duration: 22,
       theme: "forest",
       character: { emoji: "🐰", position: "bottom-left" },
       hotspots: [
@@ -198,8 +198,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "The pine trees were tall and smelled like fresh breeze. Pinecones lay everywhere on the soft brown ground. \"One, two, three!\" counted Rosie, hopping from one to the next. Nutty scampered up a trunk and tossed pinecones down. Pip caught them in a big lily pad like a basket. Old Hootie carried the biggest ones in her claws. Milo rolled two pinecones at a time with his nose. It was very, very funny.",
-      duration: 16,
+        "The pine trees were very tall and smelled wonderfully like a fresh, piney breeze. Brown pinecones lay scattered everywhere on the soft, needle-covered ground. \"One, two, three!\" counted Rosie, hopping cheerfully from one pinecone to the next, gathering them into a neat pile. Nutty the squirrel scampered right up a tall tree trunk and began tossing pinecones down from the branches. Pip the frog caught them all in a great big lily pad that he used just like a basket. Old Hootie the owl carried the biggest, heaviest pinecones safely in her strong claws. And Milo rolled two round pinecones at a time with his wet black nose. It was all very, very silly and very, very funny, and everybody laughed together.",
+      duration: 22,
       theme: "forest",
       character: { emoji: "🐻", position: "bottom-right" },
       hotspots: [
@@ -209,8 +209,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "At the old stone well, the little star was still waiting, glowing softly. \"We're back!\" called Milo. \"And we brought friends!\" The little star's light grew a little brighter. One by one, the friends dropped pinecones down into the well. Plop. Plop. Plop. The pile grew taller and taller. The star climbed on top, holding on with her tiny twinkly arms. \"Higher! Higher!\" the friends cheered together.",
-      duration: 16,
+        "At the old stone well, the little star was still waiting patiently, glowing softly in the dark. \"We're back, little star! We're back!\" called Milo happily. \"And we brought all our wonderful friends!\" The little star's light grew just a tiny bit brighter, and she smiled. One by one, very carefully, the friends dropped the pinecones down, down, down into the deep well. Plop. Plop. Plop. Plop. The pile at the bottom grew taller and taller and taller still. The little star climbed right up on top of the pile, holding on with her tiny twinkly arms. \"Higher! Higher! Almost there!\" the friends cheered together, clapping their paws and wings.",
+      duration: 22,
       theme: "magic",
       character: { emoji: "🌟", position: "top-left" },
       hotspots: [
@@ -220,8 +220,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "When the tower was tall enough, the little star peeked over the top of the well. She blinked up at the night sky. She was shining so brightly now. Milo reached out his soft paw. \"Ready to fly?\" he asked gently. The little star smiled. \"Thank you, my friends,\" she said. \"You are the kindest animals in all the forest.\" She hugged each one with a little golden sparkle.",
-      duration: 16,
+        "When the pinecone tower was tall enough, the little star peeked right over the top of the well, and smiled. She blinked her shiny eyes up at the whole big beautiful night sky. She was shining so brightly now, like a little golden lantern. Milo reached out his soft, furry paw. \"Are you ready to fly home, little one?\" he asked very gently. The little star smiled the brightest smile of all. \"Thank you, thank you, my new friends,\" she said. \"You are the kindest, bravest animals in the whole entire forest, and I will never, ever forget you.\" Then she hugged each one with a warm little golden sparkle that tickled.",
+      duration: 22,
       theme: "magic",
       character: { emoji: "🌟", position: "top-right" },
       hotspots: [
@@ -231,8 +231,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "Then, with one, two, three — whoosh! — the little star shot up, up, up into the velvet sky. She left a long trail of shimmering sparkles behind. Milo and his friends stood very still. They tipped their heads all the way back and watched until the little star joined the other stars and twinkled brightly, happy and home at last. The whole sky seemed to smile.",
-      duration: 15,
+        "Then, with one big, two big, three big — whoosh! — the little star shot up, up, up, way up into the soft velvet sky. She left a long, bright trail of shimmering sparkles behind her as she went. Milo and all his forest friends stood very, very still on the soft mossy ground. They tipped their heads all the way back and watched in wonder. They watched and watched until the little star soared back up among all the other twinkly stars, and she twinkled brightly there, happy and safe and home at last. The whole big sky seemed to smile down on them.",
+      duration: 22,
       theme: "sky",
       character: { emoji: "🌠", position: "top-right" },
       hotspots: [
@@ -242,8 +242,8 @@ const EPISODE_2: SeedEpisode = {
     },
     {
       text:
-        "Milo said goodbye to his friends with warm, cozy hugs. He padded home through the meadow. His paws were tired, but his heart was full. Mama Bear was waiting at the door with her warmest smile. Milo snuggled under his patchwork blanket. \"Goodnight, stars,\" he whispered. \"Goodnight, friends.\" And somewhere up above, a little star twinkled brighter than all the others, just for Milo.",
-      duration: 16,
+        "Milo said goodbye to his wonderful friends with big, warm, cozy bear hugs for each one. Then he padded slowly back home through the silver meadow, with his red scarf trailing behind him. His paws were tired from the long night's adventure, but oh, his little heart was so, so full of happiness. Mama Bear was waiting at the door of the den with her very warmest smile and open arms. Milo gave her a great big hug, then snuggled right back under his soft patchwork blanket. \"Goodnight, stars. Goodnight, moon. Goodnight, dear friends,\" he whispered softly. And somewhere high above, a little star twinkled brighter than all the other stars in the whole sky, twinkling down just for Milo.",
+      duration: 24,
       theme: "night",
       character: { emoji: "🐻", position: "bottom-right" },
       hotspots: [
