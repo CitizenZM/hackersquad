@@ -139,25 +139,43 @@ export function useSoundEffects() {
         }
       }
 
-      // Haptic feedback on supported devices
-      if ("vibrate" in navigator) {
-        const patterns: Record<SoundType, number | number[]> = {
-          tap: 10,
-          pop: 15,
-          success: [15, 30, 15],
-          sparkle: [10, 20, 10, 20, 10],
-          whoosh: 8,
-          unlock: [20, 40, 20, 40, 40],
-        };
-        try {
-          navigator.vibrate(patterns[type]);
-        } catch {
-          // ignore
-        }
-      }
+      // Haptic feedback: use native Capacitor haptics if available, else web vibrate
+      triggerHaptic(type);
     },
     [getCtx]
   );
 
   return { play };
+}
+
+async function triggerHaptic(type: SoundType) {
+  // Try native Capacitor haptics first
+  if (typeof window !== "undefined" && (window as unknown as Record<string, unknown>).Capacitor) {
+    try {
+      const { Haptics, ImpactStyle, NotificationType } = await import("@capacitor/haptics");
+      if (type === "success" || type === "unlock") {
+        await Haptics.notification({ type: NotificationType.Success });
+      } else if (type === "whoosh") {
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } else {
+        await Haptics.impact({ style: ImpactStyle.Medium });
+      }
+      return;
+    } catch {}
+  }
+
+  // Fallback to web vibration
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    const patterns: Record<SoundType, number | number[]> = {
+      tap: 10,
+      pop: 15,
+      success: [15, 30, 15],
+      sparkle: [10, 20, 10, 20, 10],
+      whoosh: 8,
+      unlock: [20, 40, 20, 40, 40],
+    };
+    try {
+      navigator.vibrate(patterns[type]);
+    } catch {}
+  }
 }

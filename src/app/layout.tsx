@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "StoryNest Kids",
   description:
     "Transform any content into personalized 5-minute story episodes for children",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
