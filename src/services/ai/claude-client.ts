@@ -19,11 +19,16 @@ export async function analyzeWithClaude<T>(options: {
 
   const { systemPrompt, userPrompt, responseSchema, maxTokens = 4096 } = options;
 
+  // OpenAI requires "json" in the messages when using json_object format
+  const systemWithJson = systemPrompt.toLowerCase().includes("json")
+    ? systemPrompt
+    : systemPrompt + "\n\nRespond with valid JSON only.";
+
   const response = await client.chat.completions.create({
     model: MODEL,
     max_tokens: maxTokens,
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemWithJson },
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
@@ -31,7 +36,6 @@ export async function analyzeWithClaude<T>(options: {
 
   const text = response.choices[0]?.message?.content || "";
 
-  // Extract JSON from response (handles markdown code blocks)
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
   const jsonStr = (jsonMatch[1] || text).trim();
 
@@ -39,20 +43,19 @@ export async function analyzeWithClaude<T>(options: {
     const parsed = JSON.parse(jsonStr);
     return responseSchema.parse(parsed);
   } catch (parseError) {
-    // Retry with a correction prompt
     const retryResponse = await client.chat.completions.create({
       model: MODEL,
       max_tokens: maxTokens,
       messages: [
         {
           role: "system",
-          content: "You must respond with ONLY valid JSON. No explanation, no markdown. Just the JSON object.",
+          content: "You must respond with ONLY valid JSON. No explanation, no markdown.",
         },
         { role: "user", content: userPrompt },
         { role: "assistant", content: text },
         {
           role: "user",
-          content: `Your previous response was not valid JSON. Please output ONLY the JSON object, nothing else. The error was: ${parseError instanceof Error ? parseError.message : "parse error"}`,
+          content: `Fix: output valid JSON only. Error: ${parseError instanceof Error ? parseError.message : "parse error"}`,
         },
       ],
       response_format: { type: "json_object" },

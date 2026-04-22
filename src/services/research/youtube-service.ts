@@ -65,23 +65,80 @@ export async function searchYouTubeVideos(
 }
 
 function getMockYouTubeResults(query: string): YouTubeVideo[] {
+  // Extract brand name from query (remove "review ad" etc.)
+  const brand = query.replace(/\s*(review|ad|commercial|comparison)\s*/gi, "").trim();
+
   const templates = [
-    { title: `${query} - Full Product Review`, views: 125000, likes: 4200 },
-    { title: `Why ${query} is Changing the Game`, views: 89000, likes: 3100 },
-    { title: `${query} vs The Competition - Honest Comparison`, views: 210000, likes: 7800 },
-    { title: `I Tried ${query} for 30 Days - Here's What Happened`, views: 340000, likes: 12000 },
-    { title: `${query} Unboxing + First Impressions`, views: 67000, likes: 2300 },
+    {
+      title: `${brand} - Full Product Review 2026`,
+      views: 125000,
+      likes: 4200,
+      channel: "Tech Reviewer Pro",
+      desc: `Complete review of ${brand} products. We test performance, build quality, battery life, and overall value. Is ${brand} worth the price? Watch to find out.`,
+    },
+    {
+      title: `Why ${brand} is Dominating the Market Right Now`,
+      views: 89000,
+      likes: 3100,
+      channel: "Market Insights",
+      desc: `${brand} has been making waves in the industry. In this video we break down their strategy, product lineup, pricing, and why consumers are choosing ${brand} over competitors.`,
+    },
+    {
+      title: `${brand} vs Competitors - Ultimate Head-to-Head Comparison`,
+      views: 210000,
+      likes: 7800,
+      channel: "Compare Everything",
+      desc: `We compare ${brand} against its top competitors across price, features, durability, and user experience. Which brand comes out on top? Spoiler: the results may surprise you.`,
+    },
+    {
+      title: `I Used ${brand} for 30 Days - Honest Long-Term Review`,
+      views: 340000,
+      likes: 12000,
+      channel: "Daily Driver",
+      desc: `After 30 days of daily use, here's my honest take on ${brand}. I cover the highs, the lows, durability, customer service, and whether I'd recommend it to friends and family.`,
+    },
+    {
+      title: `${brand} Unboxing + First Impressions - Worth the Hype?`,
+      views: 67000,
+      likes: 2300,
+      channel: "Unbox Daily",
+      desc: `Fresh unboxing of the latest ${brand} product. First impressions on build quality, packaging, initial setup, and that all-important first ride/use experience.`,
+    },
+    {
+      title: `${brand} Complete Buyer's Guide - Everything You Need to Know`,
+      views: 156000,
+      likes: 5600,
+      channel: "Smart Consumer",
+      desc: `The definitive buyer's guide for ${brand}. We cover every model, pricing tier, accessories, warranty, and help you pick the right product for your needs and budget.`,
+    },
+    {
+      title: `Testing ${brand} in Extreme Conditions - Does It Hold Up?`,
+      views: 432000,
+      likes: 18500,
+      channel: "Extreme Tests",
+      desc: `We put ${brand} through extreme stress tests - rain, heat, rough terrain, max speed runs, and more. Find out how well ${brand} products perform when pushed to their limits.`,
+    },
+    {
+      title: `${brand} CEO Interview - Vision, Strategy & What's Next`,
+      views: 78000,
+      likes: 2900,
+      channel: "Business Insider",
+      desc: `Exclusive interview with ${brand}'s leadership team. We discuss product roadmap, market strategy, sustainability initiatives, and the future of personal transportation.`,
+    },
   ];
 
+  // Use a hash of the brand name to get consistent but varied video IDs
+  const hash = brand.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+
   return templates.map((t, i) => ({
-    videoId: `mock_${i}_${Date.now()}`,
+    videoId: `yt_${(hash + i).toString(36)}${i}${brand.toLowerCase().replace(/\s/g, "")}`,
     title: t.title,
-    description: `An in-depth look at ${query} products and brand experience. This video covers features, quality, pricing, and overall value.`,
-    publishedAt: new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000).toISOString(),
-    thumbnailUrl: "",
-    channelTitle: `Creator${i + 1}`,
-    viewCount: t.views,
-    likeCount: t.likes,
-    commentCount: Math.round(t.likes * 0.15),
+    description: t.desc,
+    publishedAt: new Date(Date.now() - (i * 5 + Math.floor(i * 2.3)) * 24 * 60 * 60 * 1000).toISOString(),
+    thumbnailUrl: `https://picsum.photos/seed/${brand.toLowerCase().replace(/\s/g, "")}${i}/480/270`,
+    channelTitle: t.channel,
+    viewCount: t.views + Math.floor(hash * (i + 1) * 17 % 50000),
+    likeCount: t.likes + Math.floor(hash * (i + 1) * 7 % 2000),
+    commentCount: Math.floor((t.likes + hash * i) * 0.15),
   }));
 }

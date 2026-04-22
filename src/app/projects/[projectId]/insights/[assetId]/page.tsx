@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { NARRATIVE_TYPE_LABELS, DATA_SOURCE_LABELS } from "@/lib/constants";
 import { ScoreRadar } from "@/components/dashboard/score-radar";
 import { StatusBadge, ScoreBar } from "@/components/dashboard/status-badge";
+import { ScriptGenerator } from "@/components/content/script-generator";
 import {
   ExternalLink,
   Eye,
@@ -171,6 +172,13 @@ export default async function AssetInsightPage({
           </p>
         </div>
       )}
+
+      {/* Script / Transcript */}
+      <ScriptGenerator
+        projectId={projectId}
+        assetId={assetId}
+        existingTranscript={asset.transcript}
+      />
 
       {/* Related Insights */}
       {asset.insights.length > 0 && (
