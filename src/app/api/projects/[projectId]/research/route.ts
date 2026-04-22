@@ -21,49 +21,55 @@ export async function POST(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Mark as researching
     await prisma.project.update({
       where: { id: projectId },
       data: { status: "RESEARCHING" },
     });
 
-    let brandCrawl: CrawlResult | null = null;
-    const competitorCrawls = new Map<string, CrawlResult>();
-    let brandVideos: YouTubeVideo[] = [];
-    const competitorVideos = new Map<string, YouTubeVideo[]>();
+    // Run crawls + YouTube in PARALLEL for speed
+    const crawlPromises: Promise<{ id: string; result: CrawlResult | null }>[] = [];
 
-    // Step 1: Crawl brand website
     if (project.brandUrl) {
-      try {
-        brandCrawl = await crawlWebsite(project.brandUrl);
-      } catch (err) {
-        console.error("Brand crawl failed:", err);
-      }
+      crawlPromises.push(
+        crawlWebsite(project.brandUrl)
+          .then((result) => ({ id: "brand", result }))
+          .catch(() => ({ id: "brand", result: null }))
+      );
     }
-
-    // Step 2: Crawl competitor websites
     for (const comp of project.competitors) {
       if (!comp.url) continue;
-      try {
-        const crawl = await crawlWebsite(comp.url);
-        competitorCrawls.set(comp.id, crawl);
-      } catch (err) {
-        console.error(`Competitor crawl failed for ${comp.name}:`, err);
-      }
+      crawlPromises.push(
+        crawlWebsite(comp.url)
+          .then((result) => ({ id: comp.id, result }))
+          .catch(() => ({ id: comp.id, result: null }))
+      );
     }
 
-    // Step 3: YouTube research
-    try {
-      brandVideos = await searchYouTubeVideos(`${project.brandName} review ad`);
-      for (const comp of project.competitors) {
-        const videos = await searchYouTubeVideos(`${comp.name} review ad`);
-        competitorVideos.set(comp.id, videos);
-      }
-    } catch (err) {
-      console.error("YouTube research failed:", err);
+    // YouTube - single query for brand (competitors use mock data)
+    const ytPromise = searchYouTubeVideos(project.brandName)
+      .catch(() => [] as YouTubeVideo[]);
+
+    const [crawlResults, brandVideos] = await Promise.all([
+      Promise.all(crawlPromises),
+      ytPromise,
+    ]);
+
+    // Organize crawl results
+    let brandCrawl: CrawlResult | null = null;
+    const competitorCrawls = new Map<string, CrawlResult>();
+    for (const { id, result } of crawlResults) {
+      if (!result) continue;
+      if (id === "brand") brandCrawl = result;
+      else competitorCrawls.set(id, result);
     }
 
-    // Step 4: Web mentions from crawl data
+    // Competitor YouTube mock data (one call per competitor)
+    const competitorVideos = new Map<string, YouTubeVideo[]>();
+    for (const comp of project.competitors) {
+      competitorVideos.set(comp.id, await searchYouTubeVideos(comp.name));
+    }
+
+    // Web mentions from crawl
     if (brandCrawl) {
       const mentions = brandCrawl.testimonials.slice(0, 3);
       for (const mention of mentions) {
@@ -81,17 +87,16 @@ export async function POST(
       }
     }
 
-    // Step 5: AI Analysis
+    // AI Analysis (uses gpt-4o-mini for speed)
     await runAnalysisPipeline(
       projectId,
-      "", // no jobId needed for serverless
+      "",
       brandCrawl,
       competitorCrawls,
       brandVideos,
       competitorVideos
     );
 
-    // Finalize
     await prisma.project.update({
       where: { id: projectId },
       data: { status: "ANALYZED" },
@@ -105,16 +110,12 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      project: result,
-    });
+    return NextResponse.json({ success: true, project: result });
   } catch (err) {
     console.error("Research pipeline error:", err);
-    await prisma.project.update({
-      where: { id: projectId },
-      data: { status: "ERROR" },
-    }).catch(() => {});
+    await prisma.project
+      .update({ where: { id: projectId }, data: { status: "ERROR" } })
+      .catch(() => {});
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Research failed" },
       { status: 500 }
