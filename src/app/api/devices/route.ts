@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 
 export async function POST(request: Request) {
@@ -6,21 +5,15 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { token, platform, childId } = body;
+    const { token, platform } = body;
 
     if (!token || !platform) {
       return Response.json({ error: "Token and platform required" }, { status: 400 });
     }
 
-    // Store in session events as a device registration event
-    await prisma.sessionEvent.create({
-      data: {
-        childProfileId: childId || "device-registration",
-        storyPackId: "device-registration",
-        eventType: "PLAY_START",
-        metadata: { deviceToken: token, platform, parentId } as never,
-      },
-    });
+    // TODO: Store device token in a dedicated DeviceToken table when
+    // server-side push is implemented. For now, log and acknowledge.
+    console.log(`Device registered: platform=${platform} parent=${parentId} token=${token.slice(0, 8)}...`);
 
     return Response.json({ success: true });
   } catch (error) {
