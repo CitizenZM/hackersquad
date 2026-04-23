@@ -4,6 +4,7 @@ import { NARRATIVE_TYPE_LABELS, DATA_SOURCE_LABELS } from "@/lib/constants";
 import { OverviewCharts } from "@/components/dashboard/overview-charts";
 import { HeroMetric } from "@/components/dashboard/hero-metric";
 import { StatusBadge, ScoreBar } from "@/components/dashboard/status-badge";
+import { ActionButton } from "@/components/dashboard/action-buttons";
 import {
   Activity,
   Target,
@@ -70,6 +71,16 @@ export default async function OverviewPage({
 
   return (
     <div className="space-y-6">
+      {/* Action bar */}
+      <div className="flex justify-end">
+        <ActionButton
+          endpoint={`/api/projects/${projectId}/research`}
+          label="Re-run research"
+          loadingLabel="Researching..."
+          icon="refresh"
+        />
+      </div>
+
       {/* Hero metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <HeroMetric

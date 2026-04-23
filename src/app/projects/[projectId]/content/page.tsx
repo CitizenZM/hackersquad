@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { NARRATIVE_TYPE_LABELS, CONTENT_TYPE_LABELS, CONTENT_CATEGORY_LABELS } from "@/lib/constants";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
+import { LoadMoreButton } from "@/components/dashboard/action-buttons";
 import { ChevronRight, Eye, ThumbsUp, MessageSquare, ExternalLink } from "lucide-react";
 
 function formatDate(date: Date | string | null) {
@@ -291,6 +292,9 @@ export default async function ContentPage({
               </Link>
             ))}
           </div>
+
+          {/* Load More */}
+          <LoadMoreButton projectId={projectId} currentCount={assets.length} />
         </>
       )}
     </div>

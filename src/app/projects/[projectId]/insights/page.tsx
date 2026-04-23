@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NARRATIVE_TYPE_LABELS } from "@/lib/constants";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
+import { ActionButton } from "@/components/dashboard/action-buttons";
 
 export default async function InsightsListPage({
   params,
@@ -26,11 +27,19 @@ export default async function InsightsListPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-base font-semibold tracking-tight">Insights & Patterns</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Storytelling patterns, selling points, and strategic findings
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">Insights & Patterns</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Storytelling patterns, selling points, and strategic findings
+          </p>
+        </div>
+        <ActionButton
+          endpoint={`/api/projects/${projectId}/research`}
+          label="Re-analyze"
+          loadingLabel="Analyzing..."
+          icon="brain"
+        />
       </div>
 
       {/* Narrative Patterns */}
