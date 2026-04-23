@@ -18,127 +18,203 @@ export async function searchYouTubeVideos(
   query: string,
   maxResults = 10
 ): Promise<YouTubeVideo[]> {
-  if (process.env.MOCK_CRAWL === "true" || !process.env.YOUTUBE_API_KEY) {
-    return getMockYouTubeResults(query);
+  if (process.env.MOCK_CRAWL === "true") {
+    return [];
   }
 
+  // 1. Try official YouTube Data API (if key exists)
+  if (process.env.YOUTUBE_API_KEY) {
+    try {
+      return await searchViaAPI(query, maxResults);
+    } catch (error) {
+      console.error("YouTube API error:", error);
+    }
+  }
+
+  // 2. Scrape YouTube search results (no API key needed)
   try {
-    const searchResponse = await youtube.search.list({
-      key: process.env.YOUTUBE_API_KEY,
-      q: query,
-      part: ["snippet"],
-      type: ["video"],
-      maxResults,
-      order: "relevance",
-    });
-
-    const videoIds = (searchResponse.data.items || [])
-      .map((item) => item.id?.videoId)
-      .filter((id): id is string => !!id);
-
-    if (videoIds.length === 0) return [];
-
-    const statsResponse = await youtube.videos.list({
-      key: process.env.YOUTUBE_API_KEY,
-      id: videoIds,
-      part: ["statistics", "snippet"],
-    });
-
-    return (statsResponse.data.items || []).map((item) => ({
-      videoId: item.id || "",
-      title: item.snippet?.title || "",
-      description: (item.snippet?.description || "").slice(0, 1000),
-      publishedAt: item.snippet?.publishedAt || "",
-      thumbnailUrl:
-        item.snippet?.thumbnails?.high?.url ||
-        item.snippet?.thumbnails?.default?.url ||
-        "",
-      channelTitle: item.snippet?.channelTitle || "",
-      viewCount: parseInt(item.statistics?.viewCount || "0", 10),
-      likeCount: parseInt(item.statistics?.likeCount || "0", 10),
-      commentCount: parseInt(item.statistics?.commentCount || "0", 10),
-    }));
+    return await scrapeYouTubeSearch(query, maxResults);
   } catch (error) {
-    console.error("YouTube API error:", error);
-    return getMockYouTubeResults(query);
+    console.error("YouTube scrape error:", error);
+  }
+
+  return [];
+}
+
+async function searchViaAPI(query: string, maxResults: number): Promise<YouTubeVideo[]> {
+  const searchResponse = await youtube.search.list({
+    key: process.env.YOUTUBE_API_KEY,
+    q: query,
+    part: ["snippet"],
+    type: ["video"],
+    maxResults,
+    order: "relevance",
+  });
+
+  const videoIds = (searchResponse.data.items || [])
+    .map((item) => item.id?.videoId)
+    .filter((id): id is string => !!id);
+
+  if (videoIds.length === 0) return [];
+
+  const statsResponse = await youtube.videos.list({
+    key: process.env.YOUTUBE_API_KEY,
+    id: videoIds,
+    part: ["statistics", "snippet"],
+  });
+
+  return (statsResponse.data.items || []).map((item) => ({
+    videoId: item.id || "",
+    title: item.snippet?.title || "",
+    description: (item.snippet?.description || "").slice(0, 1000),
+    publishedAt: item.snippet?.publishedAt || "",
+    thumbnailUrl:
+      item.snippet?.thumbnails?.high?.url ||
+      item.snippet?.thumbnails?.default?.url ||
+      "",
+    channelTitle: item.snippet?.channelTitle || "",
+    viewCount: parseInt(item.statistics?.viewCount || "0", 10),
+    likeCount: parseInt(item.statistics?.likeCount || "0", 10),
+    commentCount: parseInt(item.statistics?.commentCount || "0", 10),
+  }));
+}
+
+function parseViewCount(text: string): number {
+  if (!text) return 0;
+  const cleaned = text.replace(/[^0-9.,KMBkmb]/g, "").trim();
+  const num = parseFloat(cleaned.replace(/,/g, ""));
+  if (isNaN(num)) return 0;
+  const upper = text.toUpperCase();
+  if (upper.includes("B")) return Math.round(num * 1_000_000_000);
+  if (upper.includes("M")) return Math.round(num * 1_000_000);
+  if (upper.includes("K")) return Math.round(num * 1_000);
+  return Math.round(num);
+}
+
+function parsePublishedAge(text: string): string {
+  if (!text) return new Date().toISOString();
+  const now = Date.now();
+  const match = text.match(/(\d+)\s*(year|month|week|day|hour|minute)/i);
+  if (!match) return new Date().toISOString();
+  const n = parseInt(match[1]);
+  const unit = match[2].toLowerCase();
+  const ms: Record<string, number> = {
+    year: 365 * 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
+    week: 7 * 24 * 60 * 60 * 1000,
+    day: 24 * 60 * 60 * 1000,
+    hour: 60 * 60 * 1000,
+    minute: 60 * 1000,
+  };
+  return new Date(now - n * (ms[unit] || 0)).toISOString();
+}
+
+async function scrapeYouTubeSearch(
+  query: string,
+  maxResults: number
+): Promise<YouTubeVideo[]> {
+  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+
+    if (!response.ok) throw new Error(`YouTube returned ${response.status}`);
+
+    const html = await response.text();
+
+    // Extract ytInitialData JSON from the page
+    const match = html.match(
+      /var ytInitialData = ({.*?});<\/script>/
+    );
+    if (!match) {
+      const match2 = html.match(
+        /window\["ytInitialData"\] = ({.*?});<\/script>/
+      );
+      if (!match2) throw new Error("ytInitialData not found in page");
+      return parseYtInitialData(match2[1], maxResults);
+    }
+
+    return parseYtInitialData(match[1], maxResults);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
-function getMockYouTubeResults(query: string): YouTubeVideo[] {
-  // Extract brand name from query (remove "review ad" etc.)
-  const brand = query.replace(/\s*(review|ad|commercial|comparison)\s*/gi, "").trim();
+function parseYtInitialData(jsonStr: string, maxResults: number): YouTubeVideo[] {
+  const data = JSON.parse(jsonStr);
 
-  const templates = [
-    {
-      title: `${brand} - Full Product Review 2026`,
-      views: 125000,
-      likes: 4200,
-      channel: "Tech Reviewer Pro",
-      desc: `Complete review of ${brand} products. We test performance, build quality, battery life, and overall value. Is ${brand} worth the price? Watch to find out.`,
-    },
-    {
-      title: `Why ${brand} is Dominating the Market Right Now`,
-      views: 89000,
-      likes: 3100,
-      channel: "Market Insights",
-      desc: `${brand} has been making waves in the industry. In this video we break down their strategy, product lineup, pricing, and why consumers are choosing ${brand} over competitors.`,
-    },
-    {
-      title: `${brand} vs Competitors - Ultimate Head-to-Head Comparison`,
-      views: 210000,
-      likes: 7800,
-      channel: "Compare Everything",
-      desc: `We compare ${brand} against its top competitors across price, features, durability, and user experience. Which brand comes out on top? Spoiler: the results may surprise you.`,
-    },
-    {
-      title: `I Used ${brand} for 30 Days - Honest Long-Term Review`,
-      views: 340000,
-      likes: 12000,
-      channel: "Daily Driver",
-      desc: `After 30 days of daily use, here's my honest take on ${brand}. I cover the highs, the lows, durability, customer service, and whether I'd recommend it to friends and family.`,
-    },
-    {
-      title: `${brand} Unboxing + First Impressions - Worth the Hype?`,
-      views: 67000,
-      likes: 2300,
-      channel: "Unbox Daily",
-      desc: `Fresh unboxing of the latest ${brand} product. First impressions on build quality, packaging, initial setup, and that all-important first ride/use experience.`,
-    },
-    {
-      title: `${brand} Complete Buyer's Guide - Everything You Need to Know`,
-      views: 156000,
-      likes: 5600,
-      channel: "Smart Consumer",
-      desc: `The definitive buyer's guide for ${brand}. We cover every model, pricing tier, accessories, warranty, and help you pick the right product for your needs and budget.`,
-    },
-    {
-      title: `Testing ${brand} in Extreme Conditions - Does It Hold Up?`,
-      views: 432000,
-      likes: 18500,
-      channel: "Extreme Tests",
-      desc: `We put ${brand} through extreme stress tests - rain, heat, rough terrain, max speed runs, and more. Find out how well ${brand} products perform when pushed to their limits.`,
-    },
-    {
-      title: `${brand} CEO Interview - Vision, Strategy & What's Next`,
-      views: 78000,
-      likes: 2900,
-      channel: "Business Insider",
-      desc: `Exclusive interview with ${brand}'s leadership team. We discuss product roadmap, market strategy, sustainability initiatives, and the future of personal transportation.`,
-    },
-  ];
+  const contents =
+    data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+      ?.sectionListRenderer?.contents || [];
 
-  // Use a hash of the brand name to get consistent but varied video IDs
-  const hash = brand.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const videos: YouTubeVideo[] = [];
 
-  return templates.map((t, i) => ({
-    videoId: `yt_${(hash + i).toString(36)}${i}${brand.toLowerCase().replace(/\s/g, "")}`,
-    title: t.title,
-    description: t.desc,
-    publishedAt: new Date(Date.now() - (i * 5 + Math.floor(i * 2.3)) * 24 * 60 * 60 * 1000).toISOString(),
-    thumbnailUrl: `https://picsum.photos/seed/${brand.toLowerCase().replace(/\s/g, "")}${i}/480/270`,
-    channelTitle: t.channel,
-    viewCount: t.views + Math.floor(hash * (i + 1) * 17 % 50000),
-    likeCount: t.likes + Math.floor(hash * (i + 1) * 7 % 2000),
-    commentCount: Math.floor((t.likes + hash * i) * 0.15),
-  }));
+  for (const section of contents) {
+    const items = section?.itemSectionRenderer?.contents || [];
+    for (const item of items) {
+      const vr = item?.videoRenderer;
+      if (!vr || !vr.videoId) continue;
+
+      const title =
+        vr.title?.runs?.[0]?.text || vr.title?.simpleText || "";
+      const channel =
+        vr.ownerText?.runs?.[0]?.text ||
+        vr.longBylineText?.runs?.[0]?.text ||
+        "";
+      const viewsText =
+        vr.viewCountText?.simpleText || vr.viewCountText?.runs?.[0]?.text || "";
+      const publishedText =
+        vr.publishedTimeText?.simpleText || "";
+
+      // Get highest quality thumbnail
+      const thumbnails = vr.thumbnail?.thumbnails || [];
+      const thumb = thumbnails.length > 0
+        ? thumbnails[thumbnails.length - 1].url
+        : `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+
+      // Extract description snippet
+      let description = "";
+      for (const snip of vr.detailedMetadataSnippets || []) {
+        for (const run of snip?.snippetText?.runs || []) {
+          description += run.text || "";
+        }
+      }
+      if (!description) {
+        for (const snip of vr.descriptionSnippet?.runs || []) {
+          description += snip.text || "";
+        }
+      }
+
+      const viewCount = parseViewCount(viewsText);
+
+      videos.push({
+        videoId: vr.videoId,
+        title,
+        description: description.slice(0, 1000),
+        publishedAt: parsePublishedAge(publishedText),
+        thumbnailUrl: thumb.split("?")[0], // clean thumbnail URL
+        channelTitle: channel,
+        viewCount,
+        likeCount: Math.round(viewCount * 0.035), // estimated ~3.5% like ratio
+        commentCount: Math.round(viewCount * 0.005), // estimated ~0.5% comment ratio
+      });
+
+      if (videos.length >= maxResults) break;
+    }
+    if (videos.length >= maxResults) break;
+  }
+
+  return videos;
 }

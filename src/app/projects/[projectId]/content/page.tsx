@@ -159,7 +159,7 @@ export default async function ContentPage({
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-1">
-                          {asset.url && !asset.url.includes("mock_") && (
+                          {asset.url && (
                             <a
                               href={asset.url}
                               target="_blank"

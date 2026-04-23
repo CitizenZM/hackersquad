@@ -144,14 +144,14 @@ export async function runAnalysisPipeline(
             platform: "YouTube", viewCount: video.viewCount,
             likeCount: video.likeCount, commentCount: video.commentCount,
             engagementRate: video.viewCount > 0 ? ((video.likeCount + video.commentCount) / video.viewCount) * 100 : 0,
-            metricsSource: "OFFICIAL_API", overallScore: score.overallScore,
+            metricsSource: process.env.YOUTUBE_API_KEY ? "OFFICIAL_API" : "PUBLIC_WEB", overallScore: score.overallScore,
             hookStrength: score.hookStrength, productVisibility: score.productVisibility,
             storytellingArc: score.storytellingArc, ctaQuality: score.ctaQuality,
             emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
             hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
             keyMessages: score.keyMessages,
             isBrandOwned: !videoCompetitorMap.get(score.videoId),
-            dataSource: "OFFICIAL_API",
+            dataSource: process.env.YOUTUBE_API_KEY ? "OFFICIAL_API" : "PUBLIC_WEB",
           }});
         }
       } catch (e) { console.error("Content scoring failed:", e); }
