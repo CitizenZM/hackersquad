@@ -71,10 +71,14 @@ export async function POST(
     }
 
     // STEP 2: Extract smart keywords from brand crawl
+    // Combine briefing text from both sources
+    const briefing = [project.briefingText, project.briefingParsed].filter(Boolean).join("\n\n") || undefined;
+
     const keywords = await extractSearchKeywords(
       project.brandName,
       brandCrawl,
-      project.competitors.map((c) => c.name)
+      project.competitors.map((c) => c.name),
+      briefing
     );
 
     // STEP 3: Multi-platform video search (YouTube + Shorts + TikTok + Vimeo)

@@ -62,6 +62,7 @@ export async function POST(
       audienceSegments: segments.map((s) => `${s.name} (${s.ageRange}): ${s.description}`),
       painPoints: painPoints.map((p) => p.point),
       platformPreferences: platforms.filter((p) => p.adReceptivity === "high").map((p) => p.platform),
+      briefing: [project.briefingText, project.briefingParsed].filter(Boolean).join("\n\n") || undefined,
     });
 
     const result = await analyzeWithClaude({

@@ -113,6 +113,29 @@ export default async function OverviewPage({
         />
       </div>
 
+      {/* Project Briefing */}
+      {(project.briefingText || project.briefingParsed) && (
+        <div className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold tracking-tight">Project Briefing</p>
+            <StatusBadge level="neutral">User provided</StatusBadge>
+          </div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
+            {project.briefingText}
+            {project.briefingParsed && (
+              <>
+                {project.briefingText && <br />}
+                <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground block mt-2 mb-1">
+                  From uploaded file:
+                </span>
+                {project.briefingParsed.slice(0, 500)}
+                {(project.briefingParsed.length || 0) > 500 && "..."}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Brand Intel + Top Signals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {brand && (

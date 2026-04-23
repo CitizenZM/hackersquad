@@ -8,6 +8,7 @@ export interface ScriptInput {
   };
   sellingPoints: string[];
   campaignGoal?: string;
+  briefing?: string;
 }
 
 export function buildScriptWritingPrompt(input: ScriptInput) {
@@ -37,6 +38,8 @@ Campaign Goal: ${input.campaignGoal || "Conversion"}
 
 Key Selling Points to Weave In:
 ${input.sellingPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+${input.briefing ? `\nProject Brief:\n${input.briefing.slice(0, 1000)}` : ""}
 
 Write a compelling 30-second video ad script. Include:
 - 3 different hook variants (the first 3 seconds)

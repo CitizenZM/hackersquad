@@ -59,6 +59,9 @@ model Project {
   category     String?
   campaignGoal String?
 
+  briefingText   String?
+  briefingParsed String?
+
   brandHealthScore Float?
   opportunityScore Float?
   topSignals       Json?

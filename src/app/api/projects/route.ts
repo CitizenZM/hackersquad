@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         brandUrl: data.brandUrl || null,
         category: data.category || null,
         campaignGoal: data.campaignGoal || null,
+        briefingText: data.briefingText || null,
         brand: {
           create: {
             name: data.brandName,

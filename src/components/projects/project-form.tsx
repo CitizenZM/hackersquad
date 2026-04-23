@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -29,6 +30,8 @@ export function ProjectForm() {
   const [brandUrl, setBrandUrl] = useState("");
   const [category, setCategory] = useState("");
   const [campaignGoal, setCampaignGoal] = useState("");
+  const [briefingText, setBriefingText] = useState("");
+  const [briefingFile, setBriefingFile] = useState<File | null>(null);
   const [competitors, setCompetitors] = useState<CompetitorField[]>([
     { name: "", url: "" },
   ]);
@@ -72,6 +75,7 @@ export function ProjectForm() {
           brandUrl: brandUrl.trim() || undefined,
           category: category || undefined,
           campaignGoal: campaignGoal || undefined,
+          briefingText: briefingText.trim() || undefined,
           competitors: validCompetitors.map((c) => ({
             name: c.name.trim(),
             url: c.url.trim() || undefined,
@@ -85,6 +89,17 @@ export function ProjectForm() {
       }
 
       const project = await res.json();
+
+      // Upload briefing file if selected
+      if (briefingFile) {
+        const formData = new FormData();
+        formData.append("file", briefingFile);
+        await fetch(`/api/projects/${project.id}/briefing/upload`, {
+          method: "POST",
+          body: formData,
+        }).catch(() => {}); // non-blocking
+      }
+
       router.push(`/projects/${project.id}/research`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -152,6 +167,43 @@ export function ProjectForm() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Briefing */}
+      <div className="space-y-3 pt-2 border-t border-border">
+        <div className="pt-3">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Project Briefing
+          </Label>
+          <p className="text-[11px] text-muted-foreground mt-0.5 mb-2">
+            Paste campaign brief, brand guidelines, or product info. Or upload a file (PDF, DOCX, TXT).
+          </p>
+        </div>
+        <Textarea
+          placeholder="Paste your campaign brief, brand guidelines, target audience details, creative direction, or any background context..."
+          value={briefingText}
+          onChange={(e) => setBriefingText(e.target.value)}
+          rows={4}
+          className="rounded-md text-sm"
+        />
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            Upload brief file
+          </Label>
+          <div className="flex items-center gap-3">
+            <Input
+              type="file"
+              accept=".pdf,.doc,.docx,.txt"
+              onChange={(e) => setBriefingFile(e.target.files?.[0] || null)}
+              className="h-9 rounded-md text-sm file:mr-3 file:border-0 file:bg-muted file:px-3 file:py-1 file:text-xs file:font-medium file:rounded-md cursor-pointer"
+            />
+            {briefingFile && (
+              <span className="text-xs text-muted-foreground shrink-0">
+                {briefingFile.name} ({(briefingFile.size / 1024).toFixed(0)}KB)
+              </span>
+            )}
           </div>
         </div>
       </div>

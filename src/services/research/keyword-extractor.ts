@@ -14,7 +14,8 @@ export type SearchKeywords = z.infer<typeof keywordSchema>;
 export async function extractSearchKeywords(
   brandName: string,
   crawlData: CrawlResult | null,
-  competitors: string[]
+  competitors: string[],
+  briefing?: string
 ): Promise<SearchKeywords> {
   // Fallback if no crawl data or AI fails
   const fallback: SearchKeywords = {
@@ -47,6 +48,7 @@ Headings: ${crawlData.headings.slice(0, 10).join(", ")}
 Product features: ${crawlData.productFeatures.slice(0, 8).join(", ")}
 CTAs: ${crawlData.ctaTexts.join(", ")}
 Body excerpt: ${crawlData.bodyText.slice(0, 500)}
+${briefing ? `\nProject brief: ${briefing.slice(0, 800)}` : ""}
 
 Generate search keywords and ad-specific search queries.`;
 

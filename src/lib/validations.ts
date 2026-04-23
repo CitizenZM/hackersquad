@@ -10,6 +10,7 @@ export const createProjectSchema = z.object({
   brandUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   category: z.string().optional(),
   campaignGoal: z.string().optional(),
+  briefingText: z.string().optional(),
   competitors: z.array(competitorSchema).min(1, "Add at least one competitor"),
 });
 
