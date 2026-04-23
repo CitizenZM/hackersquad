@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
+import { LofiFrame } from "@/components/creative/lofi-frame";
 
 interface Angle {
   id: number;
@@ -450,17 +451,12 @@ export default function CreativePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {storyboard.frames.map((frame) => (
               <div key={frame.frameNumber} className="rounded-lg border border-border bg-card overflow-hidden">
-                <div className="aspect-[16/10] bg-muted p-4 flex items-center justify-center relative">
-                  <p className="text-[11px] text-muted-foreground text-center line-clamp-4">
-                    {frame.imagePrompt}
-                  </p>
-                  <div className="absolute top-2 left-2 bg-foreground/80 text-background text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                    {frame.duration}
-                  </div>
-                  <div className="absolute top-2 right-2 bg-foreground/80 text-background text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                    #{frame.frameNumber}
-                  </div>
-                </div>
+                <LofiFrame
+                  scene={frame.scene}
+                  imagePrompt={frame.imagePrompt}
+                  frameNumber={frame.frameNumber}
+                  duration={frame.duration}
+                />
                 <div className="p-3 space-y-1.5">
                   <p className="text-sm font-medium leading-snug">{frame.scene}</p>
                   <div className="space-y-1">
