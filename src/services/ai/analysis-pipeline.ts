@@ -5,6 +5,7 @@ import { buildBrandAnalysisPrompt } from "./prompts/brand-analysis";
 import { buildContentScoringPrompt } from "./prompts/content-scoring";
 import { buildPatternMiningPrompt } from "./prompts/pattern-mining";
 import { buildCompetitorIntelPrompt } from "./prompts/competitor-intel";
+import { buildAudienceResearchPrompt } from "./prompts/audience-research";
 import type { CrawlResult } from "@/services/research/website-crawler";
 import type { YouTubeVideo } from "@/services/research/youtube-service";
 import type { VideoResult } from "@/services/research/video-search";
@@ -210,4 +211,49 @@ export async function runAnalysisPipeline(
       }});
     } catch (e) { console.error("Pattern mining failed:", e); }
   }
+
+  // Audience research (runs after we have brand + content data)
+  try {
+    const brand = await prisma.brand.findUnique({ where: { projectId } });
+    const updatedProject = await prisma.project.findUnique({ where: { id: projectId } });
+
+    const audienceSchema = z.object({
+      segments: z.array(z.object({ name: z.string(), ageRange: z.string(), description: z.string(), size: z.string() })),
+      psychographics: z.array(z.object({ trait: z.string(), description: z.string() })),
+      painPoints: z.array(z.object({ point: z.string(), severity: z.string() })),
+      interests: z.array(z.string()),
+      platforms: z.array(z.object({ platform: z.string(), usage: z.string(), adReceptivity: z.string() })),
+      buyingBehavior: z.string(),
+      incomeLevel: z.string(),
+      geoMarkets: z.array(z.string()),
+    });
+
+    const topContent = scoredAssets.slice(0, 5).map((a) => ({
+      title: a.title, viewCount: a.viewCount || 0, narrativeType: a.narrativeType || "DEMONSTRATION",
+    }));
+
+    const prompt = buildAudienceResearchPrompt({
+      brandName: project.brandName,
+      brandPromise: brand?.brandPromise || undefined,
+      valueProposition: brand?.valueProposition || undefined,
+      targetAudience: brand?.targetAudience || undefined,
+      toneOfVoice: brand?.toneOfVoice || undefined,
+      pricingTheme: brand?.pricingTheme || undefined,
+      productFeatures: (brand?.productFeatures as string[]) || undefined,
+      category: updatedProject?.category || undefined,
+      topSignals: (updatedProject?.topSignals as string[]) || undefined,
+      topContent,
+    });
+
+    const audience = await analyzeWithClaude({
+      systemPrompt: prompt.system, userPrompt: prompt.user,
+      responseSchema: audienceSchema, maxTokens: 2048,
+    });
+
+    await prisma.audienceProfile.upsert({
+      where: { projectId },
+      create: { projectId, ...audience, dataSource: "AI_INFERRED" },
+      update: { ...audience },
+    });
+  } catch (e) { console.error("Audience research failed:", e); }
 }

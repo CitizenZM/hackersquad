@@ -5,6 +5,7 @@ import { OverviewCharts } from "@/components/dashboard/overview-charts";
 import { HeroMetric } from "@/components/dashboard/hero-metric";
 import { StatusBadge, ScoreBar } from "@/components/dashboard/status-badge";
 import { ActionButton } from "@/components/dashboard/action-buttons";
+import { EditableField } from "@/components/dashboard/editable-field";
 import {
   Activity,
   Target,
@@ -22,7 +23,7 @@ export default async function OverviewPage({
 }) {
   const { projectId } = await params;
 
-  const [project, contentAssets, patterns, sellingPoints, insights, competitors] =
+  const [project, contentAssets, patterns, sellingPoints, insights, competitors, audienceProfile] =
     await Promise.all([
       prisma.project.findUnique({
         where: { id: projectId },
@@ -46,6 +47,7 @@ export default async function OverviewPage({
         take: 10,
       }),
       prisma.competitor.findMany({ where: { projectId } }),
+      prisma.audienceProfile.findUnique({ where: { projectId } }),
     ]);
 
   if (!project) return <div>Project not found</div>;
@@ -113,27 +115,33 @@ export default async function OverviewPage({
 
       {/* Brand Intel + Top Signals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {brand?.brandPromise && (
+        {brand && (
           <div className="lg:col-span-2 rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-semibold tracking-tight">Brand Intelligence</p>
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                {DATA_SOURCE_LABELS[brand.dataSource]}
+                Editable
               </span>
             </div>
             <dl className="divide-y divide-border">
               {[
-                { label: "Brand promise", value: brand.brandPromise },
-                { label: "Value proposition", value: brand.valueProposition },
-                { label: "Target audience", value: brand.targetAudience },
-                { label: "Tone of voice", value: brand.toneOfVoice },
-                { label: "Pricing theme", value: brand.pricingTheme },
-              ].filter(i => i.value).map((item) => (
+                { label: "Brand promise", field: "brandPromise", value: brand.brandPromise },
+                { label: "Value proposition", field: "valueProposition", value: brand.valueProposition },
+                { label: "Target audience", field: "targetAudience", value: brand.targetAudience },
+                { label: "Tone of voice", field: "toneOfVoice", value: brand.toneOfVoice },
+                { label: "Pricing theme", field: "pricingTheme", value: brand.pricingTheme },
+              ].map((item) => (
                 <div key={item.label} className="grid grid-cols-3 gap-4 py-3">
                   <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {item.label}
                   </dt>
-                  <dd className="col-span-2 text-sm text-foreground">{item.value}</dd>
+                  <dd className="col-span-2">
+                    <EditableField
+                      value={item.value}
+                      field={item.field}
+                      endpoint={`/api/projects/${projectId}/brand`}
+                    />
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -157,6 +165,120 @@ export default async function OverviewPage({
           </div>
         )}
       </div>
+
+      {/* Audience Research */}
+      {audienceProfile && (
+        <div className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold tracking-tight">Audience Research</p>
+            <StatusBadge level="ai">AI Inferred</StatusBadge>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Segments */}
+            {(audienceProfile.segments as { name: string; ageRange: string; description: string; size: string }[])?.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-3">Audience Segments</p>
+                <div className="space-y-2">
+                  {(audienceProfile.segments as { name: string; ageRange: string; description: string; size: string }[]).map((seg, i) => (
+                    <div key={i} className="rounded-md border border-border p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium">{seg.name}</p>
+                        <div className="flex gap-1.5">
+                          <StatusBadge level="neutral">{seg.ageRange}</StatusBadge>
+                          <StatusBadge level={seg.size === "large" ? "healthy" : seg.size === "medium" ? "attention" : "neutral"}>
+                            {seg.size}
+                          </StatusBadge>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{seg.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pain Points + Psychographics */}
+            <div className="space-y-5">
+              {(audienceProfile.painPoints as { point: string; severity: string }[])?.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-3">Pain Points</p>
+                  <div className="space-y-1.5">
+                    {(audienceProfile.painPoints as { point: string; severity: string }[]).map((pp, i) => (
+                      <div key={i} className="flex items-center gap-2.5">
+                        <div className={`h-2 w-2 rounded-full shrink-0 ${pp.severity === "high" ? "bg-[var(--status-urgent)]" : pp.severity === "medium" ? "bg-[var(--status-attention)]" : "bg-muted-foreground"}`} />
+                        <span className="text-sm">{pp.point}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(audienceProfile.psychographics as { trait: string; description: string }[])?.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-3">Psychographics</p>
+                  <div className="space-y-1.5">
+                    {(audienceProfile.psychographics as { trait: string; description: string }[]).map((p, i) => (
+                      <div key={i}>
+                        <p className="text-sm font-medium">{p.trait}</p>
+                        <p className="text-xs text-muted-foreground">{p.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom row: Platforms, Interests, Geo, Buying */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5 pt-5 border-t border-border">
+            {(audienceProfile.platforms as { platform: string; usage: string; adReceptivity: string }[])?.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-2">Platform Preferences</p>
+                <div className="space-y-1">
+                  {(audienceProfile.platforms as { platform: string; usage: string; adReceptivity: string }[]).map((p, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="font-medium">{p.platform}</span>
+                      <StatusBadge level={p.adReceptivity === "high" ? "healthy" : "neutral"}>
+                        {p.usage}
+                      </StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(audienceProfile.interests as string[])?.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-2">Interests</p>
+                <div className="flex flex-wrap gap-1">
+                  {(audienceProfile.interests as string[]).map((interest, i) => (
+                    <StatusBadge key={i} level="neutral">{interest}</StatusBadge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(audienceProfile.geoMarkets as string[])?.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-2">Geo Markets</p>
+                <div className="flex flex-wrap gap-1">
+                  {(audienceProfile.geoMarkets as string[]).map((geo, i) => (
+                    <StatusBadge key={i} level="neutral">{geo}</StatusBadge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-2">Buying Behavior</p>
+              <p className="text-xs text-foreground">{audienceProfile.buyingBehavior || "—"}</p>
+              <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-3 mb-1">Income Level</p>
+              <p className="text-xs text-foreground">{audienceProfile.incomeLevel || "—"}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts */}
       <OverviewCharts

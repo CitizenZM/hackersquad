@@ -74,6 +74,7 @@ model Project {
   creativeVariants  CreativeVariant[]
   previewAssets     PreviewAsset[]
   researchJobs      ResearchJob[]
+  audienceProfile   AudienceProfile?
 }
 
 model Brand {
@@ -302,4 +303,23 @@ model ResearchJob {
   createdAt   DateTime  @default(now())
 
   @@index([projectId, status])
+}
+
+model AudienceProfile {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  segments       Json?
+  psychographics Json?
+  painPoints     Json?
+  interests      Json?
+  platforms      Json?
+  buyingBehavior String?
+  incomeLevel    String?
+  geoMarkets     Json?
+
+  dataSource DataSource @default(AI_INFERRED)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }

@@ -7,6 +7,9 @@ export interface AngleInput {
   topSellingPoints: string[];
   topPatterns: string[];
   topSignals: string[];
+  audienceSegments?: string[];
+  painPoints?: string[];
+  platformPreferences?: string[];
 }
 
 export function buildAngleGenerationPrompt(input: AngleInput) {
@@ -45,8 +48,16 @@ ${input.topPatterns.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
 Key Market Signals:
 ${input.topSignals.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+${input.audienceSegments?.length ? `
+Target Audience Segments:
+${input.audienceSegments.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
+${input.painPoints?.length ? `
+Audience Pain Points:
+${input.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}` : ""}
+${input.platformPreferences?.length ? `
+Best Platforms: ${input.platformPreferences.join(", ")}` : ""}
 
-Generate 10 diverse, data-backed ad angles spanning different narrative types, emotions, and platforms.`;
+Generate 10 diverse, data-backed ad angles. Each angle should target a specific audience segment and address a real pain point. Assign each angle to the platform where it will perform best.`;
 
   return { system, user };
 }

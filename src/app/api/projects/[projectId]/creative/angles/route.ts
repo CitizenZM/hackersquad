@@ -44,6 +44,12 @@ export async function POST(
       orderBy: { avgPerformance: "desc" },
     });
 
+    // Get audience data
+    const audience = await prisma.audienceProfile.findUnique({ where: { projectId } });
+    const segments = (audience?.segments as { name: string; ageRange: string; description: string }[]) || [];
+    const painPoints = (audience?.painPoints as { point: string }[]) || [];
+    const platforms = (audience?.platforms as { platform: string; adReceptivity: string }[]) || [];
+
     const prompt = buildAngleGenerationPrompt({
       brandName: project.brandName,
       category: project.category || undefined,
@@ -53,6 +59,9 @@ export async function POST(
       topSellingPoints: sellingPoints.map((sp) => `${sp.point} (${sp.category})`),
       topPatterns: patterns.map((p) => `${p.name}: ${p.description.slice(0, 100)}`),
       topSignals: (project.topSignals as string[]) || [],
+      audienceSegments: segments.map((s) => `${s.name} (${s.ageRange}): ${s.description}`),
+      painPoints: painPoints.map((p) => p.point),
+      platformPreferences: platforms.filter((p) => p.adReceptivity === "high").map((p) => p.platform),
     });
 
     const result = await analyzeWithClaude({
