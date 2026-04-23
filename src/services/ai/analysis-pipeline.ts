@@ -181,66 +181,71 @@ export async function runAnalysisPipeline(
 
   await Promise.all(tasks);
 
-  // Pattern mining (needs scored content, runs after)
+  // Pattern mining + Audience research — run BOTH in parallel
   const scoredAssets = await prisma.contentAsset.findMany({ where: { projectId }, orderBy: { overallScore: "desc" } });
+
+  const postTasks: Promise<void>[] = [];
+
+  // Pattern mining
   if (scoredAssets.length > 0) {
-    try {
-      const p = buildPatternMiningPrompt(project.brandName, scoredAssets.map((a) => ({
-        title: a.title, narrativeType: a.narrativeType || "DEMONSTRATION",
-        overallScore: a.overallScore || 0, hookText: a.hookText || "",
-        keyMessages: (a.keyMessages as string[]) || [],
-      })));
-      const r = await analyzeWithClaude({ systemPrompt: p.system, userPrompt: p.user, responseSchema: patternSchema, maxTokens: 4096 });
-
-      for (const pat of r.patterns) {
-        await prisma.narrativePattern.upsert({
-          where: { projectId_type: { projectId, type: validNarrativeType(pat.type) } },
-          create: { projectId, type: validNarrativeType(pat.type), name: pat.name, description: pat.description, frequency: pat.frequency, avgPerformance: pat.avgPerformance, bestPractices: pat.bestPractices },
-          update: { name: pat.name, description: pat.description, frequency: pat.frequency, avgPerformance: pat.avgPerformance, bestPractices: pat.bestPractices },
-        });
-      }
-      for (const sp of r.sellingPoints) {
-        await prisma.sellingPoint.create({ data: { projectId, point: sp.point, category: sp.category, strength: sp.strength, frequency: sp.frequency, uniqueness: sp.uniqueness } });
-      }
-
-      const avgScore = scoredAssets.reduce((s, a) => s + (a.overallScore || 0), 0) / scoredAssets.length;
-      await prisma.project.update({ where: { id: projectId }, data: {
-        brandHealthScore: Math.round(avgScore),
-        opportunityScore: Math.round(r.sellingPoints.reduce((s, p) => s + (p.uniqueness || 0), 0) / Math.max(r.sellingPoints.length, 1)),
-        topSignals: r.topSignals,
-      }});
-    } catch (e) { console.error("Pattern mining failed:", e); }
+    postTasks.push((async () => {
+      try {
+        const p = buildPatternMiningPrompt(project.brandName, scoredAssets.map((a) => ({
+          title: a.title, narrativeType: a.narrativeType || "DEMONSTRATION",
+          overallScore: a.overallScore || 0, hookText: a.hookText || "",
+          keyMessages: (a.keyMessages as string[]) || [],
+        })));
+        const r = await analyzeWithClaude({ systemPrompt: p.system, userPrompt: p.user, responseSchema: patternSchema, maxTokens: 4096 });
+        for (const pat of r.patterns) {
+          await prisma.narrativePattern.upsert({
+            where: { projectId_type: { projectId, type: validNarrativeType(pat.type) } },
+            create: { projectId, type: validNarrativeType(pat.type), name: pat.name, description: pat.description, frequency: pat.frequency, avgPerformance: pat.avgPerformance, bestPractices: pat.bestPractices },
+            update: { name: pat.name, description: pat.description, frequency: pat.frequency, avgPerformance: pat.avgPerformance, bestPractices: pat.bestPractices },
+          });
+        }
+        for (const sp of r.sellingPoints) {
+          await prisma.sellingPoint.create({ data: { projectId, point: sp.point, category: sp.category, strength: sp.strength, frequency: sp.frequency, uniqueness: sp.uniqueness } });
+        }
+        const avgScore = scoredAssets.reduce((s, a) => s + (a.overallScore || 0), 0) / scoredAssets.length;
+        await prisma.project.update({ where: { id: projectId }, data: {
+          brandHealthScore: Math.round(avgScore),
+          opportunityScore: Math.round(r.sellingPoints.reduce((s, p) => s + (p.uniqueness || 0), 0) / Math.max(r.sellingPoints.length, 1)),
+          topSignals: r.topSignals,
+        }});
+      } catch (e) { console.error("Pattern mining failed:", e); }
+    })());
   }
 
-  // Audience research (runs after we have brand + content data)
-  try {
-    const brand = await prisma.brand.findUnique({ where: { projectId } });
-    const updatedProject = await prisma.project.findUnique({ where: { id: projectId } });
+  // Audience research (parallel with pattern mining)
+  postTasks.push((async () => {
+    try {
+      const brand = await prisma.brand.findUnique({ where: { projectId } });
+      const updatedProject = await prisma.project.findUnique({ where: { id: projectId } });
 
-    const audienceSchema = z.object({
-      segments: z.array(z.object({ name: z.string(), ageRange: z.string(), description: z.string(), size: z.string() })),
-      psychographics: z.array(z.object({ trait: z.string(), description: z.string() })),
-      painPoints: z.array(z.object({ point: z.string(), severity: z.string() })),
-      interests: z.array(z.string()),
-      platforms: z.array(z.object({ platform: z.string(), usage: z.string(), adReceptivity: z.string() })),
-      buyingBehavior: z.string(),
-      incomeLevel: z.string(),
-      geoMarkets: z.array(z.string()),
-    });
+      const audienceSchema = z.object({
+        segments: z.array(z.object({ name: z.string(), ageRange: z.string(), description: z.string(), size: z.string() })),
+        psychographics: z.array(z.object({ trait: z.string(), description: z.string() })),
+        painPoints: z.array(z.object({ point: z.string(), severity: z.string() })),
+        interests: z.array(z.string()),
+        platforms: z.array(z.object({ platform: z.string(), usage: z.string(), adReceptivity: z.string() })),
+        buyingBehavior: z.string(),
+        incomeLevel: z.string(),
+        geoMarkets: z.array(z.string()),
+      });
 
-    const topContent = scoredAssets.slice(0, 5).map((a) => ({
-      title: a.title, viewCount: a.viewCount || 0, narrativeType: a.narrativeType || "DEMONSTRATION",
-    }));
+      const topContent = scoredAssets.slice(0, 5).map((a) => ({
+        title: a.title, viewCount: a.viewCount || 0, narrativeType: a.narrativeType || "DEMONSTRATION",
+      }));
 
-    const prompt = buildAudienceResearchPrompt({
-      brandName: project.brandName,
-      brandPromise: brand?.brandPromise || undefined,
-      valueProposition: brand?.valueProposition || undefined,
-      targetAudience: brand?.targetAudience || undefined,
-      toneOfVoice: brand?.toneOfVoice || undefined,
-      pricingTheme: brand?.pricingTheme || undefined,
-      productFeatures: (brand?.productFeatures as string[]) || undefined,
-      category: updatedProject?.category || undefined,
+      const prompt = buildAudienceResearchPrompt({
+        brandName: project.brandName,
+        brandPromise: brand?.brandPromise || undefined,
+        valueProposition: brand?.valueProposition || undefined,
+        targetAudience: brand?.targetAudience || undefined,
+        toneOfVoice: brand?.toneOfVoice || undefined,
+        pricingTheme: brand?.pricingTheme || undefined,
+        productFeatures: (brand?.productFeatures as string[]) || undefined,
+        category: updatedProject?.category || undefined,
       topSignals: (updatedProject?.topSignals as string[]) || undefined,
       topContent,
     });
@@ -255,5 +260,8 @@ export async function runAnalysisPipeline(
       create: { projectId, ...audience, dataSource: "AI_INFERRED" },
       update: { ...audience },
     });
-  } catch (e) { console.error("Audience research failed:", e); }
+    } catch (e) { console.error("Audience research failed:", e); }
+  })());
+
+  await Promise.all(postTasks);
 }
