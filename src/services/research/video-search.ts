@@ -57,7 +57,7 @@ async function searchYouTubeLong(
   const results: VideoResult[] = [];
   for (const query of queries) {
     try {
-      const videos = await searchYouTubeVideos(query, 5);
+      const videos = await searchYouTubeVideos(query, 5, undefined, brandName);
       results.push(
         ...videos.map((v) => youtubeToResult(v, "youtube"))
       );
@@ -74,7 +74,7 @@ async function searchYouTubeShorts(
 ): Promise<VideoResult[]> {
   const query = `${brandName} ad short`;
   try {
-    const videos = await searchYouTubeVideos(query, 5, "EgIQCQ%3D%3D");
+    const videos = await searchYouTubeVideos(query, 5, "EgIQCQ%3D%3D", brandName);
     return videos.map((v) => youtubeToResult(v, "youtube_short"));
   } catch {
     return [];

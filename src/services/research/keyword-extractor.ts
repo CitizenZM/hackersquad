@@ -36,7 +36,7 @@ Return a JSON object with:
 - brandKeywords: brand name variations (2-4 items)
 - productKeywords: specific product/service terms found on site (3-5 items)
 - categoryKeywords: industry/category terms (2-3 items)
-- adSearchQueries: 5 search queries optimized for finding this brand's video ADS and COMMERCIALS (not reviews or demos). Include words like "official", "ad", "commercial", "campaign", "brand film", "introducing".`;
+- adSearchQueries: 5 search queries optimized for finding this brand's video ADS and COMMERCIALS (not reviews or demos). Include words like "official", "ad", "commercial", "campaign", "brand film", "introducing". Focus on English-language, US-market content. Add "english" or "official" to queries to filter out non-English results.`;
 
     const user = `Brand: ${brandName}
 Competitors: ${competitors.join(", ") || "none listed"}

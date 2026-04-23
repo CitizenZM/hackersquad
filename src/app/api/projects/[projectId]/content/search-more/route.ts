@@ -27,12 +27,12 @@ const contentScoreSchema = z.object({
 });
 
 const QUERY_VARIATIONS = [
-  (brand: string) => `${brand} latest commercial 2024`,
-  (brand: string) => `${brand} product launch video`,
-  (brand: string) => `${brand} brand film campaign`,
-  (brand: string) => `${brand} TV spot ad`,
-  (brand: string) => `${brand} promo video official`,
-  (brand: string) => `${brand} marketing campaign`,
+  (brand: string) => `${brand} official commercial english`,
+  (brand: string) => `${brand} US ad campaign 2024`,
+  (brand: string) => `${brand} brand video english official`,
+  (brand: string) => `${brand} product launch ad english`,
+  (brand: string) => `${brand} TV commercial spot`,
+  (brand: string) => `${brand} marketing ad campaign official`,
 ];
 
 function validNarrativeType(val: string): NarrativeType {
@@ -68,8 +68,8 @@ export async function POST(
     const queryIdx = Math.floor(offset / 10) % QUERY_VARIATIONS.length;
     const query = QUERY_VARIATIONS[queryIdx](project.brandName);
 
-    // Search YouTube with the varied query
-    const videos = await searchYouTubeVideos(query, 10);
+    // Search YouTube with the varied query (US/English filtered)
+    const videos = await searchYouTubeVideos(query, 10, undefined, project.brandName);
 
     // Filter out duplicates
     const newVideos = videos.filter(

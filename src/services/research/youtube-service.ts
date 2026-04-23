@@ -17,7 +17,8 @@ const youtube = google.youtube("v3");
 export async function searchYouTubeVideos(
   query: string,
   maxResults = 10,
-  spFilter?: string
+  spFilter?: string,
+  brandName?: string
 ): Promise<YouTubeVideo[]> {
   if (process.env.MOCK_CRAWL === "true") {
     return [];
@@ -34,7 +35,9 @@ export async function searchYouTubeVideos(
 
   // 2. Scrape YouTube search results (no API key needed)
   try {
-    return await scrapeYouTubeSearch(query, maxResults, spFilter);
+    const results = await scrapeYouTubeSearch(query, maxResults + 5, spFilter);
+    const filtered = brandName ? filterQuality(results, brandName) : results;
+    return filtered.slice(0, maxResults);
   } catch (error) {
     console.error("YouTube scrape error:", error);
   }
@@ -92,6 +95,24 @@ function parseViewCount(text: string): number {
   return Math.round(num);
 }
 
+function isEnglishTitle(title: string): boolean {
+  if (!title) return false;
+  // Count non-ASCII characters (excludes accented Latin chars)
+  const nonLatin = title.replace(/[\x00-\x7FÀ-ɏ]/g, "").length;
+  return nonLatin / title.length < 0.3;
+}
+
+function filterQuality(videos: YouTubeVideo[], brandName: string): YouTubeVideo[] {
+  const brandLower = brandName.toLowerCase();
+  return videos.filter((v) => {
+    // Skip non-English titles
+    if (!isEnglishTitle(v.title)) return false;
+    // Skip very low view count (unless title mentions the brand)
+    if (v.viewCount < 500 && !v.title.toLowerCase().includes(brandLower)) return false;
+    return true;
+  });
+}
+
 function parsePublishedAge(text: string): string {
   if (!text) return new Date().toISOString();
   const now = Date.now();
@@ -115,7 +136,7 @@ async function scrapeYouTubeSearch(
   maxResults: number,
   spFilter?: string
 ): Promise<YouTubeVideo[]> {
-  let url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  let url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&gl=US&hl=en`;
   if (spFilter) url += `&sp=${spFilter}`;
 
   const controller = new AbortController();
