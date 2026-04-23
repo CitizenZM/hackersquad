@@ -7,7 +7,8 @@ import { buildPatternMiningPrompt } from "./prompts/pattern-mining";
 import { buildCompetitorIntelPrompt } from "./prompts/competitor-intel";
 import type { CrawlResult } from "@/services/research/website-crawler";
 import type { YouTubeVideo } from "@/services/research/youtube-service";
-import { NarrativeType } from "@/generated/prisma/enums";
+import type { VideoResult } from "@/services/research/video-search";
+import { NarrativeType, ContentType } from "@/generated/prisma/enums";
 
 const brandAnalysisSchema = z.object({
   brandPromise: z.string(),
@@ -34,6 +35,7 @@ const contentScoreSchema = z.object({
     narrativeType: z.string(),
     keyMessages: z.array(z.string()),
     analysis: z.string(),
+    contentCategory: z.string(),
   })),
 });
 
@@ -68,8 +70,9 @@ export async function runAnalysisPipeline(
   projectId: string, _jobId: string,
   brandCrawl: CrawlResult | null,
   competitorCrawls: Map<string, CrawlResult>,
-  brandVideos: YouTubeVideo[],
-  competitorVideos: Map<string, YouTubeVideo[]>
+  brandVideos: (YouTubeVideo & { _platform?: string })[],
+  competitorVideos: Map<string, (YouTubeVideo & { _platform?: string })[]>,
+  allVideoResults?: VideoResult[]
 ) {
   const project = await prisma.project.findUnique({
     where: { id: projectId }, include: { brand: true, competitors: true },
@@ -135,23 +138,40 @@ export async function runAnalysisPipeline(
         for (const score of r.scores) {
           const video = allVideos.find((v) => v.videoId === score.videoId);
           if (!video) continue;
+
+          // Determine platform from VideoResult data
+          const vr = allVideoResults?.find((x) => x.videoId === video.videoId);
+          const platform = (video as YouTubeVideo & { _platform?: string })._platform || vr?.platform || "youtube";
+          const platformMap: Record<string, ContentType> = {
+            youtube: "YOUTUBE_VIDEO", youtube_short: "YOUTUBE_SHORT",
+            tiktok: "TIKTOK_VIDEO", vimeo: "VIMEO_VIDEO",
+          };
+          const platformLabels: Record<string, string> = {
+            youtube: "YouTube", youtube_short: "YouTube Shorts",
+            tiktok: "TikTok", vimeo: "Vimeo",
+          };
+          const contentType = platformMap[platform] || "YOUTUBE_VIDEO";
+          const videoUrl = vr?.url || `https://youtube.com/watch?v=${video.videoId}`;
+
           await prisma.contentAsset.create({ data: {
             projectId, competitorId: videoCompetitorMap.get(score.videoId) || null,
-            type: "YOUTUBE_VIDEO", title: video.title,
-            url: `https://youtube.com/watch?v=${video.videoId}`,
+            type: contentType, title: video.title,
+            url: videoUrl,
             thumbnailUrl: video.thumbnailUrl, description: video.description,
             publishedAt: video.publishedAt ? new Date(video.publishedAt) : null,
-            platform: "YouTube", viewCount: video.viewCount,
+            platform: platformLabels[platform] || "YouTube",
+            viewCount: video.viewCount,
             likeCount: video.likeCount, commentCount: video.commentCount,
             engagementRate: video.viewCount > 0 ? ((video.likeCount + video.commentCount) / video.viewCount) * 100 : 0,
-            metricsSource: process.env.YOUTUBE_API_KEY ? "OFFICIAL_API" : "PUBLIC_WEB", overallScore: score.overallScore,
+            metricsSource: "PUBLIC_WEB", overallScore: score.overallScore,
             hookStrength: score.hookStrength, productVisibility: score.productVisibility,
             storytellingArc: score.storytellingArc, ctaQuality: score.ctaQuality,
             emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
             hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
             keyMessages: score.keyMessages,
+            contentCategory: score.contentCategory || null,
             isBrandOwned: !videoCompetitorMap.get(score.videoId),
-            dataSource: process.env.YOUTUBE_API_KEY ? "OFFICIAL_API" : "PUBLIC_WEB",
+            dataSource: "PUBLIC_WEB",
           }});
         }
       } catch (e) { console.error("Content scoring failed:", e); }

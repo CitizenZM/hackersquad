@@ -1,6 +1,6 @@
 import type { YouTubeVideo } from "@/services/research/youtube-service";
 
-export function buildContentScoringPrompt(brandName: string, videos: YouTubeVideo[]) {
+export function buildContentScoringPrompt(brandName: string, videos: (YouTubeVideo & { _platform?: string })[]) {
   const system = `You are a content performance analyst specializing in social media and video marketing.
 Score each content asset on multiple dimensions (0-100 scale).
 Respond with ONLY a JSON object matching this structure:
@@ -18,7 +18,8 @@ Respond with ONLY a JSON object matching this structure:
       "hookText": "string - the likely opening hook based on title/description",
       "narrativeType": "PROBLEM_SOLUTION|TESTIMONIAL|DEMONSTRATION|LIFESTYLE|EDUCATIONAL|COMPARISON|STORY_ARC|UGC_STYLE|TREND_RIDING|BEFORE_AFTER",
       "keyMessages": ["array of key messages"],
-      "analysis": "string - brief explanation of why this content works or doesn't"
+      "analysis": "string - brief explanation of why this content works or doesn't",
+      "contentCategory": "AD|REVIEW|UGC|OTHER"
     }
   ]
 }
@@ -30,7 +31,13 @@ Score criteria:
 - ctaQuality: Is there a clear call-to-action?
 - emotionalAppeal: Does it trigger an emotional response?
 - pacing: Is the content well-structured for the platform?
-- overallScore: Weighted average considering engagement metrics too`;
+- overallScore: Weighted average considering engagement metrics too
+
+contentCategory classification:
+- AD: Official brand ad, commercial, sponsored content, brand campaign, product launch video
+- REVIEW: Third-party review, unboxing, hands-on, comparison by a reviewer
+- UGC: User-generated content, organic mentions, fan-made content
+- OTHER: Tutorials, news coverage, educational content`;
 
   const user = `Score these content assets related to "${brandName}":
 
@@ -40,7 +47,8 @@ ${videos
 [${i + 1}] Video ID: ${v.videoId}
 Title: ${v.title}
 Channel: ${v.channelTitle}
-Description: ${v.description.slice(0, 500)}
+Platform: ${v._platform || "youtube"}
+Description: ${v.description.slice(0, 400)}
 Views: ${v.viewCount.toLocaleString()}
 Likes: ${v.likeCount.toLocaleString()}
 Comments: ${v.commentCount.toLocaleString()}

@@ -55,9 +55,19 @@ export const DATA_SOURCE_LABELS: Record<string, string> = {
 };
 
 export const CONTENT_TYPE_LABELS: Record<string, string> = {
-  YOUTUBE_VIDEO: "YouTube Video",
-  WEBSITE_PAGE: "Website Page",
+  YOUTUBE_VIDEO: "YouTube",
+  YOUTUBE_SHORT: "YT Shorts",
+  TIKTOK_VIDEO: "TikTok",
+  VIMEO_VIDEO: "Vimeo",
+  WEBSITE_PAGE: "Website",
   SOCIAL_POST: "Social Post",
   WEB_MENTION: "Web Mention",
   REVIEW: "Review",
+};
+
+export const CONTENT_CATEGORY_LABELS: Record<string, string> = {
+  AD: "Ad / Commercial",
+  REVIEW: "Review",
+  UGC: "User Generated",
+  OTHER: "Other",
 };

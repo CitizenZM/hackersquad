@@ -16,7 +16,8 @@ const youtube = google.youtube("v3");
 
 export async function searchYouTubeVideos(
   query: string,
-  maxResults = 10
+  maxResults = 10,
+  spFilter?: string
 ): Promise<YouTubeVideo[]> {
   if (process.env.MOCK_CRAWL === "true") {
     return [];
@@ -33,7 +34,7 @@ export async function searchYouTubeVideos(
 
   // 2. Scrape YouTube search results (no API key needed)
   try {
-    return await scrapeYouTubeSearch(query, maxResults);
+    return await scrapeYouTubeSearch(query, maxResults, spFilter);
   } catch (error) {
     console.error("YouTube scrape error:", error);
   }
@@ -111,9 +112,11 @@ function parsePublishedAge(text: string): string {
 
 async function scrapeYouTubeSearch(
   query: string,
-  maxResults: number
+  maxResults: number,
+  spFilter?: string
 ): Promise<YouTubeVideo[]> {
-  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  let url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  if (spFilter) url += `&sp=${spFilter}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);

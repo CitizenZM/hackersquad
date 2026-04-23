@@ -25,6 +25,9 @@ enum DataSource {
 
 enum ContentType {
   YOUTUBE_VIDEO
+  YOUTUBE_SHORT
+  TIKTOK_VIDEO
+  VIMEO_VIDEO
   WEBSITE_PAGE
   SOCIAL_POST
   WEB_MENTION
@@ -147,8 +150,9 @@ model ContentAsset {
   emotionalAppeal   Float?
   pacing            Float?
 
-  hookText      String?
-  narrativeType NarrativeType?
+  hookText         String?
+  narrativeType    NarrativeType?
+  contentCategory  String?
   keyMessages   Json?
   transcript    String?
 

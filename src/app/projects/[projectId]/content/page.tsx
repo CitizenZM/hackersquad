@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
-import { NARRATIVE_TYPE_LABELS, CONTENT_TYPE_LABELS } from "@/lib/constants";
+import { NARRATIVE_TYPE_LABELS, CONTENT_TYPE_LABELS, CONTENT_CATEGORY_LABELS } from "@/lib/constants";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
 import { ChevronRight, Eye, ThumbsUp, MessageSquare, ExternalLink } from "lucide-react";
 
@@ -22,12 +22,14 @@ export default async function ContentPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ sort?: string; order?: string }>;
+  searchParams: Promise<{ sort?: string; order?: string; platform?: string; category?: string }>;
 }) {
   const { projectId } = await params;
   const sp = await searchParams;
   const sortBy = sp.sort || "overallScore";
   const order = sp.order || "desc";
+  const platformFilter = sp.platform || "";
+  const categoryFilter = sp.category || "";
 
   const orderByMap: Record<string, Record<string, string>> = {
     overallScore: { overallScore: order },
@@ -36,15 +38,40 @@ export default async function ContentPage({
     engagementRate: { engagementRate: order },
   };
 
+  const whereClause: Record<string, unknown> = { projectId };
+  if (platformFilter) whereClause.type = platformFilter;
+  if (categoryFilter) whereClause.contentCategory = categoryFilter;
+
   const assets = await prisma.contentAsset.findMany({
-    where: { projectId },
+    where: whereClause,
     orderBy: orderByMap[sortBy] || { overallScore: "desc" },
     include: { competitor: { select: { name: true } } },
   });
 
+  // Get platform counts for filter chips
+  const allAssets = await prisma.contentAsset.findMany({
+    where: { projectId },
+    select: { type: true, contentCategory: true },
+  });
+  const platformCounts: Record<string, number> = {};
+  const categoryCounts: Record<string, number> = {};
+  allAssets.forEach((a) => {
+    platformCounts[a.type] = (platformCounts[a.type] || 0) + 1;
+    if (a.contentCategory) categoryCounts[a.contentCategory] = (categoryCounts[a.contentCategory] || 0) + 1;
+  });
+
+  function buildFilterUrl(params: Record<string, string>) {
+    const base: Record<string, string> = { sort: sortBy, order };
+    if (platformFilter) base.platform = platformFilter;
+    if (categoryFilter) base.category = categoryFilter;
+    const merged = { ...base, ...params };
+    const search = new URLSearchParams(merged).toString();
+    return `?${search}`;
+  }
+
   function sortLink(col: string) {
     const newOrder = sortBy === col && order === "desc" ? "asc" : "desc";
-    return `?sort=${col}&order=${newOrder}`;
+    return buildFilterUrl({ sort: col, order: newOrder });
   }
 
   function sortArrow(col: string) {
@@ -58,10 +85,10 @@ export default async function ContentPage({
         <div>
           <h2 className="text-base font-semibold tracking-tight">Content Intelligence</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {assets.length} asset{assets.length !== 1 ? "s" : ""} analyzed · Sorted by {sortBy}{sortArrow(sortBy)}
+            {assets.length} asset{assets.length !== 1 ? "s" : ""} · Sorted by {sortBy}{sortArrow(sortBy)}
           </p>
         </div>
-        <div className="flex gap-1 text-xs">
+        <div className="flex gap-1 text-xs flex-wrap">
           {[
             { col: "overallScore", label: "Score" },
             { col: "viewCount", label: "Views" },
@@ -81,6 +108,36 @@ export default async function ContentPage({
           ))}
         </div>
       </div>
+
+      {/* Platform + Category filters */}
+      {Object.keys(platformCounts).length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          <Link
+            href={buildFilterUrl({ platform: "" })}
+            className={`px-2.5 py-1 rounded-md border text-xs transition-colors ${!platformFilter ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+          >
+            All ({allAssets.length})
+          </Link>
+          {Object.entries(platformCounts).map(([type, count]) => (
+            <Link
+              key={type}
+              href={buildFilterUrl({ platform: type })}
+              className={`px-2.5 py-1 rounded-md border text-xs transition-colors ${platformFilter === type ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+            >
+              {CONTENT_TYPE_LABELS[type] || type} ({count})
+            </Link>
+          ))}
+          {Object.entries(categoryCounts).map(([cat, count]) => (
+            <Link
+              key={cat}
+              href={buildFilterUrl({ category: categoryFilter === cat ? "" : cat })}
+              className={`px-2.5 py-1 rounded-md border text-xs transition-colors ${categoryFilter === cat ? "bg-[var(--status-ai-bg)] text-[var(--status-ai-fg)] border-[var(--status-ai)]" : "border-border text-muted-foreground hover:text-foreground"}`}
+            >
+              {CONTENT_CATEGORY_LABELS[cat] || cat} ({count})
+            </Link>
+          ))}
+        </div>
+      )}
 
       {assets.length === 0 ? (
         <div className="rounded-lg border border-border bg-card py-16 text-center">
@@ -113,6 +170,7 @@ export default async function ContentPage({
                         Published{sortArrow("publishedAt")}
                       </Link>
                     </th>
+                    <th className="text-left font-medium px-3 py-2.5 hidden lg:table-cell">Type</th>
                     <th className="text-left font-medium px-3 py-2.5">Source</th>
                     <th className="w-16"></th>
                   </tr>
@@ -149,6 +207,16 @@ export default async function ContentPage({
                       </td>
                       <td className="px-3 py-3 text-right text-xs text-muted-foreground">
                         {formatDate(asset.publishedAt)}
+                      </td>
+                      <td className="px-3 py-3 hidden lg:table-cell">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-muted-foreground">{CONTENT_TYPE_LABELS[asset.type] || asset.type}</span>
+                          {asset.contentCategory && (
+                            <StatusBadge level={asset.contentCategory === "AD" ? "healthy" : "neutral"}>
+                              {CONTENT_CATEGORY_LABELS[asset.contentCategory] || asset.contentCategory}
+                            </StatusBadge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         {asset.isBrandOwned ? (

@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { crawlWebsite, type CrawlResult } from "@/services/research/website-crawler";
-import { searchYouTubeVideos, type YouTubeVideo } from "@/services/research/youtube-service";
+import { extractSearchKeywords } from "@/services/research/keyword-extractor";
+import { searchAllPlatforms, type VideoResult } from "@/services/research/video-search";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
 
 export const maxDuration = 60;
+
+const CONTENT_TYPE_MAP: Record<string, string> = {
+  youtube: "YOUTUBE_VIDEO",
+  youtube_short: "YOUTUBE_SHORT",
+  tiktok: "TIKTOK_VIDEO",
+  vimeo: "VIMEO_VIDEO",
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+  youtube: "YouTube",
+  youtube_short: "YouTube Shorts",
+  tiktok: "TikTok",
+  vimeo: "Vimeo",
+};
 
 export async function POST(
   _request: Request,
@@ -26,7 +41,7 @@ export async function POST(
       data: { status: "RESEARCHING" },
     });
 
-    // Run crawls + YouTube in PARALLEL for speed
+    // STEP 1: Crawl websites in parallel
     const crawlPromises: Promise<{ id: string; result: CrawlResult | null }>[] = [];
 
     if (project.brandUrl) {
@@ -45,16 +60,8 @@ export async function POST(
       );
     }
 
-    // YouTube - single query for brand (competitors use mock data)
-    const ytPromise = searchYouTubeVideos(project.brandName)
-      .catch(() => [] as YouTubeVideo[]);
+    const crawlResults = await Promise.all(crawlPromises);
 
-    const [crawlResults, brandVideos] = await Promise.all([
-      Promise.all(crawlPromises),
-      ytPromise,
-    ]);
-
-    // Organize crawl results
     let brandCrawl: CrawlResult | null = null;
     const competitorCrawls = new Map<string, CrawlResult>();
     for (const { id, result } of crawlResults) {
@@ -63,16 +70,43 @@ export async function POST(
       else competitorCrawls.set(id, result);
     }
 
-    // Competitor YouTube mock data (one call per competitor)
-    const competitorVideos = new Map<string, YouTubeVideo[]>();
+    // STEP 2: Extract smart keywords from brand crawl
+    const keywords = await extractSearchKeywords(
+      project.brandName,
+      brandCrawl,
+      project.competitors.map((c) => c.name)
+    );
+
+    // STEP 3: Multi-platform video search (YouTube + Shorts + TikTok + Vimeo)
+    const brandVideos = await searchAllPlatforms(project.brandName, keywords);
+
+    // Also search for each competitor
+    const competitorVideoMap = new Map<string, VideoResult[]>();
     for (const comp of project.competitors) {
-      competitorVideos.set(comp.id, await searchYouTubeVideos(comp.name));
+      const compKeywords = {
+        ...keywords,
+        adSearchQueries: [
+          `${comp.name} official ad commercial`,
+          `${comp.name} brand campaign advertisement`,
+        ],
+      };
+      const videos = await searchAllPlatforms(comp.name, compKeywords);
+      competitorVideoMap.set(comp.id, videos);
     }
 
-    // Web mentions from crawl
+    // STEP 4: Store all videos as ContentAssets
+    const allVideosForScoring: VideoResult[] = [...brandVideos];
+    const videoOwnerMap = new Map<string, string | null>();
+    brandVideos.forEach((v) => videoOwnerMap.set(`${v.platform}:${v.videoId}`, null));
+
+    for (const [compId, videos] of competitorVideoMap) {
+      allVideosForScoring.push(...videos);
+      videos.forEach((v) => videoOwnerMap.set(`${v.platform}:${v.videoId}`, compId));
+    }
+
+    // Web mentions from crawl data
     if (brandCrawl) {
-      const mentions = brandCrawl.testimonials.slice(0, 3);
-      for (const mention of mentions) {
+      for (const mention of brandCrawl.testimonials.slice(0, 3)) {
         await prisma.contentAsset.create({
           data: {
             projectId,
@@ -87,16 +121,24 @@ export async function POST(
       }
     }
 
-    // AI Analysis (uses gpt-4o-mini for speed)
+    // STEP 5: AI Analysis - convert VideoResults to the format the pipeline expects
+    const youtubeFormatBrand = brandVideos.map(videoResultToYouTube);
+    const youtubeFormatCompetitors = new Map<string, ReturnType<typeof videoResultToYouTube>[]>();
+    for (const [compId, videos] of competitorVideoMap) {
+      youtubeFormatCompetitors.set(compId, videos.map(videoResultToYouTube));
+    }
+
     await runAnalysisPipeline(
       projectId,
       "",
       brandCrawl,
       competitorCrawls,
-      brandVideos,
-      competitorVideos
+      youtubeFormatBrand,
+      youtubeFormatCompetitors,
+      allVideosForScoring
     );
 
+    // Finalize
     await prisma.project.update({
       where: { id: projectId },
       data: { status: "ANALYZED" },
@@ -121,4 +163,19 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+function videoResultToYouTube(v: VideoResult) {
+  return {
+    videoId: v.videoId,
+    title: v.title,
+    description: v.description,
+    publishedAt: v.publishedAt,
+    thumbnailUrl: v.thumbnailUrl,
+    channelTitle: v.channelTitle,
+    viewCount: v.viewCount,
+    likeCount: v.likeCount,
+    commentCount: v.commentCount,
+    _platform: v.platform,
+  };
 }
