@@ -456,6 +456,7 @@ export default function CreativePage() {
                   imagePrompt={frame.imagePrompt}
                   frameNumber={frame.frameNumber}
                   duration={frame.duration}
+                  projectId={projectId}
                 />
                 <div className="p-3 space-y-1.5">
                   <p className="text-sm font-medium leading-snug">{frame.scene}</p>
