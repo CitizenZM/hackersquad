@@ -6,6 +6,7 @@ import { buildContentScoringPrompt } from "./prompts/content-scoring";
 import { buildPatternMiningPrompt } from "./prompts/pattern-mining";
 import { buildCompetitorIntelPrompt } from "./prompts/competitor-intel";
 import { buildAudienceResearchPrompt } from "./prompts/audience-research";
+import { buildDeepAnalysisPrompt } from "./prompts/deep-analysis";
 import type { CrawlResult } from "@/services/research/website-crawler";
 import type { YouTubeVideo } from "@/services/research/youtube-service";
 import type { VideoResult } from "@/services/research/video-search";
@@ -262,6 +263,78 @@ export async function runAnalysisPipeline(
     });
     } catch (e) { console.error("Audience research failed:", e); }
   })());
+
+  // Deep analysis (runs in parallel with pattern mining + audience)
+  if (scoredAssets.length > 0) {
+    postTasks.push((async () => {
+      try {
+        const deepSchema = z.object({
+          videoStructure: z.object({
+            openingPatterns: z.array(z.object({ pattern: z.string(), frequency: z.number(), effectiveness: z.string(), example: z.string() })),
+            hookDurationRange: z.string(),
+            productRevealTiming: z.string(),
+            averageLength: z.string(),
+            structuralInsights: z.array(z.string()),
+          }),
+          vibeAnalysis: z.object({
+            dominantTones: z.array(z.object({ tone: z.string(), frequency: z.number(), avgScore: z.number(), example: z.string() })),
+            emotionalTriggers: z.array(z.object({ trigger: z.string(), usage: z.string(), examples: z.array(z.string()) })),
+            visualStyleNotes: z.string(),
+            pacingProfile: z.string(),
+            vibeInsights: z.array(z.string()),
+          }),
+          ctaAnalysis: z.object({
+            commonCTAs: z.array(z.object({ cta: z.string(), frequency: z.number(), type: z.string(), effectiveness: z.string() })),
+            placement: z.string(),
+            urgencyLevel: z.string(),
+            conversionDrivers: z.array(z.string()),
+            ctaInsights: z.array(z.string()),
+          }),
+          sellingPointDeep: z.object({
+            topPerformers: z.array(z.object({ point: z.string(), whyItWorks: z.string(), bestPlatforms: z.array(z.string()), exampleContent: z.string() })),
+            underutilized: z.array(z.object({ point: z.string(), opportunity: z.string() })),
+            messagingInsights: z.array(z.string()),
+          }),
+          competitiveGaps: z.array(z.object({ gap: z.string(), recommendation: z.string(), priority: z.string() })),
+          recommendations: z.array(z.object({ title: z.string(), description: z.string(), impact: z.string(), effort: z.string(), category: z.string() })),
+        });
+
+        const updatedProject = await prisma.project.findUnique({ where: { id: projectId } });
+        const prompt = buildDeepAnalysisPrompt({
+          brandName: project.brandName,
+          category: updatedProject?.category || undefined,
+          topContent: scoredAssets.slice(0, 8).map((a) => ({
+            title: a.title,
+            platform: a.platform || "YouTube",
+            narrativeType: a.narrativeType || "DEMONSTRATION",
+            overallScore: a.overallScore || 0,
+            hookStrength: a.hookStrength || 0,
+            ctaQuality: a.ctaQuality || 0,
+            emotionalAppeal: a.emotionalAppeal || 0,
+            pacing: a.pacing || 0,
+            storytellingArc: a.storytellingArc || 0,
+            hookText: a.hookText || "",
+            keyMessages: (a.keyMessages as string[]) || [],
+            viewCount: a.viewCount || 0,
+            contentCategory: a.contentCategory,
+          })),
+        });
+
+        const deep = await analyzeWithClaude({
+          systemPrompt: prompt.system,
+          userPrompt: prompt.user,
+          responseSchema: deepSchema,
+          maxTokens: 4096,
+        });
+
+        await prisma.deepAnalysis.upsert({
+          where: { projectId },
+          create: { projectId, ...deep, dataSource: "AI_INFERRED" },
+          update: { ...deep },
+        });
+      } catch (e) { console.error("Deep analysis failed:", e); }
+    })());
+  }
 
   await Promise.all(postTasks);
 }
