@@ -32,11 +32,14 @@ export async function POST(
 
         let imageUrl: string | undefined;
 
+        // CRITICAL: prevent text/typography artifacts in DALL-E output
+        const noTextDirective = "IMPORTANT: Pure visual scene only. NO text, NO words, NO letters, NO typography, NO captions, NO logos, NO signs with readable text, NO brand names written in the image.";
+
         if (isLofi) {
-          // DALL-E 2 at 256x256 = $0.016 per image (cheapest option)
+          // DALL-E 2 at 256x256 (cheapest option)
           const response = await openai.images.generate({
             model: "dall-e-2",
-            prompt: `Simple storyboard frame illustration: ${prompt}. Style: clean minimal sketch, flat colors, advertising concept art`,
+            prompt: `Cinematic storyboard frame: ${prompt}. Clean minimal illustration, flat colors, advertising concept art. ${noTextDirective}`,
             n: 1,
             size: "256x256",
           });
@@ -45,7 +48,7 @@ export async function POST(
           // Full quality: DALL-E 3 at 1024x1024
           const response = await openai.images.generate({
             model: "dall-e-3",
-            prompt: `Professional advertising concept frame: ${prompt}. Style: ${style || "clean, modern, commercial photography"}`,
+            prompt: `Professional advertising cinematography frame: ${prompt}. Style: ${style || "cinematic, commercial photography, natural lighting, photorealistic"}. ${noTextDirective}`,
             n: 1,
             size: "1024x1024",
             quality: "standard",
