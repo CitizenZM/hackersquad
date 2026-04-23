@@ -18,6 +18,18 @@ const scriptSchema = z.object({
   predictedScore: z.number(),
 });
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  const { projectId } = await params;
+  const scripts = await prisma.script.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+  });
+  return NextResponse.json(scripts);
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }

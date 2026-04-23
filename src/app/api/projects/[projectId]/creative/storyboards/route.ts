@@ -22,6 +22,18 @@ const storyboardSchema = z.object({
   ),
 });
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  const { projectId } = await params;
+  const storyboards = await prisma.storyboard.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+  });
+  return NextResponse.json(storyboards);
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }

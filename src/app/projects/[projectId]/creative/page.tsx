@@ -95,6 +95,40 @@ export default function CreativePage() {
   const [loadingMatrix, setLoadingMatrix] = useState(false);
   const [loadingAll, setLoadingAll] = useState(false);
   const [allProgress, setAllProgress] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  // Load previously saved data from DB on mount
+  useEffect(() => {
+    if (loaded) return;
+    async function loadSaved() {
+      try {
+        const [scriptsRes, storyboardsRes, matrixRes] = await Promise.all([
+          fetch(`/api/projects/${projectId}/creative/scripts`),
+          fetch(`/api/projects/${projectId}/creative/storyboards`),
+          fetch(`/api/projects/${projectId}/creative/test-matrix`),
+        ]);
+        const savedScripts = await scriptsRes.json();
+        const savedStoryboards = await storyboardsRes.json();
+        const savedMatrix = await matrixRes.json();
+
+        if (Array.isArray(savedScripts) && savedScripts.length > 0) {
+          setScripts(savedScripts);
+          setSelectedScript(savedScripts[0]);
+          setExpandedScript(savedScripts[0].id);
+        }
+        if (Array.isArray(savedStoryboards) && savedStoryboards.length > 0) {
+          setStoryboard(savedStoryboards[0]);
+        }
+        if (savedMatrix?.variants?.length > 0) {
+          setTestMatrix(savedMatrix.variants);
+        }
+      } catch {
+        // ignore load errors
+      }
+      setLoaded(true);
+    }
+    loadSaved();
+  }, [projectId, loaded]);
 
   const stages = [
     { num: 1, name: "Angles", icon: Wand2, done: angles.length > 0, active: loadingAngles },

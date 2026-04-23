@@ -19,6 +19,18 @@ const matrixSchema = z.object({
   ),
 });
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  const { projectId } = await params;
+  const variants = await prisma.creativeVariant.findMany({
+    where: { projectId },
+    orderBy: { predictedScore: "desc" },
+  });
+  return NextResponse.json({ variants });
+}
+
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ projectId: string }> }
