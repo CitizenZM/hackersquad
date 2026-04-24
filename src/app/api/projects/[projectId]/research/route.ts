@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { crawlWebsite, type CrawlResult } from "@/services/research/website-crawler";
-import { extractSearchKeywords } from "@/services/research/keyword-extractor";
+import { quickBrandUnderstanding, extractSearchKeywords } from "@/services/research/keyword-extractor";
 import { searchAllPlatforms, type VideoResult } from "@/services/research/video-search";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
 
@@ -70,15 +70,18 @@ export async function POST(
       else competitorCrawls.set(id, result);
     }
 
-    // STEP 2: Extract smart keywords from brand crawl
-    // Combine briefing text from both sources
+    // STEP 2: Quick brand understanding (BEFORE keyword extraction)
+    const brandContext = await quickBrandUnderstanding(project.brandName, brandCrawl);
+
+    // STEP 3: Extract smart keywords WITH brand context for disambiguation
     const briefing = [project.briefingText, project.briefingParsed].filter(Boolean).join("\n\n") || undefined;
 
     const keywords = await extractSearchKeywords(
       project.brandName,
       brandCrawl,
       project.competitors.map((c) => c.name),
-      briefing
+      briefing,
+      brandContext
     );
 
     // STEP 3: Multi-platform video search (YouTube + Shorts + TikTok + Vimeo)
@@ -106,23 +109,6 @@ export async function POST(
     for (const [compId, videos] of competitorVideoMap) {
       allVideosForScoring.push(...videos);
       videos.forEach((v) => videoOwnerMap.set(`${v.platform}:${v.videoId}`, compId));
-    }
-
-    // Web mentions from crawl data
-    if (brandCrawl) {
-      for (const mention of brandCrawl.testimonials.slice(0, 3)) {
-        await prisma.contentAsset.create({
-          data: {
-            projectId,
-            type: "WEB_MENTION",
-            title: `Website mention: ${mention.slice(0, 60)}...`,
-            url: project.brandUrl || "",
-            description: mention,
-            platform: "Website",
-            dataSource: "PUBLIC_WEB",
-          },
-        });
-      }
     }
 
     // STEP 5: AI Analysis - convert VideoResults to the format the pipeline expects

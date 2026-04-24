@@ -18,7 +18,9 @@ export async function searchYouTubeVideos(
   query: string,
   maxResults = 10,
   spFilter?: string,
-  brandName?: string
+  brandName?: string,
+  mustContain?: string[],
+  mustNotContain?: string[]
 ): Promise<YouTubeVideo[]> {
   if (process.env.MOCK_CRAWL === "true") {
     return [];
@@ -36,7 +38,7 @@ export async function searchYouTubeVideos(
   // 2. Scrape YouTube search results (no API key needed)
   try {
     const results = await scrapeYouTubeSearch(query, maxResults + 5, spFilter);
-    const filtered = brandName ? filterQuality(results, brandName) : results;
+    const filtered = brandName ? filterQuality(results, brandName, mustContain, mustNotContain) : results;
     return filtered.slice(0, maxResults);
   } catch (error) {
     console.error("YouTube scrape error:", error);
@@ -102,13 +104,40 @@ function isEnglishTitle(title: string): boolean {
   return nonLatin / title.length < 0.3;
 }
 
-function filterQuality(videos: YouTubeVideo[], brandName: string): YouTubeVideo[] {
+function filterQuality(
+  videos: YouTubeVideo[],
+  brandName: string,
+  mustContain?: string[],
+  mustNotContain?: string[]
+): YouTubeVideo[] {
   const brandLower = brandName.toLowerCase();
+  const isAmbiguous = brandName.length <= 6;
+
   return videos.filter((v) => {
-    // Skip non-English titles
     if (!isEnglishTitle(v.title)) return false;
-    // Skip very low view count (unless title mentions the brand)
     if (v.viewCount < 500 && !v.title.toLowerCase().includes(brandLower)) return false;
+
+    const text = `${v.title} ${v.description}`.toLowerCase();
+
+    // Reject if contains any "not related to" terms
+    if (mustNotContain && mustNotContain.length > 0) {
+      for (const term of mustNotContain) {
+        if (text.includes(term.toLowerCase())) return false;
+      }
+    }
+
+    // For ambiguous brand names, require at least one disambiguation keyword
+    if (isAmbiguous && mustContain && mustContain.length > 0) {
+      const hasRelevantKeyword = mustContain.some((kw) =>
+        text.includes(kw.toLowerCase())
+      );
+      const titleHasBrand = v.title.toLowerCase().includes(brandLower);
+      // Pass if: has a relevant keyword, OR title has brand + high view count (likely official)
+      if (!hasRelevantKeyword && !(titleHasBrand && v.viewCount > 50000)) {
+        return false;
+      }
+    }
+
     return true;
   });
 }

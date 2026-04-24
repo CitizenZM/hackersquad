@@ -48,21 +48,22 @@ async function searchYouTubeLong(
   brandName: string,
   keywords: SearchKeywords
 ): Promise<VideoResult[]> {
-  // Use the top 2 ad-specific queries
   const queries = keywords.adSearchQueries.slice(0, 2);
   if (queries.length === 0) {
-    queries.push(`${brandName} official ad commercial`);
+    const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
+    queries.push(`${brandName} ${disambig} official ad commercial`);
   }
+
+  const mc = keywords.brandContext?.disambiguationKeywords;
+  const mnc = keywords.brandContext?.notRelatedTo;
 
   const results: VideoResult[] = [];
   for (const query of queries) {
     try {
-      const videos = await searchYouTubeVideos(query, 5, undefined, brandName);
-      results.push(
-        ...videos.map((v) => youtubeToResult(v, "youtube"))
-      );
+      const videos = await searchYouTubeVideos(query, 5, undefined, brandName, mc, mnc);
+      results.push(...videos.map((v) => youtubeToResult(v, "youtube")));
     } catch {
-      // continue with next query
+      // continue
     }
   }
   return results;
@@ -72,9 +73,12 @@ async function searchYouTubeShorts(
   brandName: string,
   keywords: SearchKeywords
 ): Promise<VideoResult[]> {
-  const query = `${brandName} ad short`;
+  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
+  const query = `${brandName} ${disambig} ad short`;
+  const mc = keywords.brandContext?.disambiguationKeywords;
+  const mnc = keywords.brandContext?.notRelatedTo;
   try {
-    const videos = await searchYouTubeVideos(query, 5, "EgIQCQ%3D%3D", brandName);
+    const videos = await searchYouTubeVideos(query, 5, "EgIQCQ%3D%3D", brandName, mc, mnc);
     return videos.map((v) => youtubeToResult(v, "youtube_short"));
   } catch {
     return [];
@@ -86,11 +90,11 @@ async function searchTikTok(
   keywords: SearchKeywords
 ): Promise<VideoResult[]> {
   const results: VideoResult[] = [];
+  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
 
-  // Search via DuckDuckGo
   const queries = [
-    `site:tiktok.com "${brandName}" ad commercial`,
-    `site:tiktok.com "${brandName}" ${keywords.productKeywords[0] || ""}`,
+    `site:tiktok.com "${brandName}" ${disambig} ad commercial`,
+    `site:tiktok.com "${brandName}" ${keywords.productKeywords[0] || disambig}`,
   ];
 
   for (const query of queries) {
@@ -134,10 +138,11 @@ async function searchVimeo(
   keywords: SearchKeywords
 ): Promise<VideoResult[]> {
   const results: VideoResult[] = [];
+  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
 
   try {
     const ddgResults = await searchDuckDuckGo(
-      `site:vimeo.com "${brandName}" commercial ad`,
+      `site:vimeo.com "${brandName}" ${disambig} commercial ad`,
       5
     );
     const vimeoUrls = ddgResults
