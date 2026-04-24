@@ -25,15 +25,15 @@ export async function searchAllPlatforms(
   const allResults: VideoResult[] = [];
 
   // Run all platform searches in parallel
-  const [ytLong, ytShorts, tiktokResults, vimeoResults, igResults] = await Promise.all([
+  // YouTube searches (primary) + social discovery (secondary) in parallel
+  // Keep it fast to fit within 60s Vercel timeout
+  const [ytLong, ytShorts, socialResults] = await Promise.all([
     searchYouTubeLong(brandName, keywords),
     searchYouTubeShorts(brandName, keywords),
-    searchTikTok(brandName, keywords),
-    searchVimeo(brandName, keywords),
-    searchInstagram(brandName, keywords),
+    searchSocialPlatforms(brandName, keywords),
   ]);
 
-  allResults.push(...ytLong, ...ytShorts, ...tiktokResults, ...vimeoResults, ...igResults);
+  allResults.push(...ytLong, ...ytShorts, ...socialResults);
 
   // Deduplicate by videoId
   const seen = new Set<string>();
@@ -84,6 +84,85 @@ async function searchYouTubeShorts(
   } catch {
     return [];
   }
+}
+
+async function searchSocialPlatforms(
+  brandName: string,
+  keywords: SearchKeywords
+): Promise<VideoResult[]> {
+  // Single DuckDuckGo query for TikTok + IG + Vimeo combined
+  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
+  const results: VideoResult[] = [];
+
+  try {
+    const ddgResults = await searchDuckDuckGo(
+      `"${brandName}" ${disambig} tiktok OR instagram OR vimeo video ad`,
+      10
+    );
+
+    for (const r of ddgResults) {
+      if (r.url.includes("tiktok.com") && r.url.includes("/video/")) {
+        // Try to scrape TikTok metadata
+        const video = await scrapeTikTokVideo(r.url).catch(() => null);
+        if (video) {
+          results.push({
+            platform: "tiktok",
+            videoId: video.videoId,
+            title: video.title || video.description.slice(0, 80),
+            description: video.description,
+            url: video.url,
+            thumbnailUrl: video.thumbnailUrl,
+            channelTitle: video.author || video.authorHandle,
+            viewCount: video.viewCount,
+            likeCount: video.likeCount,
+            commentCount: video.commentCount,
+            publishedAt: video.publishedAt,
+          });
+        }
+      } else if (r.url.includes("instagram.com") && (r.url.includes("/reel/") || r.url.includes("/p/"))) {
+        results.push({
+          platform: "tiktok",
+          videoId: `ig_${r.url.split("/").filter(Boolean).pop() || ""}`,
+          title: r.title || `${brandName} Instagram Reel`,
+          description: r.snippet || "",
+          url: r.url,
+          thumbnailUrl: "",
+          channelTitle: "Instagram",
+          viewCount: 0,
+          likeCount: 0,
+          commentCount: 0,
+          publishedAt: new Date().toISOString(),
+        });
+      } else if (r.url.includes("vimeo.com")) {
+        const video = await getVimeoMetadata(r.url).catch(() => null);
+        if (video) {
+          results.push({
+            platform: "vimeo",
+            videoId: video.videoId,
+            title: video.title,
+            description: video.description,
+            url: video.url,
+            thumbnailUrl: video.thumbnailUrl,
+            channelTitle: video.author,
+            viewCount: 0,
+            likeCount: 0,
+            commentCount: 0,
+            publishedAt: video.publishedAt,
+          });
+        }
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  // If combined search found nothing, try individual TikTok search
+  if (results.length === 0) {
+    const ttResults = await searchTikTok(brandName, keywords);
+    results.push(...ttResults);
+  }
+
+  return results;
 }
 
 async function searchTikTok(
