@@ -25,14 +25,15 @@ export async function searchAllPlatforms(
   const allResults: VideoResult[] = [];
 
   // Run all platform searches in parallel
-  const [ytLong, ytShorts, tiktokResults, vimeoResults] = await Promise.all([
+  const [ytLong, ytShorts, tiktokResults, vimeoResults, igResults] = await Promise.all([
     searchYouTubeLong(brandName, keywords),
     searchYouTubeShorts(brandName, keywords),
     searchTikTok(brandName, keywords),
     searchVimeo(brandName, keywords),
+    searchInstagram(brandName, keywords),
   ]);
 
-  allResults.push(...ytLong, ...ytShorts, ...tiktokResults, ...vimeoResults);
+  allResults.push(...ytLong, ...ytShorts, ...tiktokResults, ...vimeoResults, ...igResults);
 
   // Deduplicate by videoId
   const seen = new Set<string>();
@@ -92,19 +93,21 @@ async function searchTikTok(
   const results: VideoResult[] = [];
   const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
 
+  // Better queries: avoid overly restrictive "site:" filter
+  // DuckDuckGo returns more TikTok results with natural queries
   const queries = [
-    `site:tiktok.com "${brandName}" ${disambig} ad commercial`,
-    `site:tiktok.com "${brandName}" ${keywords.productKeywords[0] || disambig}`,
+    `"${brandName}" ${disambig} tiktok video`,
+    `"${brandName}" tiktok viral ad`,
+    `site:tiktok.com "${brandName}" ${disambig}`,
   ];
 
   for (const query of queries) {
     try {
-      const ddgResults = await searchDuckDuckGo(query, 5);
+      const ddgResults = await searchDuckDuckGo(query, 8);
       const tiktokUrls = ddgResults
         .filter((r) => r.url.includes("tiktok.com") && r.url.includes("/video/"))
         .slice(0, 3);
 
-      // Scrape each TikTok video for full metadata (parallel)
       const scraped = await Promise.all(
         tiktokUrls.map((r) => scrapeTikTokVideo(r.url))
       );
@@ -128,6 +131,54 @@ async function searchTikTok(
     } catch {
       // continue
     }
+    if (results.length >= 5) break;
+  }
+
+  return results;
+}
+
+async function searchInstagram(
+  brandName: string,
+  keywords: SearchKeywords
+): Promise<VideoResult[]> {
+  const results: VideoResult[] = [];
+  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
+
+  // Search for Instagram Reels via DuckDuckGo
+  const queries = [
+    `"${brandName}" ${disambig} instagram reel`,
+    `"${brandName}" instagram video ad`,
+  ];
+
+  for (const query of queries) {
+    try {
+      const ddgResults = await searchDuckDuckGo(query, 8);
+      const igUrls = ddgResults
+        .filter((r) =>
+          r.url.includes("instagram.com") &&
+          (r.url.includes("/reel/") || r.url.includes("/p/"))
+        )
+        .slice(0, 3);
+
+      for (const igResult of igUrls) {
+        results.push({
+          platform: "tiktok", // stored as social post but displayed as IG
+          videoId: `ig_${igResult.url.split("/").filter(Boolean).pop() || ""}`,
+          title: igResult.title || `${brandName} Instagram Reel`,
+          description: igResult.snippet || "",
+          url: igResult.url,
+          thumbnailUrl: "",
+          channelTitle: "Instagram",
+          viewCount: 0,
+          likeCount: 0,
+          commentCount: 0,
+          publishedAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // continue
+    }
+    if (results.length >= 3) break;
   }
 
   return results;
