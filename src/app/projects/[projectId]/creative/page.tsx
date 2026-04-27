@@ -109,9 +109,9 @@ export default function CreativePage() {
           fetch(`/api/projects/${projectId}/creative/storyboards`),
           fetch(`/api/projects/${projectId}/creative/test-matrix`),
         ]);
-        const savedScripts = await scriptsRes.json();
-        const savedStoryboards = await storyboardsRes.json();
-        const savedMatrix = await matrixRes.json();
+        const savedScripts = await scriptsRes.json().catch(() => []);
+        const savedStoryboards = await storyboardsRes.json().catch(() => []);
+        const savedMatrix = await matrixRes.json().catch(() => ({ variants: [] }));
 
         if (Array.isArray(savedScripts) && savedScripts.length > 0) {
           setScripts(savedScripts);

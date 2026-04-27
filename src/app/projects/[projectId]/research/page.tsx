@@ -65,14 +65,36 @@ export default function ResearchPage() {
     try {
       const res = await fetch(`/api/projects/${projectId}/research`, { method: "POST" });
       clearInterval(progressInterval);
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Research failed");
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = null; }
+
+      if (!res.ok || !data) {
+        // Check if research actually completed despite the timeout
+        const checkRes = await fetch(`/api/projects/${projectId}`);
+        const checkData = await checkRes.json().catch(() => null);
+        if (checkData?.status === "ANALYZED" || checkData?.status === "COMPLETE") {
+          setProgress(100);
+          setStatus("complete");
+          return;
+        }
+        throw new Error(data?.error || "Research timed out. Click retry or check partial results.");
       }
       setProgress(100);
       setStatus("complete");
     } catch (err) {
       clearInterval(progressInterval);
+      // One more check — the research might have completed in the background
+      try {
+        const checkRes = await fetch(`/api/projects/${projectId}`);
+        const checkData = await checkRes.json();
+        if (checkData?.status === "ANALYZED" || checkData?.status === "COMPLETE") {
+          setProgress(100);
+          setStatus("complete");
+          return;
+        }
+      } catch { /* ignore */ }
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong");
     }
@@ -87,8 +109,17 @@ export default function ResearchPage() {
           else if (d.status === "ANALYZED" || d.status === "COMPLETE") {
             setStatus("complete");
             setProgress(100);
+          } else if (d.status === "RESEARCHING") {
+            // Stuck in researching — data may be partially complete
+            if (d._count?.contentAssets > 0 || d.brandHealthScore) {
+              setStatus("complete");
+              setProgress(100);
+            } else {
+              startResearch();
+            }
           }
-        });
+        })
+        .catch(() => {});
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
