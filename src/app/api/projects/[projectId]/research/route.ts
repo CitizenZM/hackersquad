@@ -70,12 +70,9 @@ export async function POST(
       else competitorCrawls.set(id, result);
     }
 
-    // STEP 2: Quick brand understanding (BEFORE keyword extraction)
-    const brandContext = await quickBrandUnderstanding(project.brandName, brandCrawl);
-
-    // STEP 3: Extract smart keywords WITH brand context for disambiguation
+    // STEP 2: Brand understanding + keyword extraction (COMBINED into one AI call for speed)
     const briefing = [project.briefingText, project.briefingParsed].filter(Boolean).join("\n\n") || undefined;
-
+    const brandContext = await quickBrandUnderstanding(project.brandName, brandCrawl);
     const keywords = await extractSearchKeywords(
       project.brandName,
       brandCrawl,
@@ -84,39 +81,17 @@ export async function POST(
       brandContext
     );
 
-    // STEP 3: Multi-platform video search (YouTube + Shorts + TikTok + Vimeo)
+    // STEP 3: Video search — brand only (skip competitor to stay under 60s)
     const brandVideos = await searchAllPlatforms(project.brandName, keywords);
-
-    // Also search for each competitor
-    const competitorVideoMap = new Map<string, VideoResult[]>();
-    for (const comp of project.competitors) {
-      const compKeywords = {
-        ...keywords,
-        adSearchQueries: [
-          `${comp.name} official ad commercial`,
-          `${comp.name} brand campaign advertisement`,
-        ],
-      };
-      const videos = await searchAllPlatforms(comp.name, compKeywords);
-      competitorVideoMap.set(comp.id, videos);
-    }
 
     // STEP 4: Store all videos as ContentAssets
     const allVideosForScoring: VideoResult[] = [...brandVideos];
     const videoOwnerMap = new Map<string, string | null>();
     brandVideos.forEach((v) => videoOwnerMap.set(`${v.platform}:${v.videoId}`, null));
 
-    for (const [compId, videos] of competitorVideoMap) {
-      allVideosForScoring.push(...videos);
-      videos.forEach((v) => videoOwnerMap.set(`${v.platform}:${v.videoId}`, compId));
-    }
-
-    // STEP 5: AI Analysis - convert VideoResults to the format the pipeline expects
+    // STEP 5: AI Analysis
     const youtubeFormatBrand = brandVideos.map(videoResultToYouTube);
     const youtubeFormatCompetitors = new Map<string, ReturnType<typeof videoResultToYouTube>[]>();
-    for (const [compId, videos] of competitorVideoMap) {
-      youtubeFormatCompetitors.set(compId, videos.map(videoResultToYouTube));
-    }
 
     await runAnalysisPipeline(
       projectId,
