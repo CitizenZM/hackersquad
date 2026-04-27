@@ -84,11 +84,12 @@ export function ProjectForm() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: "Request failed" }));
         throw new Error(data.error || "Failed to create project");
       }
 
-      const project = await res.json();
+      const project = await res.json().catch(() => null);
+      if (!project?.id) throw new Error("Failed to create project");
 
       // Upload briefing file if selected
       if (briefingFile) {

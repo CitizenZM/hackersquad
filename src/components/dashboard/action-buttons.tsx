@@ -100,7 +100,7 @@ export function LoadMoreButton({
           body: JSON.stringify({ offset: currentCount }),
         }
       );
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setAdded(data.added || 0);
       router.refresh();
     } catch {

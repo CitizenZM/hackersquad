@@ -144,7 +144,7 @@ export default function CreativePage() {
     setLoadingAngles(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/creative/angles`, { method: "POST" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       const result = data.angles || [];
       setAngles(result);
       return result;
@@ -169,7 +169,7 @@ export default function CreativePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ angles: top3 }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       const newScripts: Script[] = data.scripts || [];
       setScripts((prev) => [...prev, ...newScripts]);
       // Auto-select all new scripts
@@ -194,7 +194,7 @@ export default function CreativePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scriptIds: Array.from(selectedScriptIds) }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       const newBoards: Storyboard[] = data.storyboards || [];
       setStoryboards((prev) => [...prev, ...newBoards]);
       return newBoards;
@@ -207,7 +207,7 @@ export default function CreativePage() {
     setLoadingMatrix(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/creative/test-matrix`, { method: "POST" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setTestMatrix(data.variants || []);
     } finally {
       setLoadingMatrix(false);
@@ -233,7 +233,7 @@ export default function CreativePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scriptIds: newScripts.map((s) => s.id) }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       const newBoards: Storyboard[] = data.storyboards || [];
       setStoryboards((prev) => [...prev, ...newBoards]);
 

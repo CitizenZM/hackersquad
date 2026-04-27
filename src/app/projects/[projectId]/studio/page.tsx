@@ -84,7 +84,7 @@ export default function StudioPage() {
     async function loadScripts() {
       try {
         const res = await fetch(`/api/projects/${projectId}/creative/scripts`);
-        const all = await res.json();
+        const all = await res.json().catch(() => []);
         if (!Array.isArray(all)) return;
 
         if (scriptsParam) {
@@ -115,7 +115,7 @@ export default function StudioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scriptId }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!data.error) setBrief(data);
     } finally {
       setLoading(false);
@@ -132,7 +132,7 @@ export default function StudioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompts, scriptId: activeScriptId }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setKeyframes(data.keyframes || []);
     } finally {
       setLoadingKeyframes(false);

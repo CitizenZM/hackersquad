@@ -40,7 +40,8 @@ export default function ResearchPage() {
   const checkStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${projectId}`);
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!data) return;
       if (data.status === "ANALYZED" || data.status === "COMPLETE") {
         setStatus("complete");
         setProgress(100);
@@ -88,7 +89,7 @@ export default function ResearchPage() {
       // One more check — the research might have completed in the background
       try {
         const checkRes = await fetch(`/api/projects/${projectId}`);
-        const checkData = await checkRes.json();
+        const checkData = await checkRes.json().catch(() => null);
         if (checkData?.status === "ANALYZED" || checkData?.status === "COMPLETE") {
           setProgress(100);
           setStatus("complete");
@@ -103,8 +104,9 @@ export default function ResearchPage() {
   useEffect(() => {
     checkStatus().then(() => {
       fetch(`/api/projects/${projectId}`)
-        .then((r) => r.json())
+        .then((r) => r.json().catch(() => null))
         .then((d) => {
+          if (!d) return;
           if (d.status === "DRAFT") startResearch();
           else if (d.status === "ANALYZED" || d.status === "COMPLETE") {
             setStatus("complete");

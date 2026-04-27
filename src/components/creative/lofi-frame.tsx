@@ -34,7 +34,7 @@ export function LofiFrame({
           dimensions: "256x256",
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.imageUrl) setImageUrl(data.imageUrl);
     } catch {
       // silently fail
