@@ -5,6 +5,22 @@ import { analyzeWithClaude } from "@/services/ai/claude-client";
 
 export const maxDuration = 60;
 
+function buildVeoPrompt(shot: Record<string, unknown>, charDesc: string, flat: Record<string, unknown>): string {
+  const parts = [
+    `Shot on ${shot.shot_type || "medium shot"} with ${shot.camera_angle || "eye-level"} angle using a ${shot.camera_movement || "steady"} camera movement.`,
+    shot.scene_description,
+    `The character — ${charDesc} — ${shot.character_action || "stands naturally"}.`,
+    shot.product_action ? `The product ${shot.product_action}.` : "",
+    `Lighting: ${shot.lighting || flat.lighting_source + " " + flat.lighting_direction}, creating a ${flat.lighting_mood || "natural"} mood.`,
+    `Environment: ${flat.location}, ${flat.time_of_day}, ${flat.weather}. Props include ${(flat.props as string[])?.join(", ") || "minimal set dressing"}.`,
+    shot.motion_effect ? `Motion details: ${shot.motion_effect}.` : "",
+    `Color palette: warm natural tones with ${flat.lighting_quality || "soft"} quality.`,
+    `Depth of field: shallow f/2.0, subject sharp with smooth background bokeh.`,
+    `No text, no typography, no logos, no signs, no distorted anatomy, no extra fingers, no warped products, no inconsistent lighting.`,
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
 // Simplified flat schema that gpt-4o-mini can reliably produce
 const veoResultSchema = z.object({
   creative_type: z.string(),
@@ -51,7 +67,7 @@ const veoResultSchema = z.object({
     text_overlay: z.string(),
     cta: z.string(),
     negative_prompt: z.string(),
-    veo_prompt: z.string(),
+    veo_prompt: z.string().optional().default(""),
     transition_to_next: z.string(),
   })),
 });
@@ -225,7 +241,12 @@ Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt parag
           cta: flat.story_cta,
         },
       },
-      shot_list: flat.shots,
+      shot_list: flat.shots.map((shot) => {
+        // Construct detailed veo_prompt server-side from shot fields + character
+        const charDesc = `${flat.character_gender}, ${flat.character_age}, ${flat.character_appearance}, wearing ${flat.character_wardrobe}`;
+        const builtPrompt = shot.veo_prompt || buildVeoPrompt(shot, charDesc, flat);
+        return { ...shot, veo_prompt: builtPrompt };
+      }),
     };
 
     return NextResponse.json(result);
