@@ -50,7 +50,6 @@ export async function POST(
             aspectRatio: aspectRatio || "9:16",
             resolution: resolution || "720p",
             durationSeconds: 8,
-            personGeneration: "allow_adult",
           },
         }),
       }
