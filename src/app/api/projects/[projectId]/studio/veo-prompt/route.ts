@@ -37,7 +37,7 @@ const veoResultSchema = z.object({
   story_cta: z.string(),
   shots: z.array(z.object({
     shot_id: z.string(),
-    duration_seconds: z.number(),
+    duration_seconds: z.coerce.number(),
     purpose: z.string(),
     scene_description: z.string(),
     character_action: z.string(),
