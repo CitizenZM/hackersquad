@@ -104,52 +104,17 @@ export async function POST(
     const vibeData = deepAnalysis?.vibeAnalysis as { dominantTones?: { tone: string }[]; pacingProfile?: string; visualStyleNotes?: string } | null;
     const ctaData = deepAnalysis?.ctaAnalysis as { commonCTAs?: { cta: string }[]; placement?: string } | null;
 
-    const system = `You are an elite VEO3 video prompt engineer. Your prompts must be EXTREMELY detailed and specific — every frame must be production-ready for AI video generation.
+    const system = `You are a VEO3 prompt engineer for TikTok video ads. Generate 3 shots (8s each, 9:16 vertical).
 
-=== VEO_PROMPT REQUIREMENTS ===
-Each "veo_prompt" must be a SINGLE dense paragraph (150-250 words) containing ALL of these elements in flowing prose:
+RULES:
+- Each shot has a veo_prompt: one detailed paragraph (80-150 words) describing the visual scene for AI video generation
+- veo_prompt must include: camera type+angle+movement, character appearance (SAME in all shots), lighting, micro-motion, depth of field
+- NO text/typography in any visual. End each veo_prompt with "No text, no logos, no distorted anatomy."
+- Shot 1 = scroll-stopping hook (use macro reveal, whip pan, object drop, POV reach, or speed ramp)
+- Shot 3 = CTA ending (use product hero orbit, walk-toward-camera, or snap-to-black)
+- CONTINUITY: same character description in every shot, same color palette, smooth transitions
 
-1. CAMERA SETUP: Exact shot type (extreme close-up / close-up / medium close-up / medium / medium-wide / wide / extreme wide), exact camera angle (eye-level at 0° / low angle 15° upward / high angle 30° downward / top-down 90° / dutch tilt 15° / worm's eye), exact lens (24mm wide / 35mm standard / 50mm portrait / 85mm telephoto / 100mm macro)
-
-2. CAMERA MOVEMENT: Precise motion description with speed (slow dolly-in at 2cm/s / fast whip pan 180° in 0.3s / smooth orbital tracking 45° arc / handheld with micro-vibrations / crane ascending 2 meters / steady push-in accelerating / parallax shift left-to-right / jib arm sweeping down)
-
-3. CHARACTER DETAIL: Exact physical description repeated every shot (ethnicity, age, specific hair — "dark brown shoulder-length wavy hair with honey highlights", specific wardrobe — "oversized cream linen button-down tucked into high-waisted olive cargo pants", accessories, nail color if hands visible). Precise facial expression (relaxed half-smile with slightly raised eyebrows / concentrated furrowed brow with pursed lips / genuine surprised expression with widened eyes and parted lips). Precise gesture/body language (reaching forward with extended fingers / turning head 45° to the left with chin slightly raised / leaning back with weight shifted to left hip)
-
-4. LIGHTING COMPOSITION: Key light position (45° front-left at 2 meters height), fill ratio (2:1 key-to-fill), rim/hair light (backlit from upper-right creating golden rim on shoulder and hair), practical lights (warm tungsten table lamp at 2700K in background), shadows (soft diffused shadows falling camera-right), color temperature (warm 3200K overall with cool 5600K accent from window)
-
-5. DEPTH OF FIELD: Exact aperture effect (f/1.8 shallow — subject sharp, background rendered as smooth circular bokeh with specular highlights / f/8 deep — everything sharp from 1m to infinity). Focus behavior (rack focus from foreground object to subject's face over 1.5 seconds / focus locked on product in hand while background defocuses)
-
-6. MOTION & PHYSICS: Micro-movements (hair strands swaying with breeze / fingers drumming lightly on surface / chest rising with breath / fabric shifting with body movement / steam curling upward from cup / condensation droplets sliding down cold glass / light particles floating in volumetric beam). Speed (real-time 24fps / 50% slow motion emphasizing impact / 120fps ultra-slow on key moment / hyperlapse 8x background traffic)
-
-7. ENVIRONMENT DETAIL: Specific textures (weathered reclaimed wood table with visible grain / brushed concrete wall with hairline cracks / dewy grass with individual blade detail), atmosphere (golden hour sunlight streaming through floor-to-ceiling windows casting long shadows / soft overcast diffusion eliminating harsh shadows / neon reflections on wet pavement creating purple-pink puddle mirrors)
-
-8. COLOR PALETTE: Specific colors (muted sage green walls, warm honey wood tones, pops of terracotta in ceramics, skin rendered in warm peach undertones with golden highlights, shadows in cool slate-blue)
-
-9. NEGATIVE CONSTRAINTS: End with "No text, no typography, no logos, no signs, no distorted anatomy, no extra fingers, no warped product, no inconsistent lighting between frames."
-
-=== SCENE CONTINUITY (CRITICAL) ===
-- SAME character appearance verbatim in every veo_prompt — copy-paste the exact physical description
-- SAME color palette and lighting warmth across all shots
-- SAME wardrobe (no costume changes between shots)
-- Camera energy progression: Shot 1 energetic → Shot 2 mid-energy → Shot 3 resolved/calm
-- Each shot's transition_to_next describes the visual bridge to the next shot
-
-=== HOOK TECHNIQUES (Shot 1 — pick best for brand) ===
-- EXTREME MACRO REVEAL: 100mm macro lens, product texture fills frame, slow 3-second pullback reveals full product, f/2.8 with creamy bokeh
-- WHIP PAN: 180° horizontal pan in 0.4s with motion-blur streaks, lands on solution in 0.5x slow-mo
-- OBJECT DROP: Top-down 90°, product enters frame from above, 120fps capturing air displacement and micro-bounce
-- POV HAND REACH: First-person 24mm wide, natural head-bob, hand extends with visible wrist veins and natural nail texture
-- SPEED RAMP: Normal 24fps → 3x acceleration with slight motion blur → snap to 0.25x with ultra-sharp detail
-- ASMR TEXTURE: 50mm at f/2, specular highlights on product surface, hands performing satisfying action at 60fps
-
-=== CTA ENDINGS (Final Shot — pick best) ===
-- PRODUCT HERO: Smooth 180° orbit at 0.5°/frame, volumetric god-rays from upper-right, clean gradient background
-- WALK-TOWARD: Subject approaches from medium-wide to close-up over 6 seconds, progressive background defocus from f/4 to f/1.4
-- SNAP-TO-BLACK: Decisive hand gesture, cut to pure black on frame of impact
-- SOCIAL PROOF: 3 different subjects accelerating rhythm (48 frames → 36 frames → 24 frames), final hold 2 seconds
-
-=== OUTPUT JSON FORMAT ===
-Flat JSON with: creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props[], character_role, character_age, character_gender, character_appearance (VERY detailed — 50+ words), character_wardrobe (specific items with colors/fabrics), character_personality, character_emotion_start, character_emotion_end, character_speech_style, hook_style, hook_technique, cta_technique, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta, shots[] (shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt, transition_to_next)`;
+Output flat JSON: creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props[], character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style, hook_style, hook_technique, cta_technique, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta, shots[{shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt, transition_to_next}]`;
 
     const user = `Generate VEO3 campaign prompts for:
 
@@ -193,7 +158,7 @@ Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt parag
       systemPrompt: system,
       userPrompt: user,
       responseSchema: veoResultSchema,
-      maxTokens: 5000,
+      maxTokens: 3000,
     });
 
     // Restructure into nested format for the UI
