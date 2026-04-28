@@ -27,6 +27,8 @@ const veoResultSchema = z.object({
   character_emotion_end: z.string(),
   character_speech_style: z.string(),
   hook_style: z.string(),
+  hook_technique: z.string(),
+  cta_technique: z.string(),
   story_hook: z.string(),
   story_problem: z.string(),
   story_discovery: z.string(),
@@ -50,6 +52,7 @@ const veoResultSchema = z.object({
     cta: z.string(),
     negative_prompt: z.string(),
     veo_prompt: z.string(),
+    transition_to_next: z.string(),
   })),
 });
 
@@ -85,17 +88,31 @@ export async function POST(
     const vibeData = deepAnalysis?.vibeAnalysis as { dominantTones?: { tone: string }[]; pacingProfile?: string; visualStyleNotes?: string } | null;
     const ctaData = deepAnalysis?.ctaAnalysis as { commonCTAs?: { cta: string }[]; placement?: string } | null;
 
-    const system = `You are a VEO3 video prompt engineer. Generate a flat JSON with campaign settings and shot-by-shot prompts.
+    const system = `You are an elite VEO3 video prompt engineer specializing in TikTok/Reels scroll-stopping ads.
 
-Each shot MUST include a "veo_prompt" field — a single flowing paragraph ready to paste into VEO3/Veo 3.1 API. The veo_prompt describes visual scene, character, action, camera angle, camera movement, lighting, and micro motion in ONE paragraph. NO headers, NO labels, NO text/typography in the visual.
+CRITICAL RULES:
+1. Every "veo_prompt" is a SINGLE flowing paragraph — no headers, no labels, no markdown.
+2. SCENE CONTINUITY: The SAME character (exact same appearance, wardrobe, hair) must appear in ALL shots. Repeat the character description verbatim in every veo_prompt. Use the same lighting warmth and color palette across all shots.
+3. TRANSITIONS: Each shot must end with a visual cue that connects to the next shot (e.g., "the character turns toward the camera" → next shot starts with "facing the camera"). Describe how the energy flows between shots.
+4. NO TEXT in any veo_prompt — no words, no typography, no captions, no logos. Leave space in frame for post-production text overlay.
 
-Generate 3 shots in the "shots" array (8 seconds each = 24s total): hook → product reveal → benefit/CTA.
+HOOK SHOT (Shot 1) — Use ONE of these proven scroll-stopping techniques:
+- EXTREME MACRO REVEAL: Start with extreme close-up macro of product texture/surface filling entire frame, slowly pulling back to reveal the full product with shallow depth of field
+- WHIP PAN PROBLEM→SOLUTION: Fast horizontal whip pan with motion blur from problem state to solution state, speed ramp from 4x to slow-motion 0.5x as camera lands
+- UNEXPECTED OBJECT DROP: Top-down angle, product drops into frame from above in 120fps slow motion, particles scatter on impact
+- POV HAND REACH: First-person POV, hand reaching toward product, subtle natural head-movement shake
+- SPEED RAMP ACTION: Person approaching camera at normal speed, sudden 3x acceleration, then snap to 0.25x slow motion as they present product with low-angle hero framing
+- SATISFYING TEXTURE ASMR: Tight shot of hands performing satisfying action (squeezing, peeling, pouring) in 60fps slight slow motion with specular lighting highlights
+- SPLIT-SCREEN CONTRAST: Left side desaturated (problem), right side vibrant (solution), camera pushing forward into both simultaneously
 
-Output valid JSON with these top-level fields:
-creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props (array),
-character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style,
-hook_style, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta,
-shots (array of objects with: shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt)`;
+CTA ENDING SHOT (Final Shot) — Use ONE of these proven techniques:
+- PRODUCT HERO PEDESTAL: Slow-motion orbiting shot around product on clean surface, volumetric light rays creating halo, camera pushes in, leave upper third empty for text
+- SNAP-TO-BLACK URGENCY: Person makes decisive gesture (snap/close/drop), instant cut to black, no fade — creates open loop that drives clicks
+- WALK-TOWARD-CAMERA: Person walks toward camera holding product, background blurs progressively, extends product toward lens as if handing to viewer, direct eye contact
+- SOCIAL PROOF STACK: Quick cuts between 3 different people using product (1s → 0.7s → 0.5s accelerating rhythm), final person nods at camera, hold 2s for text space
+- BEFORE/AFTER FREEZE: 0.5s flash of before, 0.5s flash of after, freeze on the after result with boosted saturation
+
+Output flat JSON with fields: creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props[], character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style, hook_style, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta, hook_technique (which hook from the list above), cta_technique (which CTA ending from the list above), shots[] (shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt, transition_to_next)`;
 
     const user = `Generate VEO3 campaign prompts for:
 
@@ -176,6 +193,8 @@ Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt parag
         creative_type: flat.creative_type,
         tone: flat.tone,
         hook_style: flat.hook_style,
+        hook_technique: flat.hook_technique,
+        cta_technique: flat.cta_technique,
         story_arc: {
           hook: flat.story_hook,
           problem: flat.story_problem,

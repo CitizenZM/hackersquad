@@ -88,8 +88,8 @@ interface VeoCampaign {
   project_meta: Record<string, unknown>;
   character_system: { main_character: Record<string, string> };
   environment_system: { location: string; time_of_day: string; weather: string; lighting: Record<string, string>; props: string[] };
-  creative_strategy: { creative_type: string; tone: string; hook_style: string; story_arc: Record<string, string> };
-  shot_list: VeoShot[];
+  creative_strategy: { creative_type: string; tone: string; hook_style: string; hook_technique?: string; cta_technique?: string; story_arc: Record<string, string> };
+  shot_list: (VeoShot & { transition_to_next?: string })[];
 }
 
 export default function StudioPage() {
@@ -530,7 +530,7 @@ export default function StudioPage() {
           {veoCampaign && (
             <div className="space-y-4">
               {/* Campaign Overview */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="rounded-md border border-border p-3">
                   <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Creative Type</p>
                   <p className="text-xs font-medium mt-0.5">{veoCampaign.creative_strategy.creative_type}</p>
@@ -540,13 +540,25 @@ export default function StudioPage() {
                   <p className="text-xs font-medium mt-0.5">{veoCampaign.creative_strategy.tone}</p>
                 </div>
                 <div className="rounded-md border border-border p-3">
-                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Location</p>
-                  <p className="text-xs font-medium mt-0.5">{veoCampaign.environment_system.location}</p>
+                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Location / Time</p>
+                  <p className="text-xs font-medium mt-0.5">{veoCampaign.environment_system.location} · {veoCampaign.environment_system.time_of_day}</p>
                 </div>
-                <div className="rounded-md border border-border p-3">
-                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Time</p>
-                  <p className="text-xs font-medium mt-0.5">{veoCampaign.environment_system.time_of_day}</p>
-                </div>
+              </div>
+
+              {/* Hook + CTA Techniques */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {veoCampaign.creative_strategy.hook_technique && (
+                  <div className="rounded-md border-2 border-[var(--status-attention)] bg-[var(--status-attention-bg)]/30 p-3">
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--status-attention-fg)]">Hook Technique (Shot 1)</p>
+                    <p className="text-xs font-medium mt-1">{veoCampaign.creative_strategy.hook_technique}</p>
+                  </div>
+                )}
+                {veoCampaign.creative_strategy.cta_technique && (
+                  <div className="rounded-md border-2 border-[var(--status-healthy)] bg-[var(--status-healthy-bg)]/30 p-3">
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--status-healthy-fg)]">CTA Technique (Final Shot)</p>
+                    <p className="text-xs font-medium mt-1">{veoCampaign.creative_strategy.cta_technique}</p>
+                  </div>
+                )}
               </div>
 
               {/* Character + Environment */}
@@ -660,18 +672,71 @@ export default function StudioPage() {
                           <p className="text-[10px] text-[var(--status-urgent-fg)]">Negative: {shot.negative_prompt}</p>
                         )}
 
+                        {/* Transition to next shot */}
+                        {shot.transition_to_next && (
+                          <p className="text-[10px] text-[var(--status-ai-fg)] italic">
+                            Transition → {shot.transition_to_next}
+                          </p>
+                        )}
+
                         {/* The VEO3 prompt — the main output */}
                         <div className="pt-2 border-t border-border">
-                          <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--status-ai-fg)] mb-1.5">
-                            VEO3 PROMPT — paste directly into VEO3 API
-                          </p>
-                          <div className="rounded-md bg-[var(--status-ai-bg)] border border-[var(--status-ai)] p-3 text-xs font-mono leading-relaxed">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--status-ai-fg)]">
+                              VEO3 PROMPT — paste directly into VEO3/Veo 3.1 API
+                            </p>
+                            <button
+                              onClick={() => copyVeo(shot.veo_prompt, shot.shot_id)}
+                              className="text-[10px] font-medium text-[var(--status-ai-fg)] hover:underline flex items-center gap-1"
+                            >
+                              {copiedVeo === shot.shot_id ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
+                            </button>
+                          </div>
+                          <div className="rounded-md bg-[var(--status-ai-bg)] border border-[var(--status-ai)] p-3 text-xs font-mono leading-relaxed select-all cursor-text">
                             {shot.veo_prompt}
                           </div>
                         </div>
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* COPY ALL — Formatted for video generators */}
+                <div className="rounded-lg border-2 border-foreground bg-muted/30 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold tracking-tight">Copy All VEO3 Prompts</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Formatted for sequential paste into VEO3 API — one prompt per 8-second clip
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        const formatted = veoCampaign.shot_list.map((s, i) =>
+                          `--- SHOT ${i + 1} (${s.duration_seconds}s) — ${s.purpose.toUpperCase()} ---\n\n${s.veo_prompt}\n\nNegative prompt: ${s.negative_prompt}`
+                        ).join("\n\n" + "=".repeat(60) + "\n\n");
+                        const header = `VEO3 CAMPAIGN: ${veoCampaign.project_meta?.brand || ""}\nFormat: 9:16 vertical, 1080p, 24fps\nTotal: ${veoCampaign.shot_list.length} shots × 8s = ${veoCampaign.shot_list.length * 8}s\nHook: ${veoCampaign.creative_strategy.hook_technique || ""}\nCTA: ${veoCampaign.creative_strategy.cta_technique || ""}\n\n${"=".repeat(60)}\n\n`;
+                        navigator.clipboard.writeText(header + formatted);
+                        setCopiedVeo("formatted");
+                        setTimeout(() => setCopiedVeo(null), 2000);
+                      }}
+                      size="sm"
+                      className="h-9 rounded-md bg-foreground text-background hover:bg-foreground/90"
+                    >
+                      {copiedVeo === "formatted" ? (
+                        <><Check className="mr-1.5 h-3.5 w-3.5" /> Copied!</>
+                      ) : (
+                        <><Copy className="mr-1.5 h-3.5 w-3.5" /> Copy all prompts</>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="rounded-md bg-muted p-3 text-[10px] text-muted-foreground font-mono max-h-24 overflow-y-auto">
+                    {veoCampaign.shot_list.map((s, i) => (
+                      <div key={s.shot_id} className="mb-1">
+                        <span className="font-semibold text-foreground">Shot {i + 1}:</span> {s.veo_prompt.slice(0, 80)}...
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
