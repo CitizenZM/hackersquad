@@ -24,36 +24,41 @@ export async function POST(
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const noTextDirective = "CRITICAL: No text, no words, no letters, no typography, no captions, no logos, no signs. Pure cinematic visual only.";
 
-    // Generate up to 8 frames in parallel
-    const keyframes = await Promise.all(
-      prompts.slice(0, 8).map(async (prompt, i) => {
-        try {
-          const response = await openai.images.generate({
-            model: "dall-e-2",
-            prompt: `Cinematic film still: ${prompt}. Photorealistic advertising cinematography. ${noTextDirective}`,
-            n: 1,
-            size: "512x512",
-          });
-          const imageUrl = response.data?.[0]?.url;
-          if (!imageUrl) return null;
+    // Generate keyframes using GPT Image 1 — sequential to avoid rate limits
+    const keyframes = [];
+    for (let i = 0; i < Math.min(prompts.length, 8); i++) {
+      try {
+        const response = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: `Cinematic film still for a video ad: ${prompts[i]}. Photorealistic advertising cinematography, natural lighting, commercial production quality. ${noTextDirective}`,
+          n: 1,
+          size: "1024x1024",
+          quality: "low",
+        });
 
-          const asset = await prisma.previewAsset.create({
-            data: {
-              projectId,
-              prompt,
-              style: `keyframe-${i + 1}${scriptId ? `-script-${scriptId}` : ""}`,
-              dimensions: "512x512",
-              imageUrl,
-              status: "complete",
-            },
-          });
-          return asset;
-        } catch (err) {
-          console.error(`Keyframe ${i} failed:`, err);
-          return null;
-        }
-      })
-    );
+        const b64 = response.data?.[0]?.b64_json;
+        const imageUrl = b64
+          ? `data:image/png;base64,${b64}`
+          : response.data?.[0]?.url;
+
+        if (!imageUrl) { keyframes.push(null); continue; }
+
+        const asset = await prisma.previewAsset.create({
+          data: {
+            projectId,
+            prompt: prompts[i],
+            style: `keyframe-${i + 1}${scriptId ? `-script-${scriptId}` : ""}`,
+            dimensions: "1024x1024",
+            imageUrl,
+            status: "complete",
+          },
+        });
+        keyframes.push(asset);
+      } catch (err) {
+        console.error(`Keyframe ${i} failed:`, err);
+        keyframes.push(null);
+      }
+    }
 
     return NextResponse.json({ keyframes: keyframes.filter((k) => k !== null) });
   } catch (err) {
