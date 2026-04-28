@@ -65,6 +65,33 @@ interface Keyframe {
   style: string | null;
 }
 
+interface VeoShot {
+  shot_id: string;
+  duration_seconds: number;
+  purpose: string;
+  scene_description: string;
+  character_action: string;
+  product_action: string;
+  camera_angle: string;
+  camera_movement: string;
+  shot_type: string;
+  lighting: string;
+  motion_effect: string;
+  dialogue_or_vo: string;
+  text_overlay: string;
+  cta: string;
+  negative_prompt: string;
+  veo_prompt: string;
+}
+
+interface VeoCampaign {
+  project_meta: Record<string, unknown>;
+  character_system: { main_character: Record<string, string> };
+  environment_system: { location: string; time_of_day: string; weather: string; lighting: Record<string, string>; props: string[] };
+  creative_strategy: { creative_type: string; tone: string; hook_style: string; story_arc: Record<string, string> };
+  shot_list: VeoShot[];
+}
+
 export default function StudioPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -77,7 +104,10 @@ export default function StudioPage() {
   const [keyframes, setKeyframes] = useState<Keyframe[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingKeyframes, setLoadingKeyframes] = useState(false);
+  const [loadingVeo, setLoadingVeo] = useState(false);
+  const [veoCampaign, setVeoCampaign] = useState<VeoCampaign | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
+  const [copiedVeo, setCopiedVeo] = useState<string | null>(null);
 
   // Load selected scripts
   useEffect(() => {
@@ -137,6 +167,39 @@ export default function StudioPage() {
     } finally {
       setLoadingKeyframes(false);
     }
+  }
+
+  async function generateVeoPrompts() {
+    if (!activeScriptId) return;
+    setLoadingVeo(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/studio/veo-prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scriptId: activeScriptId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.shot_list) setVeoCampaign(data);
+    } finally {
+      setLoadingVeo(false);
+    }
+  }
+
+  function copyVeo(text: string, id: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedVeo(id);
+    setTimeout(() => setCopiedVeo(null), 2000);
+  }
+
+  function downloadVeoJson() {
+    if (!veoCampaign) return;
+    const blob = new Blob([JSON.stringify(veoCampaign, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `veo3_campaign_${activeScriptId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function copyToClipboard(text: string, index: number) {
@@ -421,6 +484,199 @@ export default function StudioPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* VEO3 Video Prompt System */}
+      {activeScript && (
+        <div className="rounded-lg border-2 border-[var(--status-ai)] bg-card p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Film className="h-4 w-4 text-[var(--status-ai-fg)]" />
+                <h3 className="text-base font-semibold tracking-tight">VEO3 Video Ad Prompts</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Production-ready shot-by-shot prompts for Google VEO3/3.1. Each shot is 8 seconds, vertical 9:16, 1080p.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {veoCampaign && (
+                <Button onClick={downloadVeoJson} size="sm" variant="outline" className="h-8 rounded-md text-xs">
+                  <Download className="mr-1.5 h-3 w-3" />
+                  Download JSON
+                </Button>
+              )}
+              <Button
+                onClick={generateVeoPrompts}
+                disabled={loadingVeo}
+                size="sm"
+                className="h-8 rounded-md text-xs bg-[var(--status-ai)] text-white hover:bg-[var(--status-ai)]/90"
+              >
+                {loadingVeo ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    Generating VEO3 prompts...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1.5 h-3 w-3" />
+                    {veoCampaign ? "Regenerate" : "Generate VEO3 Prompts"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {veoCampaign && (
+            <div className="space-y-4">
+              {/* Campaign Overview */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Creative Type</p>
+                  <p className="text-xs font-medium mt-0.5">{veoCampaign.creative_strategy.creative_type}</p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Tone</p>
+                  <p className="text-xs font-medium mt-0.5">{veoCampaign.creative_strategy.tone}</p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Location</p>
+                  <p className="text-xs font-medium mt-0.5">{veoCampaign.environment_system.location}</p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Time</p>
+                  <p className="text-xs font-medium mt-0.5">{veoCampaign.environment_system.time_of_day}</p>
+                </div>
+              </div>
+
+              {/* Character + Environment */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="rounded-md border border-border p-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Character</p>
+                  {Object.entries(veoCampaign.character_system.main_character).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground capitalize">{k.replace(/_/g, " ")}</span>
+                      <span className="font-medium text-right max-w-[60%]">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-md border border-border p-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Environment & Lighting</p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Weather</span>
+                    <span className="font-medium">{veoCampaign.environment_system.weather}</span>
+                  </div>
+                  {Object.entries(veoCampaign.environment_system.lighting).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground capitalize">{k}</span>
+                      <span className="font-medium text-right max-w-[60%]">{v}</span>
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {veoCampaign.environment_system.props.map((p, i) => (
+                      <span key={i} className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{p}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Story Arc */}
+              <div className="rounded-md border border-border p-3">
+                <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-2">Story Arc</p>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                  {Object.entries(veoCampaign.creative_strategy.story_arc).map(([k, v]) => (
+                    <div key={k} className="text-xs">
+                      <span className="font-medium capitalize text-foreground">{k}: </span>
+                      <span className="text-muted-foreground">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shot-by-Shot VEO Prompts */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold tracking-tight">Shot-by-Shot VEO3 Prompts</p>
+                  <button
+                    onClick={() => {
+                      const all = veoCampaign.shot_list.map(s => s.veo_prompt).join("\n\n---\n\n");
+                      navigator.clipboard.writeText(all);
+                      setCopiedVeo("all");
+                      setTimeout(() => setCopiedVeo(null), 2000);
+                    }}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    {copiedVeo === "all" ? <><Check className="h-3 w-3" /> Copied all</> : <><Copy className="h-3 w-3" /> Copy all prompts</>}
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {veoCampaign.shot_list.map((shot) => (
+                    <div key={shot.shot_id} className="rounded-lg border border-border overflow-hidden">
+                      {/* Shot header */}
+                      <div className="bg-muted/30 px-4 py-2 border-b border-border flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="bg-foreground text-background text-[10px] font-bold px-2 py-0.5 rounded-full">{shot.shot_id}</span>
+                          <span className="text-xs font-medium">{shot.purpose}</span>
+                          <span className="text-xs text-muted-foreground">{shot.duration_seconds}s</span>
+                        </div>
+                        <button
+                          onClick={() => copyVeo(shot.veo_prompt, shot.shot_id)}
+                          className="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
+                        >
+                          {copiedVeo === shot.shot_id ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy prompt</>}
+                        </button>
+                      </div>
+
+                      {/* Shot details grid */}
+                      <div className="p-4 space-y-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                          <div><span className="text-muted-foreground">Shot: </span><span className="font-medium">{shot.shot_type}</span></div>
+                          <div><span className="text-muted-foreground">Angle: </span><span className="font-medium">{shot.camera_angle}</span></div>
+                          <div><span className="text-muted-foreground">Movement: </span><span className="font-medium">{shot.camera_movement}</span></div>
+                          <div><span className="text-muted-foreground">Lighting: </span><span className="font-medium">{shot.lighting}</span></div>
+                        </div>
+
+                        <div className="text-sm">
+                          <p className="font-medium">{shot.scene_description}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {shot.character_action && (
+                            <p><span className="font-medium text-foreground">Character: </span><span className="text-muted-foreground">{shot.character_action}</span></p>
+                          )}
+                          {shot.product_action && (
+                            <p><span className="font-medium text-foreground">Product: </span><span className="text-muted-foreground">{shot.product_action}</span></p>
+                          )}
+                          {shot.motion_effect && (
+                            <p><span className="font-medium text-foreground">Motion: </span><span className="text-muted-foreground">{shot.motion_effect}</span></p>
+                          )}
+                          {shot.dialogue_or_vo && (
+                            <p><span className="font-medium text-foreground">VO/Dialogue: </span><span className="text-muted-foreground italic">&ldquo;{shot.dialogue_or_vo}&rdquo;</span></p>
+                          )}
+                        </div>
+
+                        {shot.negative_prompt && (
+                          <p className="text-[10px] text-[var(--status-urgent-fg)]">Negative: {shot.negative_prompt}</p>
+                        )}
+
+                        {/* The VEO3 prompt — the main output */}
+                        <div className="pt-2 border-t border-border">
+                          <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--status-ai-fg)] mb-1.5">
+                            VEO3 PROMPT — paste directly into VEO3 API
+                          </p>
+                          <div className="rounded-md bg-[var(--status-ai-bg)] border border-[var(--status-ai)] p-3 text-xs font-mono leading-relaxed">
+                            {shot.veo_prompt}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Empty state */}
