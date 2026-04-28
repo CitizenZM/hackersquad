@@ -177,7 +177,7 @@ Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt parag
       systemPrompt: system,
       userPrompt: user,
       responseSchema: veoResultSchema,
-      maxTokens: 8192,
+      maxTokens: 5000,
     });
 
     // Restructure into nested format for the UI
