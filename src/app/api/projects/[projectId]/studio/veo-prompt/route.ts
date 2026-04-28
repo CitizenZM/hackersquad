@@ -5,60 +5,35 @@ import { analyzeWithClaude } from "@/services/ai/claude-client";
 
 export const maxDuration = 60;
 
-const veoShotSchema = z.object({
-  project_meta: z.object({
-    project_name: z.string(),
-    brand: z.string(),
-    product_name: z.string(),
-    campaign_goal: z.string(),
-    platform: z.string(),
-    video_format: z.object({
-      aspect_ratio: z.string(),
-      resolution: z.string(),
-      fps: z.number(),
-      total_duration_seconds: z.number(),
-      clip_duration_seconds: z.number(),
-    }),
-  }),
-  character_system: z.object({
-    main_character: z.object({
-      role: z.string(),
-      age: z.string(),
-      gender: z.string(),
-      appearance: z.string(),
-      wardrobe: z.string(),
-      personality: z.string(),
-      emotional_state_start: z.string(),
-      emotional_state_end: z.string(),
-      speech_style: z.string(),
-    }),
-  }),
-  environment_system: z.object({
-    location: z.string(),
-    time_of_day: z.string(),
-    weather: z.string(),
-    lighting: z.object({
-      source: z.string(),
-      direction: z.string(),
-      quality: z.string(),
-      mood: z.string(),
-    }),
-    props: z.array(z.string()),
-  }),
-  creative_strategy: z.object({
-    creative_type: z.string(),
-    tone: z.string(),
-    hook_style: z.string(),
-    story_arc: z.object({
-      hook: z.string(),
-      problem: z.string(),
-      discovery: z.string(),
-      product_use: z.string(),
-      benefit_reveal: z.string(),
-      cta: z.string(),
-    }),
-  }),
-  shot_list: z.array(z.object({
+// Simplified flat schema that gpt-4o-mini can reliably produce
+const veoResultSchema = z.object({
+  creative_type: z.string(),
+  tone: z.string(),
+  location: z.string(),
+  time_of_day: z.string(),
+  weather: z.string(),
+  lighting_source: z.string(),
+  lighting_direction: z.string(),
+  lighting_quality: z.string(),
+  lighting_mood: z.string(),
+  props: z.array(z.string()),
+  character_role: z.string(),
+  character_age: z.string(),
+  character_gender: z.string(),
+  character_appearance: z.string(),
+  character_wardrobe: z.string(),
+  character_personality: z.string(),
+  character_emotion_start: z.string(),
+  character_emotion_end: z.string(),
+  character_speech_style: z.string(),
+  hook_style: z.string(),
+  story_hook: z.string(),
+  story_problem: z.string(),
+  story_discovery: z.string(),
+  story_product_use: z.string(),
+  story_benefit: z.string(),
+  story_cta: z.string(),
+  shots: z.array(z.object({
     shot_id: z.string(),
     duration_seconds: z.number(),
     purpose: z.string(),
@@ -110,13 +85,17 @@ export async function POST(
     const vibeData = deepAnalysis?.vibeAnalysis as { dominantTones?: { tone: string }[]; pacingProfile?: string; visualStyleNotes?: string } | null;
     const ctaData = deepAnalysis?.ctaAnalysis as { commonCTAs?: { cta: string }[]; placement?: string } | null;
 
-    const system = `You are a VEO3 video prompt engineer. Generate a complete VEO3-ready campaign JSON with shot-by-shot prompts.
+    const system = `You are a VEO3 video prompt engineer. Generate a flat JSON with campaign settings and shot-by-shot prompts.
 
-Each shot MUST include a complete "veo_prompt" field — a single paragraph prompt ready to paste directly into VEO3/Veo 3.1 API. The veo_prompt must describe the visual scene, character, action, camera, lighting, and motion in one flowing paragraph WITHOUT any headers or labels. Do NOT include text/typography instructions in veo_prompt.
+Each shot MUST include a "veo_prompt" field — a single flowing paragraph ready to paste into VEO3/Veo 3.1 API. The veo_prompt describes visual scene, character, action, camera angle, camera movement, lighting, and micro motion in ONE paragraph. NO headers, NO labels, NO text/typography in the visual.
 
-Generate 3 shots (8 seconds each = 24s total). Each shot serves a clear narrative purpose: hook → product reveal → benefit/CTA.
+Generate 3 shots in the "shots" array (8 seconds each = 24s total): hook → product reveal → benefit/CTA.
 
-Output valid JSON matching the schema. Include all fields.`;
+Output valid JSON with these top-level fields:
+creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props (array),
+character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style,
+hook_style, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta,
+shots (array of objects with: shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt)`;
 
     const user = `Generate VEO3 campaign prompts for:
 
@@ -156,12 +135,58 @@ ${(storyboard.frames as { frameNumber: number; scene: string; voiceover: string;
 
 Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt paragraph. Format: vertical 9:16, 1080p, 24fps.`;
 
-    const result = await analyzeWithClaude({
+    const flat = await analyzeWithClaude({
       systemPrompt: system,
       userPrompt: user,
-      responseSchema: veoShotSchema,
+      responseSchema: veoResultSchema,
       maxTokens: 4096,
     });
+
+    // Restructure into nested format for the UI
+    const result = {
+      project_meta: {
+        project_name: `${project.brandName}_VEO3_Campaign`,
+        brand: project.brandName,
+        product_name: brand?.valueProposition || project.brandName,
+        campaign_goal: project.campaignGoal || "conversion",
+        platform: "TikTok / Instagram Reels / YouTube Shorts",
+        video_format: { aspect_ratio: "9:16", resolution: "1080p", fps: 24, total_duration_seconds: 24, clip_duration_seconds: 8 },
+      },
+      character_system: {
+        main_character: {
+          role: flat.character_role,
+          age: flat.character_age,
+          gender: flat.character_gender,
+          appearance: flat.character_appearance,
+          wardrobe: flat.character_wardrobe,
+          personality: flat.character_personality,
+          emotional_state_start: flat.character_emotion_start,
+          emotional_state_end: flat.character_emotion_end,
+          speech_style: flat.character_speech_style,
+        },
+      },
+      environment_system: {
+        location: flat.location,
+        time_of_day: flat.time_of_day,
+        weather: flat.weather,
+        lighting: { source: flat.lighting_source, direction: flat.lighting_direction, quality: flat.lighting_quality, mood: flat.lighting_mood },
+        props: flat.props,
+      },
+      creative_strategy: {
+        creative_type: flat.creative_type,
+        tone: flat.tone,
+        hook_style: flat.hook_style,
+        story_arc: {
+          hook: flat.story_hook,
+          problem: flat.story_problem,
+          discovery: flat.story_discovery,
+          product_use: flat.story_product_use,
+          benefit_reveal: flat.story_benefit,
+          cta: flat.story_cta,
+        },
+      },
+      shot_list: flat.shots,
+    };
 
     return NextResponse.json(result);
   } catch (err) {
