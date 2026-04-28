@@ -51,7 +51,6 @@ export async function POST(
             resolution: resolution || "720p",
             durationSeconds: 8,
             personGeneration: "allow_adult",
-            numberOfVideos: 1,
           },
         }),
       }
