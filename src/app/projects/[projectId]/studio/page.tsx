@@ -109,6 +109,13 @@ export default function StudioPage() {
   const [copied, setCopied] = useState<number | null>(null);
   const [copiedVeo, setCopiedVeo] = useState<string | null>(null);
 
+  // Video generation state
+  const [selectedModel, setSelectedModel] = useState("veo-3.1-fast");
+  const [selectedAspect, setSelectedAspect] = useState("9:16");
+  const [selectedResolution, setSelectedResolution] = useState("720p");
+  const [generatingVideos, setGeneratingVideos] = useState<Map<string, { operationId: string; status: string; videoUrl?: string }>>(new Map());
+  const [copiedAll, setCopiedAll] = useState(false);
+
   // Load selected scripts
   useEffect(() => {
     async function loadScripts() {
@@ -183,6 +190,151 @@ export default function StudioPage() {
     } finally {
       setLoadingVeo(false);
     }
+  }
+
+  async function generateVideo(shotId: string, prompt: string) {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/studio/generate-video`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          model: selectedModel,
+          aspectRatio: selectedAspect,
+          resolution: selectedResolution,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.operationId) {
+        setGeneratingVideos((prev) => {
+          const next = new Map(prev);
+          next.set(shotId, { operationId: data.operationId, status: "generating" });
+          return next;
+        });
+        pollVideoStatus(shotId, data.operationId);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function pollVideoStatus(shotId: string, operationId: string) {
+    const encodedOp = encodeURIComponent(operationId);
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const res = await fetch(`/api/projects/${projectId}/studio/video-status/${encodedOp}`);
+        const data = await res.json().catch(() => ({}));
+        if (data.done && data.videoUrl) {
+          setGeneratingVideos((prev) => {
+            const next = new Map(prev);
+            next.set(shotId, { operationId, status: "complete", videoUrl: data.videoUrl });
+            return next;
+          });
+          return;
+        }
+        if (data.error) {
+          setGeneratingVideos((prev) => {
+            const next = new Map(prev);
+            next.set(shotId, { operationId, status: "error" });
+            return next;
+          });
+          return;
+        }
+      } catch {
+        // continue polling
+      }
+    }
+    setGeneratingVideos((prev) => {
+      const next = new Map(prev);
+      next.set(shotId, { operationId, status: "timeout" });
+      return next;
+    });
+  }
+
+  function generateAllVideos() {
+    if (!veoCampaign?.shot_list) return;
+    for (const shot of veoCampaign.shot_list) {
+      if (!generatingVideos.has(shot.shot_id)) {
+        generateVideo(shot.shot_id, shot.veo_prompt);
+      }
+    }
+  }
+
+  function buildFullPromptCopy(): string {
+    const sections: string[] = [];
+    sections.push("=" .repeat(60));
+    sections.push(`CREATIVEINTEL OS — COMPLETE VIDEO AD BRIEF`);
+    sections.push("=" .repeat(60));
+
+    if (activeScript) {
+      sections.push(`\nSCRIPT: ${activeScript.title}`);
+      sections.push(`Format: ${activeScript.format} · ${activeScript.duration}`);
+      sections.push(`Emotion: ${activeScript.targetEmotion}`);
+      sections.push(`\nHOOK OPTIONS:`);
+      activeScript.hookVariants.forEach((h, i) => sections.push(`  ${i + 1}. ${h}`));
+      sections.push(`\nSCRIPT BODY:\n${activeScript.body}`);
+      sections.push(`\nCTA OPTIONS:`);
+      activeScript.ctaVariants.forEach((c, i) => sections.push(`  ${i + 1}. ${c}`));
+    }
+
+    if (brief) {
+      sections.push(`\n${"=".repeat(60)}`);
+      sections.push(`VIDEO BRIEF: ${brief.title}`);
+      sections.push(`Logline: ${brief.logline}`);
+      sections.push(`Duration: ${brief.totalDuration}`);
+      sections.push(`Visual: ${brief.visualStyle}`);
+      sections.push(`Color: ${brief.colorPalette}`);
+      sections.push(`Music: ${brief.musicDirection}`);
+      sections.push(`Casting: ${brief.castingNotes}`);
+      sections.push(`Location: ${brief.locationNotes}`);
+      brief.shotList?.forEach((s) => {
+        sections.push(`\n--- SHOT ${s.shotNumber} (${s.duration}) ---`);
+        sections.push(`  Type: ${s.shotType} | Angle: ${s.cameraAngle} | Move: ${s.cameraMovement}`);
+        sections.push(`  Light: ${s.lighting} | Lens: ${s.lensNotes}`);
+        sections.push(`  Scene: ${s.sceneDescription}`);
+        sections.push(`  Action: ${s.action}`);
+        if (s.dialogue !== "none") sections.push(`  VO: "${s.dialogue}"`);
+        sections.push(`  AI PROMPT: ${s.aiVideoPrompt}`);
+      });
+    }
+
+    if (veoCampaign) {
+      const cs = veoCampaign.creative_strategy;
+      const ch = veoCampaign.character_system.main_character;
+      const es = veoCampaign.environment_system;
+      sections.push(`\n${"=".repeat(60)}`);
+      sections.push(`VEO3 CAMPAIGN PROMPTS`);
+      sections.push(`Model: ${selectedModel} | Aspect: ${selectedAspect} | Resolution: ${selectedResolution}`);
+      sections.push(`Creative: ${cs.creative_type} | Tone: ${cs.tone}`);
+      sections.push(`Hook: ${cs.hook_technique || "?"} | CTA: ${cs.cta_technique || "?"}`);
+      sections.push(`\nCHARACTER: ${ch.role}, ${ch.age}, ${ch.gender}`);
+      sections.push(`  Appearance: ${ch.appearance}`);
+      sections.push(`  Wardrobe: ${ch.wardrobe}`);
+      sections.push(`  Emotion: ${ch.emotional_state_start} → ${ch.emotional_state_end}`);
+      sections.push(`\nENVIRONMENT: ${es.location} | ${es.time_of_day} | ${es.weather}`);
+      sections.push(`  Lighting: ${es.lighting.source} ${es.lighting.direction} ${es.lighting.quality}`);
+      sections.push(`  Props: ${es.props.join(", ")}`);
+      sections.push(`\nSTORY ARC:`);
+      Object.entries(cs.story_arc).forEach(([k, v]) => sections.push(`  ${k}: ${v}`));
+
+      veoCampaign.shot_list.forEach((s, i) => {
+        sections.push(`\n${"─".repeat(40)}`);
+        sections.push(`VEO3 SHOT ${i + 1} (${s.duration_seconds}s) — ${s.purpose}`);
+        sections.push(`Camera: ${s.shot_type} / ${s.camera_angle} / ${s.camera_movement}`);
+        sections.push(`Lighting: ${s.lighting}`);
+        sections.push(`Motion: ${s.motion_effect}`);
+        sections.push(`Scene: ${s.scene_description}`);
+        sections.push(`Character: ${s.character_action}`);
+        sections.push(`Product: ${s.product_action}`);
+        if (s.dialogue_or_vo) sections.push(`VO: "${s.dialogue_or_vo}"`);
+        sections.push(`Negative: ${s.negative_prompt}`);
+        sections.push(`\nVEO3 PROMPT:\n${s.veo_prompt}`);
+        if (s.transition_to_next) sections.push(`\n→ Transition: ${s.transition_to_next}`);
+      });
+    }
+
+    return sections.join("\n");
   }
 
   function copyVeo(text: string, id: string) {
@@ -496,10 +648,10 @@ export default function StudioPage() {
                 <h3 className="text-base font-semibold tracking-tight">VEO3 Video Ad Prompts</h3>
               </div>
               <p className="text-xs text-muted-foreground">
-                Production-ready shot-by-shot prompts for Google VEO3/3.1. Each shot is 8 seconds, vertical 9:16, 1080p.
+                Production-ready prompts for Google VEO3/3.1 + direct video generation
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {veoCampaign && (
                 <Button onClick={downloadVeoJson} size="sm" variant="outline" className="h-8 rounded-md text-xs">
                   <Download className="mr-1.5 h-3 w-3" />
@@ -605,6 +757,60 @@ export default function StudioPage() {
                 </div>
               </div>
 
+              {/* Model Selector + Video Generation Controls */}
+              <div className="rounded-md border-2 border-foreground bg-muted/30 p-4 space-y-3">
+                <p className="text-sm font-semibold tracking-tight">Video Generation Settings</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-1">Model</p>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="w-full h-9 rounded-md border border-border bg-background px-2 text-xs"
+                    >
+                      <option value="veo-3.1-lite">Veo 3.1 Lite ($0.40/8s)</option>
+                      <option value="veo-3.1-fast">Veo 3.1 Fast ($0.80/8s)</option>
+                      <option value="veo-3.1-standard">Veo 3.1 Standard ($3.20/8s)</option>
+                      <option value="veo-3-fast">Veo 3 Fast ($0.80/8s)</option>
+                      <option value="veo-3">Veo 3 Standard ($3.20/8s)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-1">Aspect Ratio</p>
+                    <select
+                      value={selectedAspect}
+                      onChange={(e) => setSelectedAspect(e.target.value)}
+                      className="w-full h-9 rounded-md border border-border bg-background px-2 text-xs"
+                    >
+                      <option value="9:16">9:16 (TikTok/Reels)</option>
+                      <option value="16:9">16:9 (YouTube)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-1">Resolution</p>
+                    <select
+                      value={selectedResolution}
+                      onChange={(e) => setSelectedResolution(e.target.value)}
+                      className="w-full h-9 rounded-md border border-border bg-background px-2 text-xs"
+                    >
+                      <option value="720p">720p</option>
+                      <option value="1080p">1080p</option>
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  onClick={generateAllVideos}
+                  disabled={!veoCampaign?.shot_list?.length}
+                  className="w-full h-10 rounded-md bg-foreground text-background hover:bg-foreground/90 font-medium"
+                >
+                  <Film className="mr-2 h-4 w-4" />
+                  Generate All Videos ({veoCampaign?.shot_list?.length || 0} shots × 8s = {(veoCampaign?.shot_list?.length || 0) * 8}s)
+                </Button>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Estimated cost: ${((veoCampaign?.shot_list?.length || 0) * (selectedModel.includes("lite") ? 0.4 : selectedModel.includes("fast") ? 0.8 : 3.2)).toFixed(2)} · Generation takes 30-120 seconds per shot
+                </p>
+              </div>
+
               {/* Shot-by-Shot VEO Prompts */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -696,47 +902,109 @@ export default function StudioPage() {
                             {shot.veo_prompt}
                           </div>
                         </div>
+
+                        {/* Video Generation + Preview */}
+                        <div className="pt-2 border-t border-border">
+                          {(() => {
+                            const vidState = generatingVideos.get(shot.shot_id);
+                            if (vidState?.status === "complete" && vidState.videoUrl) {
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--status-healthy-fg)]">
+                                      Generated Video
+                                    </p>
+                                    <a
+                                      href={vidState.videoUrl}
+                                      download={`shot_${shot.shot_id}.mp4`}
+                                      className="text-[10px] font-medium text-foreground hover:underline flex items-center gap-1"
+                                    >
+                                      <Download className="h-3 w-3" /> Download MP4
+                                    </a>
+                                  </div>
+                                  <video
+                                    src={vidState.videoUrl}
+                                    controls
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="w-full rounded-md border border-border aspect-[9/16] max-h-80 object-contain bg-black"
+                                  />
+                                </div>
+                              );
+                            }
+                            if (vidState?.status === "generating") {
+                              return (
+                                <div className="flex items-center gap-2 py-3">
+                                  <Loader2 className="h-4 w-4 animate-spin text-[var(--status-ai-fg)]" />
+                                  <p className="text-xs text-[var(--status-ai-fg)]">Generating video... (30-120s)</p>
+                                </div>
+                              );
+                            }
+                            if (vidState?.status === "error" || vidState?.status === "timeout") {
+                              return (
+                                <div className="flex items-center justify-between py-2">
+                                  <p className="text-xs text-[var(--status-urgent-fg)]">
+                                    {vidState.status === "timeout" ? "Generation timed out" : "Generation failed"}
+                                  </p>
+                                  <Button
+                                    onClick={() => generateVideo(shot.shot_id, shot.veo_prompt)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 rounded-md text-[10px]"
+                                  >
+                                    Retry
+                                  </Button>
+                                </div>
+                              );
+                            }
+                            return (
+                              <Button
+                                onClick={() => generateVideo(shot.shot_id, shot.veo_prompt)}
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-md text-xs w-full"
+                              >
+                                <Film className="mr-1.5 h-3 w-3" />
+                                Generate this shot ({selectedModel})
+                              </Button>
+                            );
+                          })()}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* COPY ALL — Formatted for video generators */}
+                {/* COPY ALL — Complete prompt details from ALL sections */}
                 <div className="rounded-lg border-2 border-foreground bg-muted/30 p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold tracking-tight">Copy All VEO3 Prompts</p>
+                      <p className="text-sm font-semibold tracking-tight">Copy Complete Brief</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Formatted for sequential paste into VEO3 API — one prompt per 8-second clip
+                        Script + Video Brief + VEO3 Prompts + Character + Environment — everything in one paste
                       </p>
                     </div>
                     <Button
                       onClick={() => {
-                        const formatted = veoCampaign.shot_list.map((s, i) =>
-                          `--- SHOT ${i + 1} (${s.duration_seconds}s) — ${s.purpose.toUpperCase()} ---\n\n${s.veo_prompt}\n\nNegative prompt: ${s.negative_prompt}`
-                        ).join("\n\n" + "=".repeat(60) + "\n\n");
-                        const header = `VEO3 CAMPAIGN: ${veoCampaign.project_meta?.brand || ""}\nFormat: 9:16 vertical, 1080p, 24fps\nTotal: ${veoCampaign.shot_list.length} shots × 8s = ${veoCampaign.shot_list.length * 8}s\nHook: ${veoCampaign.creative_strategy.hook_technique || ""}\nCTA: ${veoCampaign.creative_strategy.cta_technique || ""}\n\n${"=".repeat(60)}\n\n`;
-                        navigator.clipboard.writeText(header + formatted);
-                        setCopiedVeo("formatted");
-                        setTimeout(() => setCopiedVeo(null), 2000);
+                        navigator.clipboard.writeText(buildFullPromptCopy());
+                        setCopiedAll(true);
+                        setTimeout(() => setCopiedAll(false), 2000);
                       }}
                       size="sm"
                       className="h-9 rounded-md bg-foreground text-background hover:bg-foreground/90"
                     >
-                      {copiedVeo === "formatted" ? (
-                        <><Check className="mr-1.5 h-3.5 w-3.5" /> Copied!</>
+                      {copiedAll ? (
+                        <><Check className="mr-1.5 h-3.5 w-3.5" /> Copied everything!</>
                       ) : (
-                        <><Copy className="mr-1.5 h-3.5 w-3.5" /> Copy all prompts</>
+                        <><Copy className="mr-1.5 h-3.5 w-3.5" /> Copy all details</>
                       )}
                     </Button>
                   </div>
-                  <div className="rounded-md bg-muted p-3 text-[10px] text-muted-foreground font-mono max-h-24 overflow-y-auto">
-                    {veoCampaign.shot_list.map((s, i) => (
-                      <div key={s.shot_id} className="mb-1">
-                        <span className="font-semibold text-foreground">Shot {i + 1}:</span> {s.veo_prompt.slice(0, 80)}...
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Includes: script (hooks + body + CTAs), video brief (shot list + camera specs), VEO3 prompts (character + environment + lighting + all shots), generation settings
+                  </p>
                 </div>
               </div>
             </div>
