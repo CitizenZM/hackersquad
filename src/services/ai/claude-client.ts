@@ -1,9 +1,16 @@
 import OpenAI from "openai";
 import { z, ZodSchema } from "zod";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "",
-});
+let _client: OpenAI | null = null;
+function getClient(): OpenAI {
+  if (_client) return _client;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+  _client = new OpenAI({ apiKey });
+  return _client;
+}
 
 const MODEL = process.env.AI_MODEL || "gpt-4o";
 
@@ -24,7 +31,7 @@ export async function analyzeWithClaude<T>(options: {
     ? systemPrompt
     : systemPrompt + "\n\nRespond with valid JSON only.";
 
-  const response = await client.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: MODEL,
     max_tokens: maxTokens,
     messages: [
@@ -43,7 +50,7 @@ export async function analyzeWithClaude<T>(options: {
     const parsed = JSON.parse(jsonStr);
     return responseSchema.parse(parsed);
   } catch (parseError) {
-    const retryResponse = await client.chat.completions.create({
+    const retryResponse = await getClient().chat.completions.create({
       model: MODEL,
       max_tokens: maxTokens,
       messages: [

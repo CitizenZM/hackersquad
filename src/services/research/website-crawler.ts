@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { cached } from "@/services/cache";
 
 export interface CrawlResult {
   url: string;
@@ -19,7 +20,13 @@ export async function crawlWebsite(url: string): Promise<CrawlResult> {
   if (process.env.MOCK_CRAWL === "true") {
     return getMockCrawlResult(url);
   }
+  return cached(
+    { kind: "crawl:website", params: { url }, schemaVersion: 1 },
+    () => crawlWebsiteUncached(url)
+  );
+}
 
+async function crawlWebsiteUncached(url: string): Promise<CrawlResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 

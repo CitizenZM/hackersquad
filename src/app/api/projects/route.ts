@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createProjectSchema } from "@/lib/validations";
+import {
+  ensureDefaultWorkspace,
+  upsertBrandProfile,
+  upsertCompetitorProfile,
+} from "@/services/brand-library";
 
 export async function GET() {
   const projects = await prisma.project.findMany({
@@ -18,6 +23,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = createProjectSchema.parse(body);
 
+    const workspace = await ensureDefaultWorkspace();
+    const brandProfile = await upsertBrandProfile({
+      workspaceId: workspace.id,
+      name: data.brandName,
+      url: data.brandUrl ?? null,
+      category: data.category ?? null,
+    });
+
+    const competitorProfiles = await Promise.all(
+      data.competitors.map((c) =>
+        upsertCompetitorProfile({
+          workspaceId: workspace.id,
+          name: c.name,
+          url: c.url ?? null,
+        })
+      )
+    );
+
     const project = await prisma.project.create({
       data: {
         name: `${data.brandName} Analysis`,
@@ -26,16 +49,20 @@ export async function POST(request: Request) {
         category: data.category || null,
         campaignGoal: data.campaignGoal || null,
         briefingText: data.briefingText || null,
+        workspaceId: workspace.id,
+        brandProfileId: brandProfile.id,
         brand: {
           create: {
             name: data.brandName,
             url: data.brandUrl || null,
+            brandProfileId: brandProfile.id,
           },
         },
         competitors: {
-          create: data.competitors.map((c) => ({
+          create: data.competitors.map((c, i) => ({
             name: c.name,
             url: c.url || null,
+            competitorProfileId: competitorProfiles[i].id,
           })),
         },
       },

@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { cached } from "@/services/cache";
 
 export interface YouTubeVideo {
   videoId: string;
@@ -26,25 +27,33 @@ export async function searchYouTubeVideos(
     return [];
   }
 
-  // 1. Try official YouTube Data API (if key exists)
-  if (process.env.YOUTUBE_API_KEY) {
-    try {
-      return await searchViaAPI(query, maxResults);
-    } catch (error) {
-      console.error("YouTube API error:", error);
+  return cached(
+    {
+      kind: "youtube:search",
+      params: { query, maxResults, spFilter: spFilter ?? null, brandName: brandName ?? null, mustContain: mustContain ?? null, mustNotContain: mustNotContain ?? null },
+      ttlSec: 60 * 60 * 12,
+      schemaVersion: 1,
+    },
+    async () => {
+      if (process.env.YOUTUBE_API_KEY) {
+        try {
+          return await searchViaAPI(query, maxResults);
+        } catch (error) {
+          console.error("YouTube API error:", error);
+        }
+      }
+      try {
+        const results = await scrapeYouTubeSearch(query, maxResults + 5, spFilter);
+        const filtered = brandName
+          ? filterQuality(results, brandName, mustContain, mustNotContain)
+          : results;
+        return filtered.slice(0, maxResults);
+      } catch (error) {
+        console.error("YouTube scrape error:", error);
+      }
+      return [];
     }
-  }
-
-  // 2. Scrape YouTube search results (no API key needed)
-  try {
-    const results = await scrapeYouTubeSearch(query, maxResults + 5, spFilter);
-    const filtered = brandName ? filterQuality(results, brandName, mustContain, mustNotContain) : results;
-    return filtered.slice(0, maxResults);
-  } catch (error) {
-    console.error("YouTube scrape error:", error);
-  }
-
-  return [];
+  );
 }
 
 async function searchViaAPI(query: string, maxResults: number): Promise<YouTubeVideo[]> {

@@ -47,12 +47,112 @@ enum NarrativeType {
   BEFORE_AFTER
 }
 
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brands      BrandProfile[]
+  competitors CompetitorProfile[]
+  projects    Project[]
+}
+
+model BrandProfile {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name             String
+  url              String?
+  category         String?
+  brandPromise     String?
+  valueProposition String?
+  toneOfVoice      String?
+  targetAudience   String?
+  pricingTheme     String?
+  productFeatures  Json?
+  ctaLanguage      Json?
+  socialProof      Json?
+
+  lastCrawledAt DateTime?
+  rawCrawlData  Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  projects Project[]
+  brands   Brand[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, lastCrawledAt])
+}
+
+model CompetitorProfile {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name             String
+  url              String?
+  brandPromise     String?
+  valueProposition String?
+  toneOfVoice      String?
+  pricingTheme     String?
+  productFeatures  Json?
+  ctaLanguage      Json?
+  socialProof      Json?
+  strengths        Json?
+  weaknesses       Json?
+
+  lastCrawledAt DateTime?
+  rawCrawlData  Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  competitors Competitor[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, lastCrawledAt])
+}
+
+model CrawlCache {
+  id            String   @id @default(cuid())
+  cacheKey      String   @unique
+  kind          String
+  schemaVersion Int      @default(1)
+  payload       Json
+  fetchedAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  @@index([kind, expiresAt])
+  @@index([expiresAt])
+}
+
+model IdempotencyKey {
+  key       String   @id
+  route     String
+  projectId String?
+  response  Json
+  status    Int      @default(200)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([projectId, route])
+  @@index([expiresAt])
+}
+
 model Project {
   id        String        @id @default(cuid())
   name      String
   status    ProjectStatus @default(DRAFT)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+
+  workspaceId    String?
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  brandProfileId String?
+  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
 
   brandName    String
   brandUrl     String?
@@ -86,6 +186,9 @@ model Brand {
   projectId String  @unique
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  brandProfileId String?
+  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
+
   name             String
   url              String?
   brandPromise     String?
@@ -106,6 +209,9 @@ model Competitor {
   id        String  @id @default(cuid())
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  competitorProfileId String?
+  competitorProfile   CompetitorProfile? @relation(fields: [competitorProfileId], references: [id], onDelete: SetNull)
 
   name             String
   url              String?
@@ -155,21 +261,25 @@ model ContentAsset {
   emotionalAppeal   Float?
   pacing            Float?
 
-  hookText         String?
-  narrativeType    NarrativeType?
-  contentCategory  String?
-  keyMessages   Json?
-  transcript    String?
+  hookText        String?
+  narrativeType   NarrativeType?
+  contentCategory String?
+  keyMessages     Json?
+  transcript      String?
 
-  isBrandOwned Boolean    @default(false)
-  dataSource   DataSource @default(OFFICIAL_API)
-  rawData      Json?
-  createdAt    DateTime   @default(now())
+  isBrandOwned    Boolean @default(false)
+  isPaidMedia     Boolean @default(false)
+  adSpendEstimate Json?
+
+  dataSource DataSource @default(OFFICIAL_API)
+  rawData    Json?
+  createdAt  DateTime   @default(now())
 
   insights Insight[]
 
   @@index([projectId, type])
   @@index([projectId, overallScore])
+  @@index([projectId, isPaidMedia])
 }
 
 model Insight {
@@ -200,7 +310,7 @@ model NarrativePattern {
   type           NarrativeType
   name           String
   description    String
-  frequency      Int    @default(0)
+  frequency      Int           @default(0)
   avgPerformance Float?
   examples       Json?
   bestPractices  Json?

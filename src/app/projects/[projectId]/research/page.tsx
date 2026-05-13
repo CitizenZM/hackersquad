@@ -54,39 +54,44 @@ export default function ResearchPage() {
     }
   }, [projectId]);
 
+  async function pollStatus(jobId?: string): Promise<void> {
+    const qs = jobId ? `?jobId=${encodeURIComponent(jobId)}` : "";
+    while (true) {
+      const res = await fetch(`/api/projects/${projectId}/research/status${qs}`);
+      const data = await res.json().catch(() => null);
+      if (!data) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      if (typeof data.progress === "number") setProgress(data.progress);
+      if (data.status === "complete") {
+        setStatus("complete");
+        setProgress(100);
+        return;
+      }
+      if (data.status === "error") {
+        setStatus("error");
+        setError(data.error || "Research failed");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+
   async function startResearch() {
     setStatus("running");
     setProgress(0);
     setError(null);
 
-    const progressInterval = setInterval(() => {
-      setProgress((p) => Math.min(p + 2, 90));
-    }, 1000);
-
     try {
       const res = await fetch(`/api/projects/${projectId}/research`, { method: "POST" });
-      clearInterval(progressInterval);
-
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = null; }
-
+      const data = await res.json().catch(() => null);
       if (!res.ok || !data) {
-        // Check if research actually completed despite the timeout
-        const checkRes = await fetch(`/api/projects/${projectId}`);
-        const checkData = await checkRes.json().catch(() => null);
-        if (checkData?.status === "ANALYZED" || checkData?.status === "COMPLETE") {
-          setProgress(100);
-          setStatus("complete");
-          return;
-        }
-        throw new Error(data?.error || "Research timed out. Click retry or check partial results.");
+        throw new Error(data?.error || "Failed to start research");
       }
-      setProgress(100);
-      setStatus("complete");
+      await pollStatus(data.jobId);
     } catch (err) {
-      clearInterval(progressInterval);
-      // One more check — the research might have completed in the background
+      // Final defensive check — project may have flipped status already
       try {
         const checkRes = await fetch(`/api/projects/${projectId}`);
         const checkData = await checkRes.json().catch(() => null);
