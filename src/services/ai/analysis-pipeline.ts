@@ -104,6 +104,41 @@ export async function runAnalysisPipeline(
           ctaLanguage: a.ctaLanguage, socialProof: a.socialProof,
           dataSource: "AI_INFERRED", rawCrawlData: brandCrawl satisfies object as object,
         }});
+
+        // Generate 3-5 strategic insights grounded in the brand analysis so
+        // Insight table is never empty even when competitor crawls fail.
+        try {
+          const insightSchema = z.object({
+            insights: z.array(z.object({
+              category: z.string(),
+              title: z.string(),
+              description: z.string(),
+              importance: z.number(),
+              recommendation: z.string(),
+            })).min(3),
+          });
+          const sys = `You are a creative strategist. Given a brand's analyzed positioning, produce 3-5 actionable strategic insights for ad creative. Each insight must be SPECIFIC to this brand (reference real features/audience/promise). No generic marketing platitudes.
+
+Respond with ONLY JSON:
+{"insights":[{"category":"positioning|audience|messaging|differentiation|opportunity","title":"...","description":"why this matters (2-3 sentences with specifics)","importance":1-100,"recommendation":"concrete next-step for ad creative (1 sentence)"}]}`;
+          const usr = `Brand: ${project.brandName}
+Promise: ${a.brandPromise}
+Value prop: ${a.valueProposition}
+Tone: ${a.toneOfVoice}
+Target audience: ${a.targetAudience}
+Pricing theme: ${a.pricingTheme}
+Top features: ${(a.productFeatures || []).slice(0, 6).join(", ")}
+CTAs on site: ${(a.ctaLanguage || []).slice(0, 6).join(", ")}
+Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
+          const ai = await analyzeWithClaude({ systemPrompt: sys, userPrompt: usr, responseSchema: insightSchema, maxTokens: 1500 });
+          for (const ins of ai.insights) {
+            await prisma.insight.create({ data: {
+              projectId, category: ins.category, title: ins.title,
+              description: ins.description, importance: ins.importance,
+              recommendation: ins.recommendation, dataSource: "AI_INFERRED",
+            }}).catch(() => {});
+          }
+        } catch (e) { console.error("Strategic-insight generation failed:", e); }
       } catch (e) { console.error("Brand analysis failed:", e); }
     })());
   }
