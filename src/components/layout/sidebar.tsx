@@ -7,6 +7,7 @@ import {
   FolderKanban,
   Plus,
   Sparkles,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ const navItems = [
   { href: "/", label: "Home", icon: LayoutGrid },
   { href: "/all", label: "Projects", icon: FolderKanban },
   { href: "/projects/new", label: "New project", icon: Plus },
+  { href: "/library/brands", label: "Brand library", icon: Library },
 ];
 
 export function Sidebar() {

@@ -190,26 +190,38 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
           const contentType = platformMap[platform] || "YOUTUBE_VIDEO";
           const videoUrl = vr?.url || `https://youtube.com/watch?v=${video.videoId}`;
 
-          await prisma.contentAsset.create({ data: {
-            projectId, competitorId: videoCompetitorMap.get(score.videoId) || null,
-            type: contentType, title: video.title,
-            url: videoUrl,
-            thumbnailUrl: video.thumbnailUrl, description: video.description,
-            publishedAt: video.publishedAt ? new Date(video.publishedAt) : null,
-            platform: platformLabels[platform] || "YouTube",
-            viewCount: video.viewCount,
-            likeCount: video.likeCount, commentCount: video.commentCount,
-            engagementRate: video.viewCount > 0 ? ((video.likeCount + video.commentCount) / video.viewCount) * 100 : 0,
-            metricsSource: "PUBLIC_WEB", overallScore: score.overallScore,
-            hookStrength: score.hookStrength, productVisibility: score.productVisibility,
-            storytellingArc: score.storytellingArc, ctaQuality: score.ctaQuality,
-            emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
-            hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
-            keyMessages: score.keyMessages,
-            contentCategory: score.contentCategory || null,
-            isBrandOwned: !videoCompetitorMap.get(score.videoId),
-            dataSource: "PUBLIC_WEB",
-          }});
+          await prisma.contentAsset.upsert({
+            where: { projectId_url: { projectId, url: videoUrl } },
+            create: {
+              projectId, competitorId: videoCompetitorMap.get(score.videoId) || null,
+              type: contentType, title: video.title,
+              url: videoUrl,
+              thumbnailUrl: video.thumbnailUrl, description: video.description,
+              publishedAt: video.publishedAt ? new Date(video.publishedAt) : null,
+              platform: platformLabels[platform] || "YouTube",
+              viewCount: video.viewCount,
+              likeCount: video.likeCount, commentCount: video.commentCount,
+              engagementRate: video.viewCount > 0 ? ((video.likeCount + video.commentCount) / video.viewCount) * 100 : 0,
+              metricsSource: "PUBLIC_WEB", overallScore: score.overallScore,
+              hookStrength: score.hookStrength, productVisibility: score.productVisibility,
+              storytellingArc: score.storytellingArc, ctaQuality: score.ctaQuality,
+              emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
+              hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
+              keyMessages: score.keyMessages,
+              contentCategory: score.contentCategory || null,
+              isBrandOwned: !videoCompetitorMap.get(score.videoId),
+              dataSource: "PUBLIC_WEB",
+            },
+            update: {
+              title: video.title, thumbnailUrl: video.thumbnailUrl, description: video.description,
+              viewCount: video.viewCount, likeCount: video.likeCount, commentCount: video.commentCount,
+              overallScore: score.overallScore, hookStrength: score.hookStrength,
+              productVisibility: score.productVisibility, storytellingArc: score.storytellingArc,
+              ctaQuality: score.ctaQuality, emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
+              hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
+              keyMessages: score.keyMessages, contentCategory: score.contentCategory || null,
+            },
+          });
         }
       } catch (e) { console.error("Content scoring failed:", e); }
     })());

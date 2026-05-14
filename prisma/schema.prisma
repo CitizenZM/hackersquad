@@ -279,6 +279,7 @@ model ContentAsset {
 
   insights Insight[]
 
+  @@unique([projectId, url])
   @@index([projectId, type])
   @@index([projectId, overallScore])
   @@index([projectId, isPaidMedia])

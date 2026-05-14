@@ -9,6 +9,7 @@ import {
   Lightbulb,
   Wand2,
   Palette,
+  Video,
 } from "lucide-react";
 
 interface TabNavProps {
@@ -21,6 +22,7 @@ const tabs = [
   { segment: "insights", label: "Insights", icon: Lightbulb },
   { segment: "creative", label: "Create", icon: Wand2 },
   { segment: "studio", label: "Studio", icon: Palette },
+  { segment: "studio/video", label: "Video", icon: Video },
 ];
 
 export function TabNav({ projectId }: TabNavProps) {

@@ -94,12 +94,14 @@ export async function POST(
       const video = newVideos.find((v) => v.videoId === score.videoId);
       if (!video) continue;
 
-      await prisma.contentAsset.create({
-        data: {
+      const ytUrl = `https://youtube.com/watch?v=${video.videoId}`;
+      const res = await prisma.contentAsset.upsert({
+        where: { projectId_url: { projectId, url: ytUrl } },
+        create: {
           projectId,
           type: "YOUTUBE_VIDEO",
           title: video.title,
-          url: `https://youtube.com/watch?v=${video.videoId}`,
+          url: ytUrl,
           thumbnailUrl: video.thumbnailUrl,
           description: video.description,
           publishedAt: video.publishedAt ? new Date(video.publishedAt) : null,
@@ -124,7 +126,17 @@ export async function POST(
           contentCategory: score.contentCategory || null,
           dataSource: "PUBLIC_WEB",
         },
+        update: {
+          title: video.title, thumbnailUrl: video.thumbnailUrl, description: video.description,
+          viewCount: video.viewCount, likeCount: video.likeCount, commentCount: video.commentCount,
+          overallScore: score.overallScore, hookStrength: score.hookStrength,
+          productVisibility: score.productVisibility, storytellingArc: score.storytellingArc,
+          ctaQuality: score.ctaQuality, emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
+          hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
+          keyMessages: score.keyMessages, contentCategory: score.contentCategory || null,
+        },
       });
+      void res;
       added++;
     }
 

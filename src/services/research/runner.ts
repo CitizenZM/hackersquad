@@ -125,13 +125,17 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
       let saved = 0;
       for (const ad of tiktokAds) {
         if (!ad.adId) continue;
+        const adUrl =
+          ad.videoUrl ||
+          `https://ads.tiktok.com/business/creativecenter/inspiration/popular/pc/en?material_id=${ad.adId}`;
         await prisma.contentAsset
-          .create({
-            data: {
+          .upsert({
+            where: { projectId_url: { projectId, url: adUrl } },
+            create: {
               projectId,
               type: "TIKTOK_VIDEO",
               title: ad.title,
-              url: ad.videoUrl || `https://ads.tiktok.com/business/creativecenter/inspiration/popular/pc/en?material_id=${ad.adId}`,
+              url: adUrl,
               thumbnailUrl: ad.thumbnailUrl ?? null,
               description: ad.brand
                 ? `Top TikTok ad by ${ad.brand}`
@@ -147,6 +151,17 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
               } as never,
               dataSource: "PUBLIC_WEB",
               rawData: ad.rawData as never,
+            },
+            update: {
+              title: ad.title,
+              thumbnailUrl: ad.thumbnailUrl ?? null,
+              adSpendEstimate: {
+                impressions: ad.impressions ?? null,
+                ctr: ad.ctr ?? null,
+                cvr: ad.cvr ?? null,
+                firstSeen: ad.firstSeenAt ?? null,
+                lastSeen: ad.lastSeenAt ?? null,
+              } as never,
             },
           })
           .then(() => {

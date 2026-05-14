@@ -50,8 +50,9 @@ export async function runImport(jobId: string, projectId: string, input: { url: 
       },
     });
 
-    const ca = await prisma.contentAsset.create({
-      data: {
+    const ca = await prisma.contentAsset.upsert({
+      where: { projectId_url: { projectId, url: input.url } },
+      create: {
         projectId,
         type: vr.platform === "youtube" ? "YOUTUBE_VIDEO" : vr.platform === "tiktok" ? "TIKTOK_VIDEO" : "WEB_MENTION",
         title: dl.metadata.title,
@@ -64,6 +65,15 @@ export async function runImport(jobId: string, projectId: string, input: { url: 
         likeCount: dl.metadata.like_count ?? null,
         transcript: tx.text || null,
         dataSource: "PUBLIC_WEB",
+        rawData: dl.metadata as never,
+      },
+      update: {
+        title: dl.metadata.title,
+        description: dl.metadata.description?.slice(0, 1000) || null,
+        thumbnailUrl: dl.metadata.thumbnail ?? null,
+        viewCount: dl.metadata.view_count ?? null,
+        likeCount: dl.metadata.like_count ?? null,
+        transcript: tx.text || null,
         rawData: dl.metadata as never,
       },
     });
