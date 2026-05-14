@@ -1,10 +1,19 @@
 import path from "node:path";
+import { promises as fs } from "node:fs";
+import os from "node:os";
 import { prisma } from "@/lib/db";
 import { downloadVideo, ensureWorkDir, detectPlatform } from "./downloader";
+import { cloudDownload } from "./cloud-downloader";
 import { transcribeAudio } from "./transcribe";
 import { selectHighlights } from "./highlight";
 import { shortsifyClip } from "./shortsify";
 import { generateProductVideo } from "./moneyprinter";
+import { checkBinaries } from "./binaries";
+import {
+  isCloudinaryConfigured,
+  uploadVideo,
+  shortsifyURL,
+} from "./cloudinary-render";
 
 type Updater = (patch: { status?: string; progress?: number; step?: string; error?: string; output?: unknown; outputPath?: string }) => Promise<void>;
 
@@ -26,11 +35,47 @@ function makeUpdater(jobId: string): Updater {
   };
 }
 
+async function downloadEither(url: string, jobId: string) {
+  const bin = await checkBinaries();
+  if (bin.ytdlp.available && bin.ffmpeg.available) {
+    // Local-binary path
+    const dl = await downloadVideo(url, jobId);
+    const wavPath = dl.localPath; // for transcribe step
+    return {
+      localPath: dl.localPath,
+      wavPath,
+      cloudPublicId: null as string | null,
+      cloudUrl: null as string | null,
+      metadata: dl.metadata,
+    };
+  }
+  if (!isCloudinaryConfigured()) {
+    throw new Error(
+      "No rendering backend available. Either install yt-dlp + ffmpeg locally, or set CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET to enable cloud rendering."
+    );
+  }
+  // Cloud path: pure-JS download → Cloudinary upload
+  const cd = await cloudDownload(url);
+  // Write to a temp file so transcribe + later steps can stream from it
+  const dir = path.join(os.tmpdir(), "creativeintel-video", jobId);
+  await fs.mkdir(dir, { recursive: true });
+  const localPath = path.join(dir, cd.contentType === "video/webm" ? "video.webm" : "video.mp4");
+  await fs.writeFile(localPath, cd.buffer);
+  const upload = await uploadVideo(cd.buffer);
+  return {
+    localPath,
+    wavPath: localPath,
+    cloudPublicId: upload.publicId,
+    cloudUrl: upload.url,
+    metadata: { ...cd.metadata, duration: upload.durationSec ?? cd.metadata.duration },
+  };
+}
+
 export async function runImport(jobId: string, projectId: string, input: { url: string }) {
   const update = makeUpdater(jobId);
   await update({ status: "running", progress: 5, step: "Downloading" });
   try {
-    const dl = await downloadVideo(input.url, jobId);
+    const dl = await downloadEither(input.url, jobId);
     await update({ progress: 50, step: "Transcribing" });
     const tx = await transcribeAudio(dl.localPath);
 
@@ -43,7 +88,11 @@ export async function runImport(jobId: string, projectId: string, input: { url: 
       height: dl.metadata.height ?? null,
       transcript: tx.text || null,
       language: tx.language ?? null,
-      metadata: dl.metadata as never,
+      metadata: {
+        ...dl.metadata,
+        cloudPublicId: dl.cloudPublicId,
+        cloudUrl: dl.cloudUrl,
+      } as never,
     };
     const vr = await prisma.videoReference.upsert({
       where: { projectId_sourceUrl: { projectId, sourceUrl: input.url } },
@@ -119,7 +168,7 @@ export async function runShortsify(
     if (!ref) {
       if (!input.sourceUrl) throw new Error("sourceUrl or videoReferenceId required");
       await update({ status: "running", progress: 5, step: "Downloading source" });
-      const dl = await downloadVideo(input.sourceUrl, jobId);
+      const dl = await downloadEither(input.sourceUrl, jobId);
       await update({ progress: 30, step: "Transcribing source" });
       const tx = await transcribeAudio(dl.localPath);
       const refData = {
@@ -132,14 +181,27 @@ export async function runShortsify(
         language: tx.language ?? null,
         metadata: dl.metadata as never,
       };
+      const fullRefData = {
+        ...refData,
+        metadata: {
+          ...dl.metadata,
+          cloudPublicId: dl.cloudPublicId,
+          cloudUrl: dl.cloudUrl,
+        } as never,
+      };
       ref = await prisma.videoReference.upsert({
         where: { projectId_sourceUrl: { projectId, sourceUrl: input.sourceUrl } },
-        create: { projectId, sourceUrl: input.sourceUrl, ...refData },
-        update: refData,
+        create: { projectId, sourceUrl: input.sourceUrl, ...fullRefData },
+        update: fullRefData,
       });
     }
 
-    if (!ref.localPath) throw new Error("Reference has no local video file");
+    const refMeta = ref.metadata as { cloudPublicId?: string; cloudUrl?: string } | null;
+    const hasLocalFile = !!ref.localPath && (await fs.access(ref.localPath).then(() => true).catch(() => false));
+
+    if (!hasLocalFile && !refMeta?.cloudPublicId) {
+      throw new Error("Reference has no playable source (local file missing and not in Cloudinary). Re-import this reference.");
+    }
 
     await update({ status: "running", progress: 55, step: "Selecting highlight" });
     const project = await prisma.project.findUnique({
@@ -147,29 +209,55 @@ export async function runShortsify(
       include: { brand: true },
     });
 
-    // Re-fetch transcript segments via a fresh whisper run if not stored as JSON.
-    // (Persisting segments would balloon the row; cheap to redo on the same file.)
-    const tx = await transcribeAudio(ref.localPath);
+    // Transcribe — needs a local file. If we don't have one but the source is in
+    // Cloudinary, skip segment-based highlight and fall back to a heuristic.
+    const tx = hasLocalFile
+      ? await transcribeAudio(ref.localPath!)
+      : { text: ref.transcript ?? "", segments: [], language: ref.language ?? undefined, source: "none" as const };
     const highlights = await selectHighlights(tx.segments, {
       targetDurationSec: input.targetDurationSec ?? 30,
       brandContext: project?.brand?.targetAudience || project?.brandName,
       maxHighlights: 1,
+      totalDurationSec: ref.durationSec ?? undefined,
     });
     if (highlights.length === 0) throw new Error("No highlight could be selected");
     const h = highlights[0];
 
     await update({ progress: 75, step: "Rendering clip" });
-    const outDir = await ensureWorkDir(jobId);
-    const result = await shortsifyClip({
-      videoPath: ref.localPath,
-      start: h.start,
-      end: h.end,
-      outputDir: outDir,
-      outputName: `short-${ref.id}.mp4`,
-      segments: tx.segments,
-      hookText: h.hookText,
-      aspectRatio: input.aspectRatio ?? "9:16",
-    });
+    const bin = await checkBinaries();
+    let outputPath = "";
+    let resultWidth = 0;
+    let resultHeight = 0;
+
+    if (refMeta?.cloudPublicId && isCloudinaryConfigured()) {
+      // Cloud render — synthesize a Cloudinary URL with crop + trim + overlay
+      outputPath = shortsifyURL({
+        publicId: refMeta.cloudPublicId,
+        start: h.start,
+        end: h.end,
+        hookText: h.hookText,
+        aspectRatio: input.aspectRatio ?? "9:16",
+      });
+      [resultWidth, resultHeight] = ((input.aspectRatio ?? "9:16") === "9:16") ? [1080, 1920] :
+        (input.aspectRatio === "16:9") ? [1920, 1080] : [1080, 1080];
+    } else if (hasLocalFile && bin.ffmpeg.available) {
+      const outDir = await ensureWorkDir(jobId);
+      const result = await shortsifyClip({
+        videoPath: ref.localPath!,
+        start: h.start,
+        end: h.end,
+        outputDir: outDir,
+        outputName: `short-${ref.id}.mp4`,
+        segments: tx.segments,
+        hookText: h.hookText,
+        aspectRatio: input.aspectRatio ?? "9:16",
+      });
+      outputPath = result.outputPath;
+      resultWidth = result.width;
+      resultHeight = result.height;
+    } else {
+      throw new Error("No render backend: install ffmpeg locally OR configure Cloudinary (CLOUDINARY_* env vars).");
+    }
 
     await update({
       status: "complete",
@@ -177,15 +265,15 @@ export async function runShortsify(
       step: "Done",
       output: {
         videoReferenceId: ref.id,
-        clipPath: result.outputPath,
-        durationSec: result.durationSec,
-        width: result.width,
-        height: result.height,
+        clipPath: outputPath,
+        durationSec: h.end - h.start,
+        width: resultWidth,
+        height: resultHeight,
         hookText: h.hookText,
         rationale: h.reason,
         score: h.score,
       },
-      outputPath: result.outputPath,
+      outputPath,
     });
   } catch (err) {
     await update({ status: "error", error: err instanceof Error ? err.message : "Shortsify failed" });

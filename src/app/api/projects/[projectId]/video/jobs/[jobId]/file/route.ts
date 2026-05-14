@@ -12,6 +12,13 @@ export async function GET(
   if (!job || job.projectId !== projectId || !job.outputPath) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  // Cloud-hosted output (Cloudinary HTTPS URL): just redirect
+  if (/^https?:\/\//i.test(job.outputPath)) {
+    return NextResponse.redirect(job.outputPath, 302);
+  }
+
+  // Local file: stream
   try {
     const stat = statSync(job.outputPath);
     const stream = createReadStream(job.outputPath);
@@ -30,6 +37,12 @@ export async function GET(
       },
     });
   } catch {
-    return NextResponse.json({ error: "File not accessible" }, { status: 410 });
+    return NextResponse.json(
+      {
+        error:
+          "Output file is not accessible from this server (it was rendered locally and the file no longer exists, or this is a Vercel deployment with no access to /tmp). Re-run the job.",
+      },
+      { status: 410 }
+    );
   }
 }

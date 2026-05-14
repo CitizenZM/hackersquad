@@ -52,9 +52,13 @@ export default function VideoStudioPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] =
-    useState<null | { ready: boolean; binaries: Record<string, { available: boolean; version?: string }>; moneyprinter: { configured: boolean } }>(
-      null
-    );
+    useState<null | {
+      ready: boolean;
+      mode?: "local" | "cloud" | "none";
+      binaries: Record<string, { available: boolean; version?: string }>;
+      cloudinary?: { configured: boolean };
+      moneyprinter: { configured: boolean };
+    }>(null);
   const [playJobId, setPlayJobId] = useState<string | null>(null);
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -135,6 +139,12 @@ export default function VideoStudioPage() {
     refresh();
   }
 
+  async function clearHistory() {
+    if (!confirm("Remove all completed and failed jobs from history? Active jobs are kept.")) return;
+    await fetch(`/api/projects/${projectId}/video/jobs/clear`, { method: "POST" });
+    refresh();
+  }
+
   function platformLabel(p?: string) {
     const map: Record<string, string> = {
       youtube: "YouTube",
@@ -172,8 +182,13 @@ export default function VideoStudioPage() {
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
                   : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
               }`}
+              title={`mode=${health.mode ?? "none"}`}
             >
-              {health.ready ? "Local renderer ready" : "Renderer not available"}
+              {health.ready
+                ? health.mode === "cloud"
+                  ? "Cloud renderer ready"
+                  : "Local renderer ready"
+                : "Renderer not configured"}
             </span>
           )}
           <button
@@ -187,11 +202,23 @@ export default function VideoStudioPage() {
       </header>
 
       {!health?.ready && health && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-900 dark:text-amber-200">
-          Local rendering is unavailable on this host (likely Vercel). The UI works
-          everywhere, but actual renders require <code>yt-dlp</code> and{" "}
-          <code>ffmpeg</code> on the server. Run <code>pnpm dev</code> locally to
-          use the renderer.
+        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-900 dark:text-amber-200 space-y-2">
+          <div>
+            <strong>Rendering is not available on this server.</strong> Pick one:
+          </div>
+          <ul className="list-disc pl-5 text-xs space-y-0.5">
+            <li>
+              <strong>Cloud (Vercel/prod)</strong>: set{" "}
+              <code>CLOUDINARY_CLOUD_NAME</code>,{" "}
+              <code>CLOUDINARY_API_KEY</code>,{" "}
+              <code>CLOUDINARY_API_SECRET</code>. Free tier supports YouTube import + 9:16 crop. Run{" "}
+              <code>vercel env add</code> to install.
+            </li>
+            <li>
+              <strong>Local</strong>: <code>brew install yt-dlp ffmpeg</code>, then{" "}
+              <code>pnpm dev</code>. Supports TikTok, Douyin, Vimeo, etc.
+            </li>
+          </ul>
         </div>
       )}
 
@@ -410,9 +437,19 @@ export default function VideoStudioPage() {
 
       {/* Jobs */}
       <section className="space-y-2">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Recent jobs ({jobs.length})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Recent jobs ({jobs.length})
+          </h2>
+          {jobs.some((j) => j.status === "complete" || j.status === "error") && (
+            <button
+              onClick={clearHistory}
+              className="text-xs text-muted-foreground hover:text-red-600 underline"
+            >
+              Clear history
+            </button>
+          )}
+        </div>
         <div className="rounded-lg border border-border divide-y divide-border">
           {jobs.length === 0 && (
             <div className="px-4 py-6 text-sm text-muted-foreground">

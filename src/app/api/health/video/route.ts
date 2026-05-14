@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { checkBinaries } from "@/services/video/binaries";
+import { isCloudinaryConfigured } from "@/services/video/cloudinary-render";
 
 export async function GET() {
   const bins = await checkBinaries();
-  const ready = bins.ytdlp.available && bins.ffmpeg.available;
+  const cloud = isCloudinaryConfigured();
+  const localReady = bins.ytdlp.available && bins.ffmpeg.available;
+  // Cloud import works when Cloudinary is configured (YouTube only via ytdl-core).
+  const cloudReady = cloud;
   return NextResponse.json({
-    ready,
+    ready: localReady || cloudReady,
+    mode: localReady ? "local" : cloudReady ? "cloud" : "none",
     binaries: bins,
+    cloudinary: { configured: cloud },
     transcribe: {
       groq: !!process.env.GROQ_API_KEY,
       openai: !!process.env.OPENAI_API_KEY,
