@@ -35,19 +35,20 @@ export async function runImport(jobId: string, projectId: string, input: { url: 
     const tx = await transcribeAudio(dl.localPath);
 
     await update({ progress: 85, step: "Persisting" });
-    const vr = await prisma.videoReference.create({
-      data: {
-        projectId,
-        sourceUrl: input.url,
-        platform: dl.metadata.platform || detectPlatform(input.url),
-        localPath: dl.localPath,
-        durationSec: dl.metadata.duration ?? null,
-        width: dl.metadata.width ?? null,
-        height: dl.metadata.height ?? null,
-        transcript: tx.text || null,
-        language: tx.language ?? null,
-        metadata: dl.metadata as never,
-      },
+    const refData = {
+      platform: dl.metadata.platform || detectPlatform(input.url),
+      localPath: dl.localPath,
+      durationSec: dl.metadata.duration ?? null,
+      width: dl.metadata.width ?? null,
+      height: dl.metadata.height ?? null,
+      transcript: tx.text || null,
+      language: tx.language ?? null,
+      metadata: dl.metadata as never,
+    };
+    const vr = await prisma.videoReference.upsert({
+      where: { projectId_sourceUrl: { projectId, sourceUrl: input.url } },
+      create: { projectId, sourceUrl: input.url, ...refData },
+      update: refData,
     });
 
     const ca = await prisma.contentAsset.upsert({
@@ -121,19 +122,20 @@ export async function runShortsify(
       const dl = await downloadVideo(input.sourceUrl, jobId);
       await update({ progress: 30, step: "Transcribing source" });
       const tx = await transcribeAudio(dl.localPath);
-      ref = await prisma.videoReference.create({
-        data: {
-          projectId,
-          sourceUrl: input.sourceUrl,
-          platform: dl.metadata.platform || detectPlatform(input.sourceUrl),
-          localPath: dl.localPath,
-          durationSec: dl.metadata.duration ?? null,
-          width: dl.metadata.width ?? null,
-          height: dl.metadata.height ?? null,
-          transcript: tx.text || null,
-          language: tx.language ?? null,
-          metadata: dl.metadata as never,
-        },
+      const refData = {
+        platform: dl.metadata.platform || detectPlatform(input.sourceUrl),
+        localPath: dl.localPath,
+        durationSec: dl.metadata.duration ?? null,
+        width: dl.metadata.width ?? null,
+        height: dl.metadata.height ?? null,
+        transcript: tx.text || null,
+        language: tx.language ?? null,
+        metadata: dl.metadata as never,
+      };
+      ref = await prisma.videoReference.upsert({
+        where: { projectId_sourceUrl: { projectId, sourceUrl: input.sourceUrl } },
+        create: { projectId, sourceUrl: input.sourceUrl, ...refData },
+        update: refData,
       });
     }
 

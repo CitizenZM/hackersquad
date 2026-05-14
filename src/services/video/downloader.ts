@@ -71,7 +71,24 @@ export async function downloadVideo(
   });
 
   if (code !== 0) {
-    throw new Error(`yt-dlp failed (${code}): ${stderr.slice(-400)}`);
+    const tail = stderr.slice(-800);
+    // Translate common yt-dlp error patterns into a clean, user-actionable message.
+    if (/IP address is blocked/i.test(tail)) {
+      throw new Error("This platform is blocking our region. Try a YouTube or Vimeo URL, or download manually and re-upload.");
+    }
+    if (/HTTP Error 403/i.test(tail)) {
+      throw new Error("Source returned 403 — the video may be private, age-restricted, or region-locked.");
+    }
+    if (/HTTP Error 404/i.test(tail) || /Video unavailable/i.test(tail)) {
+      throw new Error("Source returned 404 — the video may have been removed.");
+    }
+    if (/Sign in to confirm/i.test(tail) || /age-restricted/i.test(tail)) {
+      throw new Error("Source is age-restricted and requires sign-in. Try a public, non-age-restricted video.");
+    }
+    if (/Unsupported URL/i.test(tail)) {
+      throw new Error("This URL is not supported by yt-dlp. Try a direct video link (YouTube, TikTok, Vimeo, Douyin, Bilibili).");
+    }
+    throw new Error(`Download failed: ${tail.split("\n").filter(Boolean).pop() || "unknown error"}`);
   }
 
   const files = await fs.readdir(dir);

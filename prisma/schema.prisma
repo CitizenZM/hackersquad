@@ -444,6 +444,7 @@ model VideoReference {
   metadata    Json?
   createdAt   DateTime @default(now())
 
+  @@unique([projectId, sourceUrl])
   @@index([projectId, platform])
 }
 
