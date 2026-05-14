@@ -179,6 +179,8 @@ model Project {
   researchJobs      ResearchJob[]
   audienceProfile   AudienceProfile?
   deepAnalysis      DeepAnalysis?
+  renderJobs        RenderJob[]
+  videoReferences   VideoReference[]
 }
 
 model Brand {
@@ -400,6 +402,48 @@ model PreviewAsset {
   status     String  @default("pending")
 
   createdAt DateTime @default(now())
+}
+
+model RenderJob {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  kind        String // "import" | "shortsify" | "generate"
+  status      String    @default("pending") // pending|running|complete|error
+  progress    Float     @default(0)
+  currentStep String?
+  input       Json
+  output      Json?
+  error       String?
+  outputPath  String?
+  durationMs  Int?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
+}
+
+model VideoReference {
+  id             String  @id @default(cuid())
+  projectId      String
+  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contentAssetId String? @unique
+
+  sourceUrl   String
+  platform    String // tiktok | youtube | douyin | other
+  localPath   String?
+  durationSec Float?
+  width       Int?
+  height      Int?
+  transcript  String?
+  language    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([projectId, platform])
 }
 
 model ResearchJob {
