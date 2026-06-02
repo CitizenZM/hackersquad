@@ -14,7 +14,9 @@ import {
   TrendingUp,
   ArrowRight,
   Lightbulb,
+  Package,
 } from "lucide-react";
+import { ProductIntelligence } from "@/components/dashboard/product-intelligence";
 
 export default async function OverviewPage({
   params,
@@ -82,6 +84,16 @@ export default async function OverviewPage({
           icon="refresh"
         />
       </div>
+
+      {/* Product Intelligence — must verify before proceeding */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4" />
+          <h2 className="text-sm font-semibold">Product Intelligence</h2>
+          <span className="text-xs text-muted-foreground">Verify AI understands your product before generating content</span>
+        </div>
+        <ProductIntelligence projectId={projectId} />
+      </section>
 
       {/* Hero metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

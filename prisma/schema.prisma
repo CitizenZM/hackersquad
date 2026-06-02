@@ -203,6 +203,15 @@ model Brand {
   ctaLanguage      Json?
   productFeatures  Json?
 
+  // Product Intelligence — added for visual verification system
+  productCategory      String?   // e.g., "Home Appliances - Vacuum Cleaners"
+  productDescription   String?   @db.Text  // precise product description for AI
+  productImages        Json?     // [{url, caption, type: "product"|"in-use"|"environment"}]
+  useEnvironments      Json?     // [{name, description, imagePrompt, sampleImageUrl}]
+  actorSettings        Json?     // [{role, ageRange, scenario, visualDescription}]
+  displayGuidelines    Json?     // [{rule, example, antiExample}]
+  productVerified      Boolean   @default(false)
+
   dataSource   DataSource @default(AI_INFERRED)
   rawCrawlData Json?
   createdAt    DateTime   @default(now())

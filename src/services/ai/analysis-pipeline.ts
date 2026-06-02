@@ -13,6 +13,8 @@ import type { VideoResult } from "@/services/research/video-search";
 import { NarrativeType, ContentType } from "@/generated/prisma/enums";
 
 const brandAnalysisSchema = z.object({
+  productCategory: z.string().optional(),
+  productDescription: z.string().optional(),
   brandPromise: z.string(),
   valueProposition: z.string(),
   toneOfVoice: z.string(),
@@ -21,6 +23,25 @@ const brandAnalysisSchema = z.object({
   productFeatures: z.array(z.string()),
   ctaLanguage: z.array(z.string()),
   socialProof: z.array(z.string()),
+  useEnvironments: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    imagePrompt: z.string(),
+    typicalUser: z.string(),
+  })).optional(),
+  actorSettings: z.array(z.object({
+    role: z.string(),
+    ageRange: z.string(),
+    scenario: z.string(),
+    visualDescription: z.string(),
+    painPoint: z.string(),
+    productInteraction: z.string(),
+  })).optional(),
+  displayGuidelines: z.array(z.object({
+    rule: z.string(),
+    example: z.string(),
+    antiExample: z.string(),
+  })).optional(),
 });
 
 const contentScoreSchema = z.object({
@@ -102,6 +123,11 @@ export async function runAnalysisPipeline(
           toneOfVoice: a.toneOfVoice, targetAudience: a.targetAudience,
           pricingTheme: a.pricingTheme, productFeatures: a.productFeatures,
           ctaLanguage: a.ctaLanguage, socialProof: a.socialProof,
+          productCategory: a.productCategory,
+          productDescription: a.productDescription,
+          useEnvironments: a.useEnvironments as never,
+          actorSettings: a.actorSettings as never,
+          displayGuidelines: a.displayGuidelines as never,
           dataSource: "AI_INFERRED", rawCrawlData: brandCrawl satisfies object as object,
         }});
 

@@ -13,6 +13,11 @@ import {
   AlertCircle,
   Clock,
   Target,
+  MapPin,
+  Users,
+  Eye,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 type DeepAnalysisData = {
@@ -67,15 +72,24 @@ export default async function InsightsListPage({
 }) {
   const { projectId } = await params;
 
-  const [patterns, sellingPoints, insights, deepAnalysis] = await Promise.all([
+  const [patterns, sellingPoints, insights, deepAnalysis, brand] = await Promise.all([
     prisma.narrativePattern.findMany({ where: { projectId }, orderBy: { avgPerformance: "desc" } }),
     prisma.sellingPoint.findMany({ where: { projectId }, orderBy: { strength: "desc" } }),
     prisma.insight.findMany({ where: { projectId }, orderBy: { importance: "desc" } }),
     prisma.deepAnalysis.findUnique({ where: { projectId } }),
+    prisma.brand.findUnique({ where: { projectId } }),
   ]);
 
   const deep = deepAnalysis as unknown as (DeepAnalysisData & { id: string; projectId: string }) | null;
   const hasDeep = !!(deep?.videoStructure || deep?.vibeAnalysis || deep?.ctaAnalysis);
+
+  type UseEnvironment = { name: string; description: string; typicalUser: string; imagePrompt: string };
+  type ActorSetting = { role: string; ageRange: string; scenario: string; visualDescription: string; painPoint: string; productInteraction: string };
+  type DisplayGuideline = { rule: string; example: string; antiExample: string };
+
+  const useEnvironments = (brand?.useEnvironments as UseEnvironment[] | null) || [];
+  const actorSettings = (brand?.actorSettings as ActorSetting[] | null) || [];
+  const displayGuidelines = (brand?.displayGuidelines as DisplayGuideline[] | null) || [];
 
   return (
     <div className="space-y-6">
@@ -546,7 +560,117 @@ export default async function InsightsListPage({
         </section>
       )}
 
-      {patterns.length === 0 && sellingPoints.length === 0 && insights.length === 0 && !hasDeep && (
+      {/* ── SECTION: Use Environments ── */}
+      {useEnvironments.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-blue-500" />
+            <h3 className="text-sm font-semibold">Use Environments</h3>
+            <span className="text-xs text-muted-foreground">Where users interact with this product</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {useEnvironments.map((env, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="bg-blue-50 border-b border-blue-100 px-4 py-2.5 flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-blue-600" />
+                  <p className="text-xs font-semibold text-blue-900">{env.name}</p>
+                </div>
+                <div className="p-4 space-y-2">
+                  <p className="text-xs text-foreground/80 leading-relaxed">{env.description}</p>
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-[10px] text-muted-foreground">{env.typicalUser}</p>
+                  </div>
+                  {env.imagePrompt && (
+                    <div className="rounded-lg bg-muted/50 border border-border p-2 mt-2">
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-1">Scene Prompt for Video</p>
+                      <p className="text-[10px] text-foreground/60 font-mono leading-relaxed line-clamp-3">{env.imagePrompt}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── SECTION: Actor Settings ── */}
+      {actorSettings.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-purple-500" />
+            <h3 className="text-sm font-semibold">Actor Role Settings</h3>
+            <span className="text-xs text-muted-foreground">Who appears in content and how they behave</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {actorSettings.map((actor, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="bg-purple-50 border-b border-purple-100 px-4 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5 text-purple-600" />
+                    <p className="text-xs font-semibold text-purple-900">{actor.role}</p>
+                  </div>
+                  <span className="text-[10px] text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">{actor.ageRange}</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <p className="text-xs text-foreground/80">{actor.scenario}</p>
+                  <div className="space-y-1.5">
+                    <div className="rounded-lg bg-muted/50 p-2">
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Appearance</p>
+                      <p className="text-[10px] text-foreground/70">{actor.visualDescription}</p>
+                    </div>
+                    <div className="rounded-lg bg-red-50 border border-red-100 p-2">
+                      <p className="text-[10px] font-semibold text-red-700 mb-0.5">Pain Point</p>
+                      <p className="text-[10px] text-red-800">{actor.painPoint}</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 border border-blue-100 p-2">
+                      <p className="text-[10px] font-semibold text-blue-700 mb-0.5">Product Interaction</p>
+                      <p className="text-[10px] text-blue-800">{actor.productInteraction}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── SECTION: Product Display Guidelines ── */}
+      {displayGuidelines.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-sm font-semibold">Product Display Guidelines</h3>
+            <span className="text-xs text-muted-foreground">How to correctly show this product in video</span>
+          </div>
+          <div className="space-y-2">
+            {displayGuidelines.map((guide, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                  {guide.rule}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+                    <p className="text-[10px] font-semibold text-emerald-700 mb-1.5 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Correct Approach
+                    </p>
+                    <p className="text-xs text-emerald-800 leading-relaxed">{guide.example}</p>
+                  </div>
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                    <p className="text-[10px] font-semibold text-red-700 mb-1.5 flex items-center gap-1">
+                      <XCircle className="h-3 w-3" /> Must Avoid
+                    </p>
+                    <p className="text-xs text-red-800 leading-relaxed">{guide.antiExample}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {patterns.length === 0 && sellingPoints.length === 0 && insights.length === 0 && !hasDeep && useEnvironments.length === 0 && (
         <div className="rounded-lg border border-border bg-card py-16 text-center">
           <p className="text-sm text-muted-foreground">
             No insights yet. Run research to generate analysis.
