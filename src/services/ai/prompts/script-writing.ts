@@ -1,50 +1,134 @@
 export interface ScriptInput {
   brandName: string;
+  productName?: string;
+  productDescription?: string;
   angle: {
     title: string;
     description: string;
     targetEmotion: string;
     narrativeType: string;
+    predictedScore?: number;
   };
   sellingPoints: string[];
   campaignGoal?: string;
+  platform?: string;
+  totalDurationSec?: number;
+  selectedEnvironment?: string;
+  selectedActorRole?: string;
+  selectedActorDesc?: string;
+  videoTimeline?: Array<{segment: string; startSec: number; endSec: number; label: string; description: string}>;
+  hookFormulas?: Array<{type: string; formula: string; openingLine: string; visualDescription: string}>;
+  cameraAngles?: Array<{shot: string; movement: string; whenToUse: string}>;
+  environmentNotes?: string;
+  audienceSummary?: string;
   briefing?: string;
 }
 
 export function buildScriptWritingPrompt(input: ScriptInput) {
-  const system = `You are a world-class ad copywriter specializing in video scripts.
-Write a complete ad script with multiple hook and CTA variants.
-Respond with ONLY a JSON object:
+  const durationSec = input.totalDurationSec || 30;
+  const platform = input.platform || "video";
+
+  const system = `You are a senior creative director and script writer for ${platform} ads.
+Write a DETAILED, production-ready video ad script that a director can shoot directly from.
+
+SCRIPT REQUIREMENTS:
+- Every scene must specify: exact shot type + focal length + camera movement + duration
+- Every character action must be described at millimeter precision (not "she smiles" → "left corner of mouth rises 0.5cm, exhale through nose, eyes soften")
+- Every environment must be specified: room type + lighting source + color temperature + key props
+- Hook must match one of the provided hook formulas exactly (if provided)
+- Total script must sum to EXACTLY ${durationSec} seconds
+- Scene durations must add up to exactly ${durationSec} seconds — no rounding
+
+OUTPUT JSON (no markdown, no extra keys):
 {
-  "title": "string - script title",
-  "angle": "string - the angle this script is based on",
-  "format": "short_form|long_form|ugc|testimonial",
-  "duration": "15s|30s|60s",
-  "hookVariants": ["3 different opening hooks"],
-  "body": "string - the main script body with stage directions in [brackets]",
-  "ctaVariants": ["3 different closing CTAs"],
+  "title": "string",
+  "angle": "string",
+  "format": "short_form|long_form|ugc|testimonial|tvc",
+  "duration": "string e.g. '30s'",
+  "platform": "string",
+  "totalDurationSec": number,
+  "hookVariants": ["3 distinct hooks — each with opening visual + first spoken word"],
+  "body": "FULL SCRIPT with [SCENE X: Xs-Xs] markers, camera directions, VO text, actor actions",
+  "ctaVariants": ["3 distinct CTAs with visual direction"],
   "narrativeType": "PROBLEM_SOLUTION|TESTIMONIAL|DEMONSTRATION|LIFESTYLE|EDUCATIONAL|COMPARISON|STORY_ARC|UGC_STYLE|TREND_RIDING|BEFORE_AFTER",
   "targetEmotion": "string",
-  "predictedScore": number
+  "predictedScore": number,
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "startSec": 0,
+      "endSec": 5,
+      "segmentLabel": "Hook",
+      "shotType": "Extreme close-up",
+      "focalLength": "100mm macro",
+      "cameraMovement": "Static, then slow push-in over 3 seconds",
+      "aperture": "f/1.8",
+      "location": "Modern living room — honed marble floor, golden retriever fur visible",
+      "lighting": "5200K natural window light from camera-left, 3:1 ratio",
+      "actorAction": "Woman (32yo, South Asian, linen tee) bends to vacuum — does NOT look at camera",
+      "productAction": "Product brush head engages carpet, dust visible being drawn in",
+      "voiceover": "Exact VO text here",
+      "textOverlay": "None",
+      "transition": "Cut on motion to Scene 2"
+    }
+  ]
 }`;
 
-  const user = `Write an ad script for "${input.brandName}":
+  const hookFormulasBlock = input.hookFormulas?.length
+    ? `\nHOOK FORMULAS TO USE (pick ONE for the primary hook):\n${input.hookFormulas.map((h, i) =>
+        `${i + 1}. [${h.type}] Formula: ${h.formula}\n   Opening line: "${h.openingLine}"\n   Visual: ${h.visualDescription}`
+      ).join("\n")}`
+    : "";
 
-Angle: ${input.angle.title}
-Description: ${input.angle.description}
+  const cameraAnglesBlock = input.cameraAngles?.length
+    ? `\nAPPROVED CAMERA ANGLES:\n${input.cameraAngles.map((c, i) =>
+        `${i + 1}. ${c.shot} | Movement: ${c.movement} | Use when: ${c.whenToUse}`
+      ).join("\n")}`
+    : "";
+
+  const timelineBlock = input.videoTimeline?.length
+    ? `\nVIDEO TIMELINE STRUCTURE (follow this segment plan exactly):\n${input.videoTimeline.map(t =>
+        `[${t.startSec}s–${t.endSec}s] ${t.segment} — ${t.label}: ${t.description}`
+      ).join("\n")}`
+    : "";
+
+  const environmentBlock = input.selectedEnvironment
+    ? `\nSELECTED ENVIRONMENT: ${input.selectedEnvironment}${input.environmentNotes ? `\nEnvironment notes: ${input.environmentNotes}` : ""}`
+    : "";
+
+  const actorBlock = input.selectedActorRole
+    ? `\nSELECTED ACTOR ROLE: ${input.selectedActorRole}${input.selectedActorDesc ? `\nActor visual description: ${input.selectedActorDesc}` : ""}`
+    : "";
+
+  const user = `Write a production-ready ${durationSec}-second ${platform} ad script for "${input.brandName}":
+
+PRODUCT: ${input.productName || input.brandName}
+${input.productDescription ? `PRODUCT DESCRIPTION: ${input.productDescription}` : ""}
+
+CREATIVE ANGLE: ${input.angle.title}
+Angle Description: ${input.angle.description}
 Target Emotion: ${input.angle.targetEmotion}
 Narrative Type: ${input.angle.narrativeType}
+${input.angle.predictedScore ? `Predicted Score: ${input.angle.predictedScore}` : ""}
 Campaign Goal: ${input.campaignGoal || "Conversion"}
+${input.audienceSummary ? `\n${input.audienceSummary}` : ""}
 
-Key Selling Points to Weave In:
+KEY SELLING POINTS (weave all in, prioritize top 3):
 ${input.sellingPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+${environmentBlock}
+${actorBlock}
+${hookFormulasBlock}
+${cameraAnglesBlock}
+${timelineBlock}
 
-${input.briefing ? `\nProject Brief:\n${input.briefing.slice(0, 1000)}` : ""}
+${input.briefing ? `PROJECT BRIEF:\n${input.briefing.slice(0, 1000)}` : ""}
 
-Write a compelling 30-second video ad script. Include:
-- 3 different hook variants (the first 3 seconds)
-- Full script body with visual/stage directions
-- 3 different CTA variants`;
+DELIVERABLE:
+- scenes[] must contain every second: scenes[n].endSec - scenes[n].startSec summing to exactly ${durationSec}
+- 3 hook variants (each with unique visual direction + opening word)
+- Full body script with [SCENE X: Xs-Xs] markers
+- 3 CTA variants with visual direction
+- Every scene must have: shotType, focalLength, cameraMovement, aperture, location, lighting, actorAction, productAction, voiceover, textOverlay, transition`;
 
   return { system, user };
 }

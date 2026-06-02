@@ -20,20 +20,35 @@ export interface VideoResult {
 
 export async function searchAllPlatforms(
   brandName: string,
-  keywords: SearchKeywords
+  keywords: SearchKeywords,
+  strategy: "short_social" | "tvc" | "mixed" = "mixed"
 ): Promise<VideoResult[]> {
   const allResults: VideoResult[] = [];
 
-  // Run all platform searches in parallel
-  // YouTube searches (primary) + social discovery (secondary) in parallel
-  // Keep it fast to fit within 60s Vercel timeout
-  const [ytLong, ytShorts, socialResults] = await Promise.all([
-    searchYouTubeLong(brandName, keywords),
-    searchYouTubeShorts(brandName, keywords),
-    searchSocialPlatforms(brandName, keywords),
-  ]);
-
-  allResults.push(...ytLong, ...ytShorts, ...socialResults);
+  if (strategy === "short_social") {
+    // TikTok + YouTube Shorts only
+    const [ytShorts, vimeoResults] = await Promise.all([
+      searchYouTubeShorts(brandName, keywords),
+      searchVimeoContent(brandName, keywords),
+    ]);
+    allResults.push(...ytShorts, ...vimeoResults);
+  } else if (strategy === "tvc") {
+    // YouTube long-form + Vimeo
+    const [ytLong, vimeoResults] = await Promise.all([
+      searchYouTubeLong(brandName, keywords),
+      searchVimeoContent(brandName, keywords),
+    ]);
+    allResults.push(...ytLong, ...vimeoResults);
+  } else {
+    // Mixed: all platforms
+    const [ytLong, ytShorts, socialResults, vimeoResults] = await Promise.all([
+      searchYouTubeLong(brandName, keywords),
+      searchYouTubeShorts(brandName, keywords),
+      searchSocialPlatforms(brandName, keywords),
+      searchVimeoContent(brandName, keywords),
+    ]);
+    allResults.push(...ytLong, ...ytShorts, ...socialResults, ...vimeoResults);
+  }
 
   // Deduplicate by videoId
   const seen = new Set<string>();
@@ -43,6 +58,37 @@ export async function searchAllPlatforms(
     seen.add(key);
     return true;
   });
+}
+
+async function searchVimeoContent(
+  brandName: string,
+  keywords: SearchKeywords
+): Promise<VideoResult[]> {
+  const query = `site:vimeo.com "${brandName}" ${keywords.adSearchQueries[0] || "ad commercial"}`;
+  try {
+    const results = await searchDuckDuckGo(query, 5);
+    return results
+      .filter((r) => r.url.includes("vimeo.com"))
+      .map((r) => {
+        const idMatch = r.url.match(/vimeo\.com\/(\d+)/);
+        const videoId = idMatch?.[1] || Math.random().toString(36).slice(2);
+        return {
+          platform: "vimeo" as const,
+          videoId,
+          title: r.title || `${brandName} Vimeo Video`,
+          description: r.snippet || "",
+          url: r.url,
+          thumbnailUrl: `https://vumbnail.com/${videoId}.jpg`,
+          channelTitle: "Vimeo",
+          viewCount: 0,
+          likeCount: 0,
+          commentCount: 0,
+          publishedAt: new Date().toISOString(),
+        };
+      });
+  } catch {
+    return [];
+  }
 }
 
 async function searchYouTubeLong(

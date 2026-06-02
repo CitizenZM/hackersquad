@@ -424,13 +424,41 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
             cameraRecommendation: z.string().optional().default(""),
             examples: z.array(z.string()).optional().default([]),
           })).optional().default([]),
+          videoTimeline: z.object({
+            recommendedDurationSec: z.coerce.number().optional().default(30),
+            platform: z.string().optional().default(""),
+            segments: z.array(z.object({
+              segment: z.string().optional().default(""),
+              startSec: z.coerce.number().optional().default(0),
+              endSec: z.coerce.number().optional().default(0),
+              label: z.string().optional().default(""),
+              description: z.string().optional().default(""),
+              cameraNote: z.string().optional().default(""),
+              voiceover: z.string().optional().default(""),
+              purpose: z.string().optional().default(""),
+            })).optional().default([]),
+            rationale: z.string().optional().default(""),
+          }).optional(),
         });
 
-        const updatedProject = await prisma.project.findUnique({ where: { id: projectId } });
+        const [updatedProject, campaignSel, audienceData] = await Promise.all([
+          prisma.project.findUnique({ where: { id: projectId } }),
+          prisma.campaignSelection.findUnique({ where: { projectId } }).catch(() => null),
+          prisma.audienceProfile.findUnique({ where: { projectId } }).catch(() => null),
+        ]);
         const prompt = buildDeepAnalysisPrompt({
           brandName: project.brandName,
           category: updatedProject?.category || undefined,
-          productDescription: project.productPageText?.slice(0, 300) || undefined,
+          productDescription: project.productPageText?.slice(0, 400) || undefined,
+          productName: project.productPageTitle || project.productName || undefined,
+          campaignGoal: project.campaignGoal || undefined,
+          selectedEnvironment: (campaignSel?.selectedEnvironment as string | null) || undefined,
+          selectedActorRole: (campaignSel?.selectedActorRole as string | null) || undefined,
+          selectedSellingPoints:
+            (campaignSel?.selectedSellingPoints as { point: string }[] | null)?.map((s) => s.point) || undefined,
+          audienceSummary: audienceData
+            ? `${(audienceData.segments as { name: string }[] | null)?.[0]?.name || ""}, pain points: ${(audienceData.painPoints as { point: string }[] | null)?.slice(0, 3).map((p) => p.point).join(", ") || ""}`
+            : undefined,
           topContent: scoredAssets.slice(0, 8).map((a) => ({
             title: a.title,
             platform: a.platform || "YouTube",
@@ -466,6 +494,7 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
             hookFormulas: deep.hookFormulas as never,
             platformInsights: deep.platformInsights as never,
             sellingPointVisuals: deep.sellingPointVisuals as never,
+            videoTimeline: deep.videoTimeline as never,
           },
           update: {
             ...deep,
@@ -474,6 +503,7 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
             hookFormulas: deep.hookFormulas as never,
             platformInsights: deep.platformInsights as never,
             sellingPointVisuals: deep.sellingPointVisuals as never,
+            videoTimeline: deep.videoTimeline as never,
           },
         });
       } catch (e) { console.error("Deep analysis failed:", e); }

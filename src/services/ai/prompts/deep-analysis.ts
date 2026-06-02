@@ -2,6 +2,12 @@ export interface DeepAnalysisInput {
   brandName: string;
   category?: string;
   productDescription?: string;
+  productName?: string;
+  campaignGoal?: string;
+  selectedEnvironment?: string;
+  selectedActorRole?: string;
+  selectedSellingPoints?: string[];
+  audienceSummary?: string;
   topContent: {
     title: string;
     platform: string;
@@ -115,10 +121,27 @@ Output ONLY valid JSON with ALL these keys:
       "cameraRecommendation": "Specific shot for this point",
       "examples": ["content title"]
     }
-  ]
+  ],
+  "videoTimeline": {
+    "recommendedDurationSec": 30,
+    "platform": "tiktok|instagram|youtube|tvc",
+    "segments": [
+      {
+        "segment": "Hook",
+        "startSec": 0,
+        "endSec": 5,
+        "label": "Scroll-Stopping Hook",
+        "description": "What happens visually in this segment",
+        "cameraNote": "Camera type and movement for this segment",
+        "voiceover": "VO or text overlay for this segment",
+        "purpose": "Why this timing works"
+      }
+    ],
+    "rationale": "Why this timing structure works for the platform and goal"
+  }
 }`;
 
-  const user = `Deep creative analysis for "${input.brandName}"${input.category ? ` (${input.category})` : ""}${input.productDescription ? `\nProduct: ${input.productDescription.slice(0, 200)}` : ""}:
+  const user = `Deep creative analysis for "${input.brandName}"${input.category ? ` (${input.category})` : ""}${input.productDescription ? `\nProduct: ${input.productDescription.slice(0, 200)}` : ""}${input.productName ? `\nSPECIFIC PRODUCT: ${input.productName}` : ""}${input.campaignGoal ? `\nCAMPAIGN GOAL: ${input.campaignGoal}` : ""}${input.selectedEnvironment ? `\nSELECTED ENVIRONMENT: ${input.selectedEnvironment}` : ""}${input.selectedActorRole ? `\nSELECTED ACTOR ROLE: ${input.selectedActorRole}` : ""}${input.selectedSellingPoints?.length ? `\nPRIORITY SELLING POINTS:\n${input.selectedSellingPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}` : ""}${input.audienceSummary ? `\nAUDIENCE: ${input.audienceSummary}` : ""}:
 
 SCORED AD CONTENT (${input.topContent.length} pieces):
 ${input.topContent.map((c, i) => `[${i+1}] "${c.title}" | ${c.platform} | Score:${c.overallScore} | Views:${c.viewCount.toLocaleString()}

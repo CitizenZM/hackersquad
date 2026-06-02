@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { ProductIntelligence } from "@/components/dashboard/product-intelligence";
 import { ProductDefinition } from "@/components/dashboard/product-definition";
+import { CampaignSelection } from "@/components/dashboard/campaign-selection";
 
 export default async function OverviewPage({
   params,
@@ -26,7 +27,7 @@ export default async function OverviewPage({
 }) {
   const { projectId } = await params;
 
-  const [project, contentAssets, patterns, sellingPoints, insights, competitors, audienceProfile] =
+  const [project, contentAssets, patterns, sellingPoints, insights, competitors, audienceProfile, deepAnalysis] =
     await Promise.all([
       prisma.project.findUnique({
         where: { id: projectId },
@@ -51,6 +52,7 @@ export default async function OverviewPage({
       }),
       prisma.competitor.findMany({ where: { projectId } }),
       prisma.audienceProfile.findUnique({ where: { projectId } }),
+      prisma.deepAnalysis.findUnique({ where: { projectId } }),
     ]);
 
   if (!project) return <div>Project not found</div>;
@@ -104,6 +106,24 @@ export default async function OverviewPage({
           <span className="text-xs text-muted-foreground">AI-generated verification — environments, actors, display rules</span>
         </div>
         <ProductIntelligence projectId={projectId} />
+      </section>
+
+      {/* Campaign Selection — user confirms context before script generation */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          <h2 className="text-sm font-semibold">Campaign Context Selection</h2>
+          <span className="text-xs text-muted-foreground">
+            Select environment, actor, selling points, and timeline — confirm to align AI for script generation
+          </span>
+        </div>
+        <CampaignSelection
+          projectId={projectId}
+          environments={(brand?.useEnvironments as Array<{name:string;description:string;typicalUser:string;imagePrompt?:string}>) || []}
+          actorSettings={(brand?.actorSettings as Array<{role:string;ageRange:string;scenario:string;visualDescription:string;painPoint:string;productInteraction:string}>) || []}
+          sellingPoints={sellingPoints.map(sp => ({ id: sp.id, point: sp.point, category: sp.category, strength: sp.strength || 0 }))}
+          deepTimeline={(deepAnalysis?.videoTimeline as {recommendedDurationSec:number;platform:string;segments:Array<{segment:string;startSec:number;endSec:number;label:string;description:string;cameraNote?:string;voiceover?:string;purpose?:string}>;rationale?:string}) || null}
+        />
       </section>
 
       {/* Hero metrics */}

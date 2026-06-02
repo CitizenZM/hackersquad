@@ -137,7 +137,11 @@ export async function POST(
       );
     }
 
-    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    const [project, campaignSel, audienceData] = await Promise.all([
+      prisma.project.findUnique({ where: { id: projectId } }),
+      prisma.campaignSelection.findUnique({ where: { projectId } }).catch(() => null),
+      prisma.audienceProfile.findUnique({ where: { projectId } }).catch(() => null),
+    ]);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -145,6 +149,16 @@ export async function POST(
     const prompt = buildDeepAnalysisPrompt({
       brandName: project.brandName,
       category: project.category || undefined,
+      productDescription: project.productPageText?.slice(0, 400) || undefined,
+      productName: project.productPageTitle || project.productName || undefined,
+      campaignGoal: project.campaignGoal || undefined,
+      selectedEnvironment: (campaignSel?.selectedEnvironment as string | null) || undefined,
+      selectedActorRole: (campaignSel?.selectedActorRole as string | null) || undefined,
+      selectedSellingPoints:
+        (campaignSel?.selectedSellingPoints as { point: string }[] | null)?.map((s) => s.point) || undefined,
+      audienceSummary: audienceData
+        ? `${(audienceData.segments as { name: string }[] | null)?.[0]?.name || ""}, pain points: ${(audienceData.painPoints as { point: string }[] | null)?.slice(0, 3).map((p) => p.point).join(", ") || ""}`
+        : undefined,
       topContent: assets.slice(0, 8).map((a) => ({
         title: a.title,
         platform: a.platform || "YouTube",
@@ -159,6 +173,8 @@ export async function POST(
         keyMessages: (a.keyMessages as string[]) || [],
         viewCount: a.viewCount || 0,
         contentCategory: a.contentCategory,
+        url: a.url || undefined,
+        thumbnailUrl: a.thumbnailUrl || undefined,
       })),
     });
 

@@ -251,21 +251,26 @@ export async function POST(
   }
 
   // ── Step 2: AI-generated product verification images ──
-  // Use product page title if available for accurate product naming
-  const productRef = project.productPageTitle || project.productName || `${brandName} ${productCategory}`;
-  const productDescRef = project.productPageText?.slice(0, 300) || productDesc.slice(0, 300);
+  // Use specific product title if available, otherwise fall back to description
+  // IMPORTANT: Never use the brand name alone — always use the full product description
+  // to prevent AI image generators from producing animals (e.g. "Shark" → shark fish)
+  const safeProductRef = (project.productPageTitle && project.productPageTitle.length > 5)
+    ? project.productPageTitle  // e.g. "Shark PowerDetect™ Cordless Vacuum"
+    : productDesc.slice(0, 150); // fallback to description
+
+  const antiAnimalTerms = "not an animal, not a shark fish, not ocean creature, no wildlife, no sea life";
 
   // 2a. Full product shot (white background, studio, all sides visible)
-  const fullShotPrompt = `${productRef}, ${productDescRef}, professional product photography, pure white background, studio three-point lighting, all product angles visible, commercial advertising quality, photorealistic, no humans, no text`;
+  const fullShotPrompt = `${safeProductRef} — a home cleaning appliance/vacuum cleaner. Professional product photography, pure white background, studio three-point lighting, product centered in frame. ${antiAnimalTerms}. No humans, no text, photorealistic commercial product shot.`;
 
   // 2b. Detail/close-up shot — key mechanical/functional features
-  const detailShotPrompt = `Extreme close-up macro photography showing the key features and mechanical details of ${productRef}. Studio macro lighting from above, tack-sharp focus on functional parts, white background, photorealistic product detail, no humans`;
+  const detailShotPrompt = `Close-up detail shot of ${safeProductRef} vacuum cleaner features — brush head, suction nozzle, dust canister, controls. Macro studio photography, white background, sharp mechanical details. ${antiAnimalTerms}. No humans.`;
 
   // 2c. Full product at 3/4 angle
-  const quarterAnglePrompt = `${productRef}, 3/4 front angle, light grey seamless background, dramatic side rim lighting, shadows showing product depth and form, commercial advertising quality, photorealistic, no humans`;
+  const quarterAnglePrompt = `${safeProductRef} vacuum cleaner at 3/4 angle. Light grey seamless background, dramatic side lighting showing product depth. ${antiAnimalTerms}. Photorealistic commercial photography, no humans.`;
 
   // 2d. Product in realistic home/use setting — product only
-  const inUseAnglePrompt = `${productRef} positioned in a realistic home environment showing its typical use context, natural morning light, no humans in frame, photorealistic, commercial photography style`;
+  const inUseAnglePrompt = `${safeProductRef} vacuum cleaner positioned on hardwood floor in modern living room, ready for use. Natural morning light, product prominently visible. ${antiAnimalTerms}. No humans, photorealistic.`;
 
   const aiPrompts = [
     { prompt: fullShotPrompt, caption: "Full Product — Studio White", type: "ai-full" as const, w: 1024, h: 1024 },

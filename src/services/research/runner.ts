@@ -85,6 +85,22 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
 
     // Step 3: parallel video search across brand + competitors
     await startStep(jobId, "Video search");
+
+    // Determine search strategy based on campaign goal
+    const goal = (project.campaignGoal || "").toLowerCase();
+    const isShortFormSocial =
+      goal.includes("tiktok") || goal.includes("instagram") ||
+      goal.includes("shop") || goal.includes("social") ||
+      goal.includes("creator") || goal.includes("affiliate");
+    const isTVC =
+      goal.includes("tvc") || goal.includes("television") ||
+      goal.includes("brand awareness") || goal.includes("hero") ||
+      goal.includes("landing page");
+
+    let searchStrategy: "short_social" | "tvc" | "mixed" = "mixed";
+    if (isShortFormSocial) searchStrategy = "short_social";
+    else if (isTVC) searchStrategy = "tvc";
+
     const videoTargets = [
       { name: project.brandName, ownerId: null as string | null },
       ...project.competitors.map((c) => ({ name: c.name, ownerId: c.id })),
@@ -92,7 +108,7 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
     const videoResults = await pMapSettled(
       videoTargets,
       async (t, i) => {
-        const videos = await searchAllPlatforms(t.name, keywords);
+        const videos = await searchAllPlatforms(t.name, keywords, searchStrategy);
         await updateStep(
           jobId,
           "Video search",

@@ -10,12 +10,31 @@ const scriptSchema = z.object({
   angle: z.string(),
   format: z.string(),
   duration: z.string(),
+  platform: z.string().optional().default(""),
+  totalDurationSec: z.coerce.number().optional().default(30),
   hookVariants: z.array(z.string()),
   body: z.string(),
   ctaVariants: z.array(z.string()),
   narrativeType: z.string(),
   targetEmotion: z.string(),
   predictedScore: z.number(),
+  scenes: z.array(z.object({
+    sceneNumber: z.coerce.number().optional().default(1),
+    startSec: z.coerce.number().optional().default(0),
+    endSec: z.coerce.number().optional().default(5),
+    segmentLabel: z.string().optional().default(""),
+    shotType: z.string().optional().default(""),
+    focalLength: z.string().optional().default(""),
+    cameraMovement: z.string().optional().default(""),
+    aperture: z.string().optional().default(""),
+    location: z.string().optional().default(""),
+    lighting: z.string().optional().default(""),
+    actorAction: z.string().optional().default(""),
+    productAction: z.string().optional().default(""),
+    voiceover: z.string().optional().default(""),
+    textOverlay: z.string().optional().default(""),
+    transition: z.string().optional().default(""),
+  })).optional().default([]),
 });
 
 export async function GET(
@@ -44,24 +63,43 @@ export async function POST(
     });
     if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const sellingPoints = await prisma.sellingPoint.findMany({
-      where: { projectId },
-      orderBy: { strength: "desc" },
-      take: 5,
-    });
+    const [sellingPoints, campaignSel, deepAnal, audienceData] = await Promise.all([
+      prisma.sellingPoint.findMany({
+        where: { projectId },
+        orderBy: { strength: "desc" },
+        take: 5,
+      }),
+      prisma.campaignSelection.findUnique({ where: { projectId } }).catch(() => null),
+      prisma.deepAnalysis.findUnique({ where: { projectId } }).catch(() => null),
+      prisma.audienceProfile.findUnique({ where: { projectId } }).catch(() => null),
+    ]);
 
     const prompt = buildScriptWritingPrompt({
       brandName: project.brandName,
+      productName: project.productPageTitle || project.productName || undefined,
+      productDescription: project.productPageText?.slice(0, 500) || undefined,
       angle,
       sellingPoints: sellingPoints.map((sp) => sp.point),
       campaignGoal: project.campaignGoal || undefined,
+      platform: (campaignSel?.platform as string | null) || undefined,
+      totalDurationSec: (campaignSel?.totalDurationSec as number | null) || 30,
+      selectedEnvironment: (campaignSel?.selectedEnvironment as string | null) || undefined,
+      selectedActorRole: (campaignSel?.selectedActorRole as string | null) || undefined,
+      selectedActorDesc: (campaignSel?.selectedActorDesc as string | null) || undefined,
+      videoTimeline: (campaignSel?.videoTimeline as Array<{segment:string;startSec:number;endSec:number;label:string;description:string}> | null) || undefined,
+      hookFormulas: (deepAnal?.hookFormulas as Array<{type:string;formula:string;openingLine:string;visualDescription:string}> | null)?.slice(0, 3) || undefined,
+      cameraAngles: (deepAnal?.cameraAngles as Array<{shot:string;movement:string;whenToUse:string}> | null)?.slice(0, 5) || undefined,
+      briefing: project.briefingText || undefined,
+      audienceSummary: audienceData
+        ? `Audience: ${(audienceData.segments as {name:string}[] | null)?.[0]?.name || "general"}, pain: ${(audienceData.painPoints as string[] | null)?.slice(0, 2).join(", ") || ""}`
+        : undefined,
     });
 
     const result = await analyzeWithClaude({
       systemPrompt: prompt.system,
       userPrompt: prompt.user,
       responseSchema: scriptSchema,
-      maxTokens: 4096,
+      maxTokens: 6000,
     });
 
     const validTypes: NarrativeType[] = [
@@ -80,12 +118,15 @@ export async function POST(
         angle: result.angle,
         format: result.format,
         duration: result.duration,
+        platform: result.platform || undefined,
+        totalDurationSec: result.totalDurationSec || 30,
         hookVariants: result.hookVariants,
         body: result.body,
         ctaVariants: result.ctaVariants,
         narrativeType,
         targetEmotion: result.targetEmotion,
         predictedScore: result.predictedScore,
+        scenes: result.scenes as never,
       },
     });
 
