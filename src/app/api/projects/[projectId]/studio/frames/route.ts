@@ -79,7 +79,7 @@ export async function POST(
       console.error("Image generation failed:", err);
       await prisma.previewAsset.update({
         where: { id: asset.id },
-        data: { status: "error", error: err instanceof Error ? err.message : "Generation failed" },
+        data: { status: "error" },
       });
       return NextResponse.json({
         ...asset,
