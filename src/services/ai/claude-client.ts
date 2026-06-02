@@ -1,18 +1,40 @@
 import OpenAI from "openai";
 import { z, ZodSchema } from "zod";
 
+// Route: OpenRouter (free tier) → OpenAI fallback
+// Set OPENROUTER_API_KEY to use free models via OpenRouter.
+// Set AI_MODEL to override the model (default: openrouter/free auto-router).
+// Falls back to OPENAI_API_KEY + gpt-4o-mini if OpenRouter key is absent.
 let _client: OpenAI | null = null;
 function getClient(): OpenAI {
   if (_client) return _client;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+  if (openrouterKey) {
+    _client = new OpenAI({
+      apiKey: openrouterKey,
+      baseURL: "https://openrouter.ai/api/v1",
+      defaultHeaders: {
+        "HTTP-Referer": "https://creativeintel.vercel.app",
+        "X-Title": "CreativeIntel OS",
+      },
+    });
+    return _client;
+  }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not set");
+    throw new Error("Neither OPENROUTER_API_KEY nor OPENAI_API_KEY is set");
   }
   _client = new OpenAI({ apiKey });
   return _client;
 }
 
-const MODEL = process.env.AI_MODEL || "gpt-4o";
+function getModel(): string {
+  if (process.env.AI_MODEL) return process.env.AI_MODEL;
+  if (process.env.OPENROUTER_API_KEY) return "openrouter/free";
+  return "gpt-4o-mini";
+}
+
+const MODEL = getModel();
 
 export async function analyzeWithClaude<T>(options: {
   systemPrompt: string;
@@ -31,6 +53,8 @@ export async function analyzeWithClaude<T>(options: {
     ? systemPrompt
     : systemPrompt + "\n\nRespond with valid JSON only.";
 
+  // json_object response_format is OpenAI-specific; OpenRouter free models ignore it
+  const useJsonFormat = !process.env.OPENROUTER_API_KEY;
   const response = await getClient().chat.completions.create({
     model: MODEL,
     max_tokens: maxTokens,
@@ -38,7 +62,7 @@ export async function analyzeWithClaude<T>(options: {
       { role: "system", content: systemWithJson },
       { role: "user", content: userPrompt },
     ],
-    response_format: { type: "json_object" },
+    ...(useJsonFormat ? { response_format: { type: "json_object" } } : {}),
   });
 
   const text = response.choices[0]?.message?.content || "";
@@ -65,7 +89,7 @@ export async function analyzeWithClaude<T>(options: {
           content: `Fix: output valid JSON only. Error: ${parseError instanceof Error ? parseError.message : "parse error"}`,
         },
       ],
-      response_format: { type: "json_object" },
+      ...(useJsonFormat ? { response_format: { type: "json_object" } } : {}),
     });
 
     const retryText = retryResponse.choices[0]?.message?.content || "";
