@@ -321,11 +321,11 @@ function ShotPromptCard({
           <textarea
             value={useTestPrompt ? editedTestPrompt : editedPrompt}
             onChange={e => useTestPrompt ? setEditedTestPrompt(e.target.value) : setEditedPrompt(e.target.value)}
-            rows={6}
+            rows={12}
             className="w-full text-xs bg-muted rounded-lg p-3 border border-border focus:outline-none focus:ring-1 focus:ring-foreground resize-none font-mono leading-relaxed"
           />
         ) : (
-          <p className="text-xs text-foreground/80 leading-relaxed">{prompt || "No prompt generated yet."}</p>
+          <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{prompt || "No prompt generated yet."}</p>
         )}
 
         {shot.dialogue_or_vo && (
@@ -335,10 +335,23 @@ function ShotPromptCard({
           </div>
         )}
 
+        {/* Word count quality indicator */}
+        {(() => {
+          const wc = prompt.split(/\s+/).filter(Boolean).length;
+          const color = wc >= 400 ? "text-emerald-600" : wc >= 200 ? "text-amber-600" : "text-red-500";
+          const label = wc >= 400 ? "Cinematic quality ✓" : wc >= 200 ? "Moderate detail" : "Too brief — regenerate";
+          return <span className={cn("text-[10px] font-semibold", color)}>{wc} words — {label}</span>;
+        })()}
+
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <CopyButton text={prompt} />
-            <span className="text-[10px] text-muted-foreground">{prompt.split(" ").length} words</span>
+            <button
+              onClick={() => setEditing(!editing)}
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded border border-border hover:border-foreground/40 transition-colors"
+            >
+              {editing ? "Done" : "Edit"}
+            </button>
           </div>
           <Button
             size="sm"
@@ -347,7 +360,7 @@ function ShotPromptCard({
             className="h-7 text-xs gap-1.5"
           >
             {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-            {useTestPrompt ? "Test 3s Clip" : "Generate 8s"}
+            {useTestPrompt ? "Test 3s" : "Generate 8s"}
           </Button>
         </div>
       </div>
