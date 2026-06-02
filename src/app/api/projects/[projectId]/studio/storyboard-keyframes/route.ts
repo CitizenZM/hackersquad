@@ -7,10 +7,13 @@ export const maxDuration = 60;
 async function generateImageFree(prompt: string): Promise<string> {
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
-  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
-  const res = await fetch(url, { method: "HEAD" });
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
   if (!res.ok) throw new Error(`Pollinations error: ${res.status}`);
-  return url;
+  const buffer = await res.arrayBuffer();
+  const b64 = Buffer.from(buffer).toString("base64");
+  const mime = res.headers.get("content-type") || "image/jpeg";
+  return `data:${mime};base64,${b64}`;
 }
 
 export async function POST(
