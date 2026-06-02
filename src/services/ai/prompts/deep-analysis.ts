@@ -1,6 +1,7 @@
 export interface DeepAnalysisInput {
   brandName: string;
   category?: string;
+  productDescription?: string;
   topContent: {
     title: string;
     platform: string;
@@ -15,77 +16,122 @@ export interface DeepAnalysisInput {
     keyMessages: string[];
     viewCount: number;
     contentCategory?: string | null;
+    thumbnailUrl?: string;
+    url?: string;
   }[];
 }
 
 export function buildDeepAnalysisPrompt(input: DeepAnalysisInput) {
-  const system = `You are a senior creative strategist analyzing ad campaigns in depth.
-Synthesize patterns across the scored content and produce actionable strategic insights.
-Respond with valid JSON matching this exact structure:
+  const system = `You are a senior advertising creative director and cinematographer analyzing video ads for ${input.brandName}.
+
+Your job: produce a deep multi-dimensional analysis that a creative team can use to produce better video ads.
+Analyze the content provided and identify patterns across FIVE dimensions:
+(1) Selling points — what product benefits appear and how effectively
+(2) Environments — where the product is shown and how settings are used
+(3) Camera angles & movements — cinematography patterns
+(4) Hook formulas — how the first 3 seconds are constructed
+(5) Platform-specific behaviors — what works where
+
+Output ONLY valid JSON with ALL these keys:
+
 {
   "videoStructure": {
-    "openingPatterns": [
-      { "pattern": "string - e.g. 'Product hero shot', 'Founder intro'", "frequency": number, "effectiveness": "high|medium|low", "example": "string - quote from content" }
-    ],
-    "hookDurationRange": "string - e.g. '3-5 seconds'",
-    "productRevealTiming": "string - when product typically appears, e.g. 'Within first 5 seconds in 70% of top content'",
-    "averageLength": "string - e.g. '30-60s for long-form, 15-20s for shorts'",
-    "structuralInsights": ["array of 3-5 structural observations"]
+    "openingPatterns": [{"pattern": "string", "frequency": number, "effectiveness": "high|medium|low", "example": "string"}],
+    "hookDurationRange": "string",
+    "productRevealTiming": "string",
+    "averageLength": "string",
+    "structuralInsights": ["string"]
   },
   "vibeAnalysis": {
-    "dominantTones": [
-      { "tone": "string - e.g. 'aspirational', 'playful', 'serious'", "frequency": number, "avgScore": number, "example": "string" }
-    ],
-    "emotionalTriggers": [
-      { "trigger": "string - e.g. 'excitement', 'FOMO', 'trust'", "usage": "string - how it's deployed", "examples": ["array of content titles"] }
-    ],
-    "visualStyleNotes": "string - overall visual treatment observations",
-    "pacingProfile": "string - e.g. 'Fast-paced with quick cuts' or 'Slow-burn narrative'",
-    "vibeInsights": ["array of 3-5 vibe observations"]
+    "dominantTones": [{"tone": "string", "frequency": number, "avgScore": number, "example": "string"}],
+    "emotionalTriggers": [{"trigger": "string", "usage": "string", "examples": ["string"]}],
+    "visualStyleNotes": "string",
+    "pacingProfile": "string",
+    "vibeInsights": ["string"]
   },
   "ctaAnalysis": {
-    "commonCTAs": [
-      { "cta": "string", "frequency": number, "type": "direct|soft|urgency|informational", "effectiveness": "high|medium|low" }
-    ],
-    "placement": "string - where CTAs typically appear",
+    "commonCTAs": [{"cta": "string", "frequency": number, "type": "direct|soft|urgency|informational", "effectiveness": "high|medium|low"}],
+    "placement": "string",
     "urgencyLevel": "high|medium|low",
-    "conversionDrivers": ["array of what's driving clicks"],
-    "ctaInsights": ["array of 3-5 CTA observations"]
+    "conversionDrivers": ["string"],
+    "ctaInsights": ["string"]
   },
   "sellingPointDeep": {
-    "topPerformers": [
-      { "point": "string", "whyItWorks": "string", "bestPlatforms": ["array"], "exampleContent": "string" }
-    ],
-    "underutilized": [
-      { "point": "string", "opportunity": "string - how to leverage this" }
-    ],
-    "messagingInsights": ["array of 3-5 messaging observations"]
+    "topPerformers": [{"point": "string", "whyItWorks": "string", "bestPlatforms": ["string"], "exampleContent": "string"}],
+    "underutilized": [{"point": "string", "opportunity": "string"}],
+    "messagingInsights": ["string"]
   },
-  "competitiveGaps": [
-    { "gap": "string - what the brand is missing", "recommendation": "string - how to close it", "priority": "high|medium|low" }
+  "competitiveGaps": [{"gap": "string", "recommendation": "string", "priority": "high|medium|low"}],
+  "recommendations": [{"title": "string", "description": "string", "impact": "high|medium|low", "effort": "high|medium|low", "category": "string"}],
+  "environmentAnalysis": [
+    {
+      "environment": "Environment name, e.g. 'Modern Kitchen', 'Living Room with Pets', 'Outdoor Garden'",
+      "frequency": number,
+      "description": "How this environment is used in ads — lighting, props, mood",
+      "lightingNotes": "e.g. 'Natural morning light through large windows, warm 5200K'",
+      "bestFor": "Which selling points this environment supports",
+      "examples": ["content title or quote"]
+    }
   ],
-  "recommendations": [
-    { "title": "string - action title", "description": "string - what to do", "impact": "high|medium|low", "effort": "high|medium|low", "category": "string - e.g. Content, Platform, Messaging" }
+  "cameraAngles": [
+    {
+      "shot": "Shot name, e.g. 'Extreme close-up product reveal', 'Over-shoulder user POV', 'Low angle hero shot'",
+      "movement": "Camera movement, e.g. 'Slow dolly push-in', 'Static locked off', 'Handheld UGC drift'",
+      "frequency": number,
+      "whenToUse": "Which moment in the ad — hook, product demo, CTA",
+      "adEffect": "What emotional or perceptual effect this creates",
+      "apertureSuggestion": "e.g. 'f/1.8 for shallow bokeh' or 'f/8 for sharp product detail'",
+      "examples": ["content title"]
+    }
+  ],
+  "hookFormulas": [
+    {
+      "type": "Hook type, e.g. 'Problem-Agitate', 'Curiosity Gap', 'Before-After Reveal', 'Social Proof Shock', 'Macro Product Reveal'",
+      "formula": "Step-by-step formula, e.g. 'Show problem → pause 0.5s → show product solving it'",
+      "openingLine": "Example first line of VO or on-screen text",
+      "visualDescription": "What the first 3 seconds look like visually",
+      "why": "Why this hook stops scrolling for this product/audience",
+      "platformFit": ["youtube", "tiktok", "instagram"],
+      "scoreImpact": "high|medium|low",
+      "examples": ["content title"]
+    }
+  ],
+  "platformInsights": [
+    {
+      "platform": "youtube|tiktok|instagram|facebook",
+      "contentStyle": "Description of what works on this platform for this brand",
+      "topFormats": ["format names"],
+      "avgEngagement": "e.g. '4.2% avg engagement rate on top content'",
+      "bestPractices": ["actionable tip"],
+      "avoidPatterns": ["what NOT to do on this platform"]
+    }
+  ],
+  "sellingPointVisuals": [
+    {
+      "point": "The selling point, e.g. 'Anti-Hair Wrap technology'",
+      "visualTreatment": "How to show it visually, e.g. 'Slow-motion macro of brush roll separating hair'",
+      "screenTime": "e.g. '3-5 seconds in mid-section'",
+      "placement": "Where in the ad — hook, body, pre-CTA",
+      "cameraRecommendation": "Specific shot for this point",
+      "examples": ["content title"]
+    }
   ]
-}
+}`;
 
-Focus on actionable, specific insights. Use actual examples from the content provided.`;
+  const user = `Deep creative analysis for "${input.brandName}"${input.category ? ` (${input.category})` : ""}${input.productDescription ? `\nProduct: ${input.productDescription.slice(0, 200)}` : ""}:
 
-  const user = `Deep creative analysis for "${input.brandName}" ${input.category ? `(${input.category})` : ""}:
-
-Scored Content:
-${input.topContent
-  .map(
-    (c, i) => `[${i + 1}] "${c.title}" on ${c.platform}
-  Narrative: ${c.narrativeType} | Category: ${c.contentCategory || "N/A"} | Score: ${c.overallScore}
-  Sub-scores: Hook=${c.hookStrength} CTA=${c.ctaQuality} Emotion=${c.emotionalAppeal} Pacing=${c.pacing} Story=${c.storytellingArc}
-  Views: ${c.viewCount.toLocaleString()}
+SCORED AD CONTENT (${input.topContent.length} pieces):
+${input.topContent.map((c, i) => `[${i+1}] "${c.title}" | ${c.platform} | Score:${c.overallScore} | Views:${c.viewCount.toLocaleString()}
+  Hook:${c.hookStrength} CTA:${c.ctaQuality} Emotion:${c.emotionalAppeal} Pacing:${c.pacing} Story:${c.storytellingArc}
+  Narrative: ${c.narrativeType} | Category: ${c.contentCategory || "N/A"}
   Hook text: "${c.hookText}"
-  Key messages: ${c.keyMessages.join("; ")}`
-  )
-  .join("\n\n")}
+  Key messages: ${c.keyMessages.slice(0,4).join(" | ")}`).join("\n")}
 
-Produce a deep strategic analysis covering video structure, vibe/emotion, CTA strategy, selling point effectiveness, competitive gaps, and prioritized recommendations. Reference specific content examples.`;
+Produce comprehensive analysis across ALL required dimensions. Be specific — name actual shots, environments, hook formulas.
+For cameraAngles, give at least 5 different shot types observed or recommended.
+For hookFormulas, give at least 4 different hook types with complete formulas.
+For environmentAnalysis, name at least 3 specific environments with lighting details.
+For sellingPointVisuals, give visual treatment for each top selling point.`;
 
   return { system, user };
 }

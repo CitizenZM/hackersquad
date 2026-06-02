@@ -378,12 +378,56 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
           }),
           competitiveGaps: z.array(z.object({ gap: z.string(), recommendation: z.string(), priority: z.string() })),
           recommendations: z.array(z.object({ title: z.string(), description: z.string(), impact: z.string(), effort: z.string(), category: z.string() })),
+          environmentAnalysis: z.array(z.object({
+            environment: z.string(),
+            frequency: z.number().default(1),
+            description: z.string(),
+            lightingNotes: z.string().optional().default(""),
+            bestFor: z.string().optional().default(""),
+            examples: z.array(z.string()).optional().default([]),
+          })).optional().default([]),
+          cameraAngles: z.array(z.object({
+            shot: z.string(),
+            movement: z.string().optional().default(""),
+            frequency: z.number().default(1),
+            whenToUse: z.string().optional().default(""),
+            adEffect: z.string().optional().default(""),
+            apertureSuggestion: z.string().optional().default(""),
+            examples: z.array(z.string()).optional().default([]),
+          })).optional().default([]),
+          hookFormulas: z.array(z.object({
+            type: z.string(),
+            formula: z.string(),
+            openingLine: z.string().optional().default(""),
+            visualDescription: z.string().optional().default(""),
+            why: z.string().optional().default(""),
+            platformFit: z.array(z.string()).optional().default([]),
+            scoreImpact: z.string().optional().default("medium"),
+            examples: z.array(z.string()).optional().default([]),
+          })).optional().default([]),
+          platformInsights: z.array(z.object({
+            platform: z.string(),
+            contentStyle: z.string().optional().default(""),
+            topFormats: z.array(z.string()).optional().default([]),
+            avgEngagement: z.string().optional().default(""),
+            bestPractices: z.array(z.string()).optional().default([]),
+            avoidPatterns: z.array(z.string()).optional().default([]),
+          })).optional().default([]),
+          sellingPointVisuals: z.array(z.object({
+            point: z.string(),
+            visualTreatment: z.string().optional().default(""),
+            screenTime: z.string().optional().default(""),
+            placement: z.string().optional().default(""),
+            cameraRecommendation: z.string().optional().default(""),
+            examples: z.array(z.string()).optional().default([]),
+          })).optional().default([]),
         });
 
         const updatedProject = await prisma.project.findUnique({ where: { id: projectId } });
         const prompt = buildDeepAnalysisPrompt({
           brandName: project.brandName,
           category: updatedProject?.category || undefined,
+          productDescription: project.productPageText?.slice(0, 300) || undefined,
           topContent: scoredAssets.slice(0, 8).map((a) => ({
             title: a.title,
             platform: a.platform || "YouTube",
@@ -398,6 +442,8 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
             keyMessages: (a.keyMessages as string[]) || [],
             viewCount: a.viewCount || 0,
             contentCategory: a.contentCategory,
+            url: a.url || undefined,
+            thumbnailUrl: a.thumbnailUrl || undefined,
           })),
         });
 
@@ -410,8 +456,22 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
 
         await prisma.deepAnalysis.upsert({
           where: { projectId },
-          create: { projectId, ...deep, dataSource: "AI_INFERRED" },
-          update: { ...deep },
+          create: {
+            projectId, ...deep, dataSource: "AI_INFERRED",
+            environmentAnalysis: deep.environmentAnalysis as never,
+            cameraAngles: deep.cameraAngles as never,
+            hookFormulas: deep.hookFormulas as never,
+            platformInsights: deep.platformInsights as never,
+            sellingPointVisuals: deep.sellingPointVisuals as never,
+          },
+          update: {
+            ...deep,
+            environmentAnalysis: deep.environmentAnalysis as never,
+            cameraAngles: deep.cameraAngles as never,
+            hookFormulas: deep.hookFormulas as never,
+            platformInsights: deep.platformInsights as never,
+            sellingPointVisuals: deep.sellingPointVisuals as never,
+          },
         });
       } catch (e) { console.error("Deep analysis failed:", e); }
     })());

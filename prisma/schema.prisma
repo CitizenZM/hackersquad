@@ -530,6 +530,13 @@ model DeepAnalysis {
   competitiveGaps  Json?
   recommendations  Json?
 
+  // Extended creative intelligence — added for ad creative production
+  environmentAnalysis Json?  // [{environment, frequency, description, lightingNotes, examples}]
+  cameraAngles        Json?  // [{shot, movement, frequency, whenToUse, adEffect, examples}]
+  hookFormulas        Json?  // [{type, formula, openingLine, why, platformFit, scoreImpact, examples}]
+  platformInsights    Json?  // [{platform, contentStyle, topFormats, avgEngagement, bestPractices}]
+  sellingPointVisuals Json?  // [{point, visualTreatment, screenTime, placement, examples}]
+
   dataSource DataSource @default(AI_INFERRED)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
