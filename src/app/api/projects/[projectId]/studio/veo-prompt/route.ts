@@ -22,54 +22,56 @@ function buildVeoPrompt(shot: Record<string, unknown>, charDesc: string, flat: R
 }
 
 // Simplified flat schema that gpt-4o-mini can reliably produce
+// Minimal schema — only fields the UI actually uses. Everything else optional.
+// Keeps JSON output small enough for free-tier OpenRouter models to handle reliably.
 const veoResultSchema = z.object({
-  creative_type: z.string(),
-  tone: z.string(),
-  location: z.string(),
-  time_of_day: z.string(),
-  weather: z.string(),
-  lighting_source: z.string(),
-  lighting_direction: z.string(),
-  lighting_quality: z.string(),
-  lighting_mood: z.string(),
-  props: z.array(z.string()),
-  character_role: z.string(),
-  character_age: z.string(),
-  character_gender: z.string(),
-  character_appearance: z.string(),
-  character_wardrobe: z.string(),
-  character_personality: z.string(),
-  character_emotion_start: z.string(),
-  character_emotion_end: z.string(),
-  character_speech_style: z.string(),
-  hook_style: z.string(),
-  hook_technique: z.string(),
-  cta_technique: z.string(),
-  story_hook: z.string(),
-  story_problem: z.string(),
-  story_discovery: z.string(),
-  story_product_use: z.string(),
-  story_benefit: z.string(),
-  story_cta: z.string(),
+  creative_type: z.string().optional().default("TVC"),
+  tone: z.string().optional().default("cinematic"),
+  location: z.string().optional().default("modern interior"),
+  time_of_day: z.string().optional().default("morning"),
+  weather: z.string().optional().default("clear"),
+  lighting_source: z.string().optional().default("natural window"),
+  lighting_direction: z.string().optional().default("45 degrees camera-left"),
+  lighting_quality: z.string().optional().default("soft diffused"),
+  lighting_mood: z.string().optional().default("warm"),
+  props: z.array(z.string()).optional().default([]),
+  character_role: z.string().optional().default("consumer"),
+  character_age: z.string().optional().default("30s"),
+  character_gender: z.string().optional().default("female"),
+  character_appearance: z.string().optional().default("natural, casual"),
+  character_wardrobe: z.string().optional().default("casual home clothing"),
+  character_personality: z.string().optional().default("relatable, authentic"),
+  character_emotion_start: z.string().optional().default("neutral"),
+  character_emotion_end: z.string().optional().default("satisfied"),
+  character_speech_style: z.string().optional().default("natural"),
+  hook_style: z.string().optional().default("problem reveal"),
+  hook_technique: z.string().optional().default("macro close-up"),
+  cta_technique: z.string().optional().default("product hero"),
+  story_hook: z.string().optional().default(""),
+  story_problem: z.string().optional().default(""),
+  story_discovery: z.string().optional().default(""),
+  story_product_use: z.string().optional().default(""),
+  story_benefit: z.string().optional().default(""),
+  story_cta: z.string().optional().default(""),
   shots: z.array(z.object({
     shot_id: z.string(),
-    duration_seconds: z.coerce.number(),
+    duration_seconds: z.coerce.number().default(8),
     purpose: z.string(),
     scene_description: z.string(),
-    character_action: z.string(),
-    product_action: z.string(),
-    camera_angle: z.string(),
-    camera_movement: z.string(),
-    shot_type: z.string(),
-    lighting: z.string(),
-    motion_effect: z.string(),
-    dialogue_or_vo: z.string(),
-    text_overlay: z.string(),
-    cta: z.string(),
-    negative_prompt: z.string(),
+    character_action: z.string().optional().default(""),
+    product_action: z.string().optional().default(""),
+    camera_angle: z.string().optional().default("eye-level"),
+    camera_movement: z.string().optional().default("slow push-in"),
+    shot_type: z.string().optional().default("medium close-up"),
+    lighting: z.string().optional().default("natural window light"),
+    motion_effect: z.string().optional().default(""),
+    dialogue_or_vo: z.string().optional().default(""),
+    text_overlay: z.string().optional().default(""),
+    cta: z.string().optional().default(""),
+    negative_prompt: z.string().optional().default("No text, no logos, no distorted anatomy"),
     veo_prompt: z.string().optional().default(""),
     test_prompt: z.string().optional().default(""),
-    transition_to_next: z.string(),
+    transition_to_next: z.string().optional().default("cut"),
   })),
 });
 
@@ -165,8 +167,36 @@ CRITICAL PHILOSOPHY — read before writing anything:
 
 ## test_prompt (≤120 words): Same shot but condensed to 3-second single camera position. Include acquisition line, one action beat, one lighting description, negative prompts. Use this for iteration testing.
 
-## JSON OUTPUT SCHEMA (flat, all keys required):
-creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props[], character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style, hook_style, hook_technique, cta_technique, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta, shots[{shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt, test_prompt, transition_to_next}]`;
+## JSON OUTPUT — output ONLY this JSON structure, nothing else:
+{
+  "creative_type": "string",
+  "tone": "string",
+  "location": "string",
+  "time_of_day": "string",
+  "lighting_source": "string",
+  "character_role": "string",
+  "character_age": "string",
+  "character_gender": "string",
+  "character_appearance": "string",
+  "character_wardrobe": "string",
+  "props": ["string"],
+  "shots": [
+    {
+      "shot_id": "shot_1",
+      "duration_seconds": 8,
+      "purpose": "Hook — scroll-stopping opener",
+      "scene_description": "one sentence summary",
+      "camera_movement": "dolly push-in",
+      "shot_type": "medium close-up",
+      "dialogue_or_vo": "optional VO line",
+      "veo_prompt": "THE FULL 400-600 WORD CINEMATIC PROMPT — this is the most important field",
+      "test_prompt": "condensed 3-second version under 120 words",
+      "transition_to_next": "cut on motion"
+    }
+  ]
+}
+
+THE veo_prompt FIELD IS THE MOST IMPORTANT OUTPUT. Make it 400-600 words using all 14 elements. Every other field is secondary.`;
 
     const user = `Generate VEO3 campaign prompts for:
 
