@@ -1,6 +1,18 @@
 import type { CrawlResult } from "@/services/research/website-crawler";
 
-export function buildBrandAnalysisPrompt(brandName: string, crawlData: CrawlResult) {
+export interface ProductPageContext {
+  productUrl?: string;
+  productName?: string;
+  productPageTitle?: string;
+  productPageText?: string;
+  productPageImages?: { url: string; alt: string }[];
+}
+
+export function buildBrandAnalysisPrompt(
+  brandName: string,
+  crawlData: CrawlResult,
+  productContext?: ProductPageContext
+) {
   const system = `You are a senior brand strategist with deep product knowledge.
 
 CRITICAL FIRST STEP — PRODUCT IDENTIFICATION:
@@ -48,9 +60,32 @@ Return ONLY a JSON object with this exact structure:
   ]
 }`;
 
-  const user = `Identify and analyze the brand "${brandName}".
+  // Build product context block — this is the AUTHORITATIVE source when provided
+  const productBlock = productContext?.productPageTitle
+    ? `
+=== USER-SPECIFIED PRODUCT (AUTHORITATIVE — this overrides everything else) ===
+Product Name: ${productContext.productName || productContext.productPageTitle}
+Product Page URL: ${productContext.productUrl || ""}
+Product Page Title: ${productContext.productPageTitle}
 
-WEBSITE DATA:
+Product Description (scraped from product page):
+${productContext.productPageText?.slice(0, 1500) || ""}
+
+Product Images Available: ${productContext.productPageImages?.length || 0} images
+${productContext.productPageImages?.slice(0, 4).map((img, i) => `  Image ${i+1}: ${img.alt || "product image"} — ${img.url}`).join("\n") || ""}
+
+IMPORTANT: The product described above is EXACTLY what this campaign is about.
+Use this product definition as the foundation for ALL analysis below.
+The useEnvironments, actorSettings, and displayGuidelines must all be tailored to THIS specific product.
+=== END AUTHORITATIVE PRODUCT DATA ===
+`
+    : `
+⚠️  No product URL was provided. Infer product type from brand website content ONLY.
+`;
+
+  const user = `Identify and analyze the brand "${brandName}".
+${productBlock}
+BRAND WEBSITE DATA (secondary — for brand positioning, tone, competitive context):
 Title: ${crawlData.title}
 Description: ${crawlData.metaDescription}
 
@@ -67,9 +102,9 @@ Testimonials:
 ${crawlData.testimonials.join("\n")}
 
 Page Content:
-${crawlData.bodyText.slice(0, 3000)}
+${crawlData.bodyText.slice(0, 2000)}
 
-Remember: Start by identifying what physical product this company makes based on the content, NOT the brand name.`;
+Remember: If authoritative product data is provided above, use it as the foundation. The useEnvironments and displayGuidelines must describe exactly how to shoot THIS specific product in video ads.`;
 
   return { system, user };
 }

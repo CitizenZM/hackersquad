@@ -206,32 +206,66 @@ export async function POST(
   const brandUrl = brand.url || project.brandUrl || "";
   const brandName = project.brandName;
 
+  // Primary source: real images scraped from user-specified product page URL
+  // These are the ground truth — use them directly instead of generating AI images
+  // that may not match the actual product appearance.
+  const productPageImages = (project.productPageImages as Array<{ url: string; alt: string }> | null) || [];
+  const userProductImages = (project.userProductImages as Array<{ url: string; caption: string }> | null) || [];
+
   const environments = (brand.useEnvironments as Array<{
     name: string; imagePrompt: string; description: string; typicalUser: string;
   }>) || [];
 
   const allImages: ProductImageRecord[] = [];
 
-  // ── Step 1: Scrape real images from brand website ──
-  let websiteImages: ProductImageRecord[] = [];
-  if (brandUrl) {
-    websiteImages = await scrapeWebsiteImages(brandUrl, productDesc);
+  // ── Step 1a: Product page images (PRIMARY — user-specified, exact product) ──
+  if (productPageImages.length > 0) {
+    for (const img of productPageImages.slice(0, 4)) {
+      allImages.push({
+        url: img.url,
+        caption: img.alt || "Product image from product page",
+        type: "website",
+        source: "brand-website",
+        verified: false,
+      });
+    }
   }
-  // Take up to 4 website images
-  allImages.push(...websiteImages.slice(0, 4));
 
-  // ── Step 2: AI-generated product images ──
+  // ── Step 1b: User-uploaded images (also primary truth) ──
+  if (userProductImages.length > 0) {
+    for (const img of userProductImages.slice(0, 4)) {
+      allImages.push({
+        url: img.url,
+        caption: img.caption || "User uploaded product image",
+        type: "website",
+        source: "brand-website",
+        verified: false,
+      });
+    }
+  }
+
+  // ── Step 1c: Fallback — scrape brand website if no product URL images ──
+  if (allImages.length < 2 && brandUrl) {
+    const websiteImages = await scrapeWebsiteImages(brandUrl, productDesc);
+    allImages.push(...websiteImages.slice(0, 4 - allImages.length));
+  }
+
+  // ── Step 2: AI-generated product verification images ──
+  // Use product page title if available for accurate product naming
+  const productRef = project.productPageTitle || project.productName || `${brandName} ${productCategory}`;
+  const productDescRef = project.productPageText?.slice(0, 300) || productDesc.slice(0, 300);
+
   // 2a. Full product shot (white background, studio, all sides visible)
-  const fullShotPrompt = `${productDesc.slice(0, 300)}, professional product photography, pure white background, studio lighting from three-point setup, product floating centered in frame, all sides visible, commercial advertising quality, 8K detail, no humans, no text, no logos except product branding, photorealistic`;
+  const fullShotPrompt = `${productRef}, ${productDescRef}, professional product photography, pure white background, studio three-point lighting, all product angles visible, commercial advertising quality, photorealistic, no humans, no text`;
 
-  // 2b. Detail/close-up shot (brush head, canister, handle, key features)
-  const detailShotPrompt = `Extreme close-up macro photography of ${brandName} ${productCategory} key features — brush roll mechanism, suction inlet, dust canister with transparent window showing interior, power button, brand markings. Studio macro lighting, sharp focus on mechanical details, photorealistic product detail shot, white background, no humans`;
+  // 2b. Detail/close-up shot — key mechanical/functional features
+  const detailShotPrompt = `Extreme close-up macro photography showing the key features and mechanical details of ${productRef}. Studio macro lighting from above, tack-sharp focus on functional parts, white background, photorealistic product detail, no humans`;
 
-  // 2c. Full product at 3/4 angle (most natural view)
-  const quarterAnglePrompt = `${productDesc.slice(0, 250)}, 3/4 angle view, professional product photography on light grey seamless background, dramatic side lighting creating depth shadows, commercial advertising quality, photorealistic, no humans, brand product shot`;
+  // 2c. Full product at 3/4 angle
+  const quarterAnglePrompt = `${productRef}, 3/4 front angle, light grey seamless background, dramatic side rim lighting, shadows showing product depth and form, commercial advertising quality, photorealistic, no humans`;
 
-  // 2d. Product in use angle — product only, no person
-  const inUseAnglePrompt = `${brandName} ${productCategory} positioned on hardwood floor near carpet edge, ready-to-use position, realistic home environment perspective, natural morning window light, no humans, photorealistic product placement shot for advertising`;
+  // 2d. Product in realistic home/use setting — product only
+  const inUseAnglePrompt = `${productRef} positioned in a realistic home environment showing its typical use context, natural morning light, no humans in frame, photorealistic, commercial photography style`;
 
   const aiPrompts = [
     { prompt: fullShotPrompt, caption: "Full Product — Studio White", type: "ai-full" as const, w: 1024, h: 1024 },

@@ -116,7 +116,15 @@ export async function runAnalysisPipeline(
   if (brandCrawl && project.brand) {
     tasks.push((async () => {
       try {
-        const p = buildBrandAnalysisPrompt(project.brandName, brandCrawl!);
+        // Pass product page context as primary source of truth
+        const productContext = {
+          productUrl: project.productUrl || undefined,
+          productName: project.productName || undefined,
+          productPageTitle: project.productPageTitle || undefined,
+          productPageText: project.productPageText || undefined,
+          productPageImages: (project.productPageImages as { url: string; alt: string }[] | null) || undefined,
+        };
+        const p = buildBrandAnalysisPrompt(project.brandName, brandCrawl!, productContext);
         const a = await analyzeWithClaude({ systemPrompt: p.system, userPrompt: p.user, responseSchema: brandAnalysisSchema });
         await prisma.brand.update({ where: { id: project.brand!.id }, data: {
           brandPromise: a.brandPromise, valueProposition: a.valueProposition,

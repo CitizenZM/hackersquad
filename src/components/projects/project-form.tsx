@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIES, CAMPAIGN_GOALS } from "@/lib/constants";
-import { Plus, Trash2, Loader2, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Loader2, ArrowRight, Link, Package, AlertCircle } from "lucide-react";
 
 interface CompetitorField {
   name: string;
@@ -28,10 +28,13 @@ export function ProjectForm() {
 
   const [brandName, setBrandName] = useState("");
   const [brandUrl, setBrandUrl] = useState("");
+  const [productUrl, setProductUrl] = useState("");
+  const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("");
   const [campaignGoal, setCampaignGoal] = useState("");
   const [briefingText, setBriefingText] = useState("");
   const [briefingFile, setBriefingFile] = useState<File | null>(null);
+  const [_productImages, _setProductImages] = useState<File[]>([]);
   const [competitors, setCompetitors] = useState<CompetitorField[]>([
     { name: "", url: "" },
   ]);
@@ -73,6 +76,8 @@ export function ProjectForm() {
         body: JSON.stringify({
           brandName: brandName.trim(),
           brandUrl: brandUrl.trim() || undefined,
+          productUrl: productUrl.trim() || undefined,
+          productName: productName.trim() || undefined,
           category: category || undefined,
           campaignGoal: campaignGoal || undefined,
           briefingText: briefingText.trim() || undefined,
@@ -127,7 +132,7 @@ export function ProjectForm() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="brandUrl" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Website URL
+            Brand Website URL
           </Label>
           <Input
             id="brandUrl"
@@ -138,6 +143,63 @@ export function ProjectForm() {
             className="h-10 rounded-md"
           />
         </div>
+      </div>
+
+      {/* ── Product Definition — critical section ── */}
+      <div className="space-y-4 pt-2 border-t border-border">
+        <div className="pt-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Package className="h-4 w-4 text-foreground" />
+            <Label className="text-sm font-semibold">Product Definition</Label>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">Required for accuracy</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Specify exactly which product this campaign is about. Without this, the AI will guess — and may get it wrong.
+          </p>
+        </div>
+
+        <div className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-4 space-y-3">
+          <div className="flex items-start gap-2 text-xs text-amber-800">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <p>
+              <strong>Paste the product page URL</strong> (from the brand&apos;s website or Amazon).
+              The AI will read the exact product name, images, and features directly from the page — not guess from the brand name.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="productUrl" className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Link className="h-3 w-3" /> Product Page URL <span className="text-amber-600">*</span>
+            </Label>
+            <Input
+              id="productUrl"
+              type="url"
+              placeholder="https://www.sharkninja.com/shark-vacuums/... or https://amazon.com/dp/..."
+              value={productUrl}
+              onChange={(e) => setProductUrl(e.target.value)}
+              className="h-10 rounded-md bg-white"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Paste the DTC product page or Amazon listing. The AI will extract the exact product images, name, and description.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="productName" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Product Name (optional — auto-detected from URL)
+            </Label>
+            <Input
+              id="productName"
+              placeholder="e.g. Shark PowerDetect Cordless Vacuum"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              className="h-10 rounded-md bg-white"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

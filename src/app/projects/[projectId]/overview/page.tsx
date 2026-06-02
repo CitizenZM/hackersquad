@@ -17,6 +17,7 @@ import {
   Package,
 } from "lucide-react";
 import { ProductIntelligence } from "@/components/dashboard/product-intelligence";
+import { ProductDefinition } from "@/components/dashboard/product-definition";
 
 export default async function OverviewPage({
   params,
@@ -85,12 +86,22 @@ export default async function OverviewPage({
         />
       </div>
 
-      {/* Product Intelligence — must verify before proceeding */}
+      {/* Product Definition — user-controlled source of truth */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4" />
+          <h2 className="text-sm font-semibold">Product Definition</h2>
+          <span className="text-xs text-muted-foreground">The exact product this campaign is about — set the URL or upload photos</span>
+        </div>
+        <ProductDefinition projectId={projectId} />
+      </section>
+
+      {/* Product Intelligence — AI verification and environments */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">Product Intelligence</h2>
-          <span className="text-xs text-muted-foreground">Verify AI understands your product before generating content</span>
+          <span className="text-xs text-muted-foreground">AI-generated verification — environments, actors, display rules</span>
         </div>
         <ProductIntelligence projectId={projectId} />
       </section>

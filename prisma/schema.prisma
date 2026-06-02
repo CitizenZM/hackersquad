@@ -159,6 +159,14 @@ model Project {
   category     String?
   campaignGoal String?
 
+  // Product definition — user-specified, foundational source of truth
+  productUrl         String?   // specific product page URL (Amazon PDP, DTC page)
+  productName        String?   // exact product name entered by user
+  productPageTitle   String?   // scraped from productUrl
+  productPageImages  Json?     // [{url, alt, width?, height?}] real images from productUrl
+  productPageText    String?   @db.Text // scraped product description from productUrl
+  userProductImages  Json?     // [{url, caption, uploadedAt}] user-uploaded reference photos
+
   briefingText   String?
   briefingParsed String?
 
