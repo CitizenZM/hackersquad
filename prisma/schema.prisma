@@ -181,6 +181,7 @@ model Project {
   deepAnalysis      DeepAnalysis?
   renderJobs        RenderJob[]
   videoReferences   VideoReference[]
+  falVideoJobs      FalVideoJob[]
 }
 
 model Brand {
@@ -422,6 +423,41 @@ model RenderJob {
   startedAt   DateTime?
   completedAt DateTime?
   createdAt   DateTime  @default(now())
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
+}
+
+model FalVideoJob {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  falRequestId String  @unique
+  model        String  // "grok-imagine-video" | "wan-2.6" | "kling-v3" | "veo-3.1"
+  prompt       String  @db.Text
+  aspectRatio  String  @default("9:16")
+  resolution   String  @default("720p")
+  duration     Int     @default(5) // seconds
+
+  status       String  @default("queued") // queued|processing|completed|failed
+  videoUrl     String?
+  thumbnailUrl String?
+  fileSizeBytes Int?
+  widthPx      Int?
+  heightPx     Int?
+  fpS          Float?
+  durationSec  Float?
+
+  // Script/shot context
+  scriptId      String?
+  shotIndex     Int?
+  promptVersion Int     @default(1)
+
+  costUsd     Float?
+  error       String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
 
   @@index([projectId, status])
   @@index([projectId, createdAt])

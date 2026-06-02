@@ -68,6 +68,7 @@ const veoResultSchema = z.object({
     cta: z.string(),
     negative_prompt: z.string(),
     veo_prompt: z.string().optional().default(""),
+    test_prompt: z.string().optional().default(""),
     transition_to_next: z.string(),
   })),
 });
@@ -104,17 +105,33 @@ export async function POST(
     const vibeData = deepAnalysis?.vibeAnalysis as { dominantTones?: { tone: string }[]; pacingProfile?: string; visualStyleNotes?: string } | null;
     const ctaData = deepAnalysis?.ctaAnalysis as { commonCTAs?: { cta: string }[]; placement?: string } | null;
 
-    const system = `You are a VEO3 prompt engineer for TikTok video ads. Generate 3 shots (8s each, 9:16 vertical).
+    const system = `You are a VEO3 cinematic prompt engineer specializing in high-converting short-form video ads (TikTok/Reels/Shorts). Generate exactly 3 shots, 8 seconds each, vertical 9:16.
 
-RULES:
-- Each shot has a veo_prompt: one detailed paragraph (80-150 words) describing the visual scene for AI video generation
-- veo_prompt must include: camera type+angle+movement, character appearance (SAME in all shots), lighting, micro-motion, depth of field
-- NO text/typography in any visual. End each veo_prompt with "No text, no logos, no distorted anatomy."
-- Shot 1 = scroll-stopping hook (use macro reveal, whip pan, object drop, POV reach, or speed ramp)
-- Shot 3 = CTA ending (use product hero orbit, walk-toward-camera, or snap-to-black)
-- CONTINUITY: same character description in every shot, same color palette, smooth transitions
+## CORE OUTPUT RULES
+- veo_prompt: 150–250 words per shot, one dense paragraph. Include ALL 12 elements below in order.
+- test_prompt: ≤100 words, distilled 3-second version of the same shot for quick clip testing.
+- Character description MUST be identical across all 3 shots (copy-paste the same string).
+- ZERO text, typography, logos, or UI in any visual frame.
+- Shot 1 = scroll-stopping hook (macro reveal / whip pan / object drop / POV reach / speed ramp).
+- Shot 3 = product hero CTA (orbit shot / walk-toward-camera / snap-to-black freeze).
 
-Output flat JSON: creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props[], character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style, hook_style, hook_technique, cta_technique, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta, shots[{shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt, transition_to_next}]`;
+## VEO_PROMPT ELEMENT ORDER (follow exactly):
+1. CAMERA: lens type (macro 100mm, 35mm wide, 85mm portrait, 24mm ultra-wide) + aperture (f/1.4, f/1.8, f/2.8) + movement (static, slow push-in 10% zoom, whip pan right, dolly track left, handheld UGC shake, drone descend, rack focus pull).
+2. SUBJECT: age, gender, ethnicity, exact facial features, hair (length/color/style), skin tone + texture, emotional state, eye direction.
+3. WARDROBE: brand aesthetic, specific garments, color, fit (oversized linen shirt, white ribbed tank, charcoal slim-fit trousers).
+4. ACTION: micro-action + main action at millimeter resolution (e.g., "fingers curl around product base, thumb depresses power button with audible click, slow clockwise wrist rotation reveals label toward camera").
+5. PRODUCT: frame position (left third / center / right third), angle (front-on / 3/4 / top-down), specular highlight placement (key light at 45° hits logo, rim light traces bottle edge).
+6. ENVIRONMENT: hyper-specific set (not "kitchen" → "modern open-plan kitchen, honed Calacatta marble island, matte black Gaggenau induction cooktop partially visible at frame edge, morning golden hour streaming through east-facing floor-to-ceiling windows, thin steam rising from mug in far background").
+7. LIGHTING: source type (natural window, LED 3-panel softbox, ring light, practical floor lamp) + direction (45° key from camera-left, fill from right, hair light above) + color temperature (2700K warm amber, 4000K neutral, 5600K daylight) + shadow quality (hard-edged, feathered soft, shadowless high-key).
+8. COLOR PALETTE: 3–4 specific hex-adjacent descriptors (warm ivory #F5F0E8, dusty sage #8FA888, muted terracotta #C4714F, deep espresso #2C1A0E).
+9. DEPTH OF FIELD: foreground / subject / background sharpness ("foreground counter edge at 5% blur, subject tack sharp, background completely bokeh at f/1.8, product label readable").
+10. MOTION & TIMING: per-second action timeline ("0–1s: camera static, subject lifts product; 1–3s: slow push-in begins, product fills 40% of frame; 3–6s: rack focus shifts to face; 6–8s: freeze frame, product centered").
+11. AUDIO CUES: ambient environment sound, product sound effect, VO timing cue if applicable (e.g., "ambient coffee shop hum under, product click at 1.2s, VO begins at 2s").
+12. NEGATIVE PROMPT: "No text overlays, no watermarks, no subtitles, no distorted faces, no extra fingers, no lens flare, no shaky handheld blur unless specified, no pixelation, no artificial plastic-looking skin, no inconsistent lighting between cuts, no visible logos except product."
+END each veo_prompt with: STYLE: [3–5 style tags, e.g. "UGC authentic, golden hour warmth, Apple product shot aesthetic, TikTok native format, editorial cleanliness"].
+
+## JSON SCHEMA
+Output flat JSON with these exact keys: creative_type, tone, location, time_of_day, weather, lighting_source, lighting_direction, lighting_quality, lighting_mood, props[], character_role, character_age, character_gender, character_appearance, character_wardrobe, character_personality, character_emotion_start, character_emotion_end, character_speech_style, hook_style, hook_technique, cta_technique, story_hook, story_problem, story_discovery, story_product_use, story_benefit, story_cta, shots[{shot_id, duration_seconds, purpose, scene_description, character_action, product_action, camera_angle, camera_movement, shot_type, lighting, motion_effect, dialogue_or_vo, text_overlay, cta, negative_prompt, veo_prompt, test_prompt, transition_to_next}]`;
 
     const user = `Generate VEO3 campaign prompts for:
 
@@ -207,10 +224,10 @@ Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt parag
         },
       },
       shot_list: flat.shots.map((shot) => {
-        // Construct detailed veo_prompt server-side from shot fields + character
+        // Construct detailed veo_prompt server-side from shot fields + character if AI left it empty
         const charDesc = `${flat.character_gender}, ${flat.character_age}, ${flat.character_appearance}, wearing ${flat.character_wardrobe}`;
         const builtPrompt = shot.veo_prompt || buildVeoPrompt(shot, charDesc, flat);
-        return { ...shot, veo_prompt: builtPrompt };
+        return { ...shot, veo_prompt: builtPrompt, test_prompt: shot.test_prompt || "" };
       }),
     };
 
