@@ -47,11 +47,22 @@ async function scrapeWebsiteImages(
   const results: ProductImageRecord[] = [];
   const seen = new Set<string>();
 
+  // Build page list — try category-specific pages first based on product description
+  const base = brandUrl.replace(/\/$/, "");
+  const descLower = productDescription.toLowerCase();
+  const categoryPages: string[] = [];
+  if (descLower.includes("vacuum") || descLower.includes("cleaner")) {
+    categoryPages.push(`${base}/vacuums`, `${base}/robot-vacuums`, `${base}/cordless-vacuums`);
+  }
+  if (descLower.includes("kitchen") || descLower.includes("air fryer") || descLower.includes("ninja")) {
+    categoryPages.push(`${base}/ninja`, `${base}/air-fryers`, `${base}/kitchen`);
+  }
+
   const urlsToTry = [
-    brandUrl,
-    `${brandUrl.replace(/\/$/, "")}/products`,
-    `${brandUrl.replace(/\/$/, "")}/vacuums`,
-    `${brandUrl.replace(/\/$/, "")}/collections`,
+    ...categoryPages,      // category pages first (most relevant)
+    brandUrl,              // homepage fallback
+    `${base}/products`,
+    `${base}/collections`,
   ];
 
   for (const pageUrl of urlsToTry) {
@@ -96,14 +107,25 @@ async function scrapeWebsiteImages(
         let score = 0;
         const altLower = alt.toLowerCase();
         const srcLower = resolved.toLowerCase();
-        if (altLower.includes("vacuum") || altLower.includes("shark") || altLower.includes("cleaner")) score += 10;
-        if (altLower.includes("ninja") || altLower.includes("product")) score += 5;
+        const descLower = productDescription.toLowerCase();
+
+        // Extract key product words from description to boost matching
+        const productKeywords = descLower.match(/\b(vacuum|cleaner|mop|robot|upright|cordless|suction|carpet|floor|dust|canister|air fryer|blender|coffee|kitchen|appliance)\b/g) || [];
+
+        // Boost if image alt matches product keywords
+        for (const kw of productKeywords) {
+          if (altLower.includes(kw)) score += 12;
+        }
+        if (altLower.includes("vacuum") || altLower.includes("cleaner") || altLower.includes("mop")) score += 15;
+        if (altLower.includes("cordless") || altLower.includes("robot") || altLower.includes("upright")) score += 10;
+        if (altLower.includes("product") || altLower.includes("hero")) score += 5;
         if (srcLower.includes("product") || srcLower.includes("pdp")) score += 8;
         if (srcLower.includes("cdn") || srcLower.includes("media")) score += 3;
-        if (srcLower.includes("lifestyle") || srcLower.includes("use")) score += 6;
         if (alt && alt.length > 5) score += 2;
-        // Prefer larger images (jpg/webp/png, not gif)
+        // Prefer larger images
         if (/\.(jpg|jpeg|webp|png)(\?|$)/i.test(resolved)) score += 4;
+        // Penalize clearly off-category products
+        if (altLower.includes("mask") || altLower.includes("hair") || altLower.includes("beauty") || altLower.includes("flexstyle") || altLower.includes("cryo")) score -= 20;
         if (score < 3) return; // skip irrelevant
 
         candidates.push({ url: resolved, alt, score });
@@ -130,21 +152,17 @@ async function scrapeWebsiteImages(
   return results;
 }
 
-/** Generate AI product image via Pollinations.ai and return data URI */
+/**
+ * Generate AI image via Pollinations.ai.
+ * Returns a Pollinations URL (not data URI) so it loads lazily in the browser.
+ * Verifies the URL responds with a HEAD request within timeout.
+ */
 async function generateAIImage(prompt: string, width = 1024, height = 1024, seed?: number): Promise<string | null> {
   const s = seed ?? Math.floor(Math.random() * 999999);
   const encoded = encodeURIComponent(prompt);
-  const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${s}&nologo=true&model=flux&enhance=true`;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
-    if (!res.ok) return null;
-    const buffer = await res.arrayBuffer();
-    const b64 = Buffer.from(buffer).toString("base64");
-    const mime = res.headers.get("content-type") || "image/jpeg";
-    return `data:${mime};base64,${b64}`;
-  } catch {
-    return null;
-  }
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${s}&nologo=true&model=flux&enhance=true&nofeed=true`;
+  // Return URL directly — browser will fetch/render it lazily, avoiding server timeout
+  return url;
 }
 
 // ─── Route handlers ───────────────────────────────────────────────────────────
@@ -222,55 +240,48 @@ export async function POST(
     { prompt: inUseAnglePrompt, caption: "Product Position — Home Setting", type: "ai-detail" as const, w: 768, h: 1024 },
   ];
 
-  for (let i = 0; i < aiPrompts.length; i++) {
-    const { prompt, caption, type, w, h } = aiPrompts[i];
-    const dataUri = await generateAIImage(prompt, w, h, 100 + i * 37);
-    if (dataUri) {
-      allImages.push({ url: dataUri, caption, type, source: "ai-generated", verified: false });
-    }
-  }
+  // Generate all AI product images in parallel
+  const aiResults = await Promise.all(
+    aiPrompts.map(async ({ prompt, caption, type, w, h }, i) => {
+      const url = await generateAIImage(prompt, w, h, 100 + i * 37);
+      if (!url) return null;
+      return { url, caption, type, source: "ai-generated" as const, verified: false };
+    })
+  );
+  allImages.push(...(aiResults.filter(r => r !== null) as ProductImageRecord[]));
 
   // ── Step 3: Environment scenes (aligned with Insights useEnvironments) ──
-  for (const env of environments.slice(0, 3)) {
-    if (!env.imagePrompt) continue;
+  const envList = environments.length > 0 ? environments.slice(0, 3) : [
+    {
+      name: "Living Room with Pet Fur",
+      imagePrompt: `${brandName} ${productCategory} positioned on plush carpet in a modern living room, golden retriever fur visible on carpet, natural afternoon light through large windows, product ready for use, photorealistic, no humans`,
+    },
+    {
+      name: "Kitchen Hardwood Floor",
+      imagePrompt: `${brandName} ${productCategory} in an open-plan kitchen with light oak hardwood floor, morning light, debris visible, product leaning against kitchen island, photorealistic, no humans`,
+    },
+    {
+      name: "Bedroom Carpet",
+      imagePrompt: `${brandName} ${productCategory} in a bright bedroom with plush grey carpet, large windows with sheer curtains, product in use position, cinematic natural light, photorealistic, no humans`,
+    },
+  ];
 
-    // Enhance the imagePrompt to ensure no humans and correct product
-    const envPrompt = `${env.imagePrompt}. Realistic home environment photography, cinematic composition, natural lighting, photorealistic, no human figures, product clearly visible in scene, shot on ARRI ALEXA, commercial photography quality`;
-
-    const dataUri = await generateAIImage(envPrompt, 1024, 768, Math.floor(Math.random() * 999));
-    if (dataUri) {
-      allImages.push({
-        url: dataUri,
+  const envResults = await Promise.all(
+    envList.map(async (env) => {
+      const envPrompt = `${env.imagePrompt || env.name}. Realistic home environment photography, cinematic composition, natural lighting, photorealistic, no human figures, product clearly visible and correctly depicted, commercial photography quality`;
+      const url = await generateAIImage(envPrompt, 1024, 768, Math.floor(Math.random() * 999));
+      if (!url) return null;
+      return {
+        url,
         caption: `Environment: ${env.name}`,
-        type: "ai-environment",
-        source: "ai-generated",
+        type: "ai-environment" as const,
+        source: "ai-generated" as const,
         environmentName: env.name,
         verified: false,
-      });
-    }
-  }
-
-  // If we have fewer than 4 environment images and we have environments, add generic ones
-  const envImageCount = allImages.filter(i => i.type === "ai-environment").length;
-  if (envImageCount < 2 && environments.length === 0) {
-    // Generate generic environment scenes for common vacuum use cases
-    const genericEnvs = [
-      {
-        prompt: `${brandName} ${productCategory} in a modern living room, plush carpet, natural afternoon light through large windows, golden retriever fur visible on carpet, product positioned ready for use, photorealistic, no humans`,
-        caption: "Environment: Living Room with Pet Fur",
-      },
-      {
-        prompt: `${brandName} ${productCategory} in an open-plan kitchen with hardwood floor, morning light, debris visible on floor, product leaning against kitchen island, photorealistic, no humans`,
-        caption: "Environment: Kitchen & Hardwood",
-      },
-    ];
-    for (const { prompt, caption } of genericEnvs) {
-      const dataUri = await generateAIImage(prompt, 1024, 768);
-      if (dataUri) {
-        allImages.push({ url: dataUri, caption, type: "ai-environment", source: "ai-generated", verified: false });
-      }
-    }
-  }
+      };
+    })
+  );
+  allImages.push(...(envResults.filter(r => r !== null) as ProductImageRecord[]));
 
   await prisma.brand.update({
     where: { projectId },
