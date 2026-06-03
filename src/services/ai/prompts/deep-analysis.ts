@@ -4,6 +4,8 @@ export interface DeepAnalysisInput {
   productDescription?: string;
   productName?: string;
   campaignGoal?: string;
+  platform?: string;
+  targetDurationSec?: number;
   selectedEnvironment?: string;
   selectedActorRole?: string;
   selectedSellingPoints?: string[];
@@ -123,7 +125,7 @@ Output ONLY valid JSON with ALL these keys:
     }
   ],
   "videoTimeline": {
-    "recommendedDurationSec": 30,
+    "recommendedDurationSec": MATCH_THE_TARGET_DURATION_EXACTLY,
     "platform": "tiktok|instagram|youtube|tvc",
     "segments": [
       {
@@ -141,7 +143,11 @@ Output ONLY valid JSON with ALL these keys:
   }
 }`;
 
-  const user = `Deep creative analysis for "${input.brandName}"${input.category ? ` (${input.category})` : ""}${input.productDescription ? `\nProduct: ${input.productDescription.slice(0, 200)}` : ""}${input.productName ? `\nSPECIFIC PRODUCT: ${input.productName}` : ""}${input.campaignGoal ? `\nCAMPAIGN GOAL: ${input.campaignGoal}` : ""}${input.selectedEnvironment ? `\nSELECTED ENVIRONMENT: ${input.selectedEnvironment}` : ""}${input.selectedActorRole ? `\nSELECTED ACTOR ROLE: ${input.selectedActorRole}` : ""}${input.selectedSellingPoints?.length ? `\nPRIORITY SELLING POINTS:\n${input.selectedSellingPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}` : ""}${input.audienceSummary ? `\nAUDIENCE: ${input.audienceSummary}` : ""}:
+  const durationNote = input.targetDurationSec
+    ? `\nVIDEO TARGET: ${input.targetDurationSec}s ${input.platform || "TikTok"} video — videoTimeline.recommendedDurationSec MUST equal ${input.targetDurationSec}, segments must sum to exactly ${input.targetDurationSec}s`
+    : "";
+
+  const user = `Deep creative analysis for "${input.brandName}"${input.category ? ` (${input.category})` : ""}${input.productDescription ? `\nProduct: ${input.productDescription.slice(0, 200)}` : ""}${input.productName ? `\nSPECIFIC PRODUCT: ${input.productName}` : ""}${input.campaignGoal ? `\nCAMPAIGN GOAL: ${input.campaignGoal}` : ""}${durationNote}${input.selectedEnvironment ? `\nSELECTED ENVIRONMENT: ${input.selectedEnvironment}` : ""}${input.selectedActorRole ? `\nSELECTED ACTOR ROLE: ${input.selectedActorRole}` : ""}${input.selectedSellingPoints?.length ? `\nPRIORITY SELLING POINTS:\n${input.selectedSellingPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}` : ""}${input.audienceSummary ? `\nAUDIENCE: ${input.audienceSummary}` : ""}:
 
 SCORED AD CONTENT (${input.topContent.length} pieces):
 ${input.topContent.map((c, i) => `[${i+1}] "${c.title}" | ${c.platform} | Score:${c.overallScore} | Views:${c.viewCount.toLocaleString()}

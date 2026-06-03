@@ -152,16 +152,34 @@ async function scrapeWebsiteImages(
   return results;
 }
 
+/** Strip brand/product names from environment prompts to avoid wrong-image generation */
+function sanitizeEnvPrompt(prompt: string, brandName: string, productName?: string | null): string {
+  // Replace brand name and product name with generic terms
+  // "Shark PowerDetect™ Cordless Vacuum" → "a cordless vacuum cleaner"
+  // "SharkNinja" → "the product"
+  // This prevents Pollinations from generating shark animals or wrong products
+  let safe = prompt;
+  if (productName) {
+    // Replace full product name first (longer match first)
+    safe = safe.replace(new RegExp(productName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "the product");
+  }
+  safe = safe.replace(new RegExp(brandName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "the brand");
+  // Remove trademark symbols that confuse image generators
+  safe = safe.replace(/™|®|©/g, "");
+  return safe;
+}
+
 /**
  * Generate AI image via Pollinations.ai.
- * Returns a Pollinations URL (not data URI) so it loads lazily in the browser.
- * Verifies the URL responds with a HEAD request within timeout.
+ * Returns a Pollinations URL so it loads lazily in the browser.
+ * Always appends safety suffix: no animals, no wildlife.
  */
 async function generateAIImage(prompt: string, width = 1024, height = 1024, seed?: number): Promise<string | null> {
   const s = seed ?? Math.floor(Math.random() * 999999);
-  const encoded = encodeURIComponent(prompt);
+  // Always append safety clause — prevents animal/wildlife generation from brand names like "Shark"
+  const safePrompt = `${prompt}. No animals, no wildlife, no creatures, no fish, no sharks, no pets in scene. Pure environment only.`;
+  const encoded = encodeURIComponent(safePrompt);
   const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${s}&nologo=true&model=flux&enhance=true&nofeed=true`;
-  // Return URL directly — browser will fetch/render it lazily, avoiding server timeout
   return url;
 }
 
@@ -309,8 +327,10 @@ export async function POST(
 
   const envResults = await Promise.all(
     envList.map(async (env) => {
-      // Environment prompts describe the ROOM only — no mention of brand, product, or animals
-      const envPrompt = `${env.imagePrompt}. Shot on ARRI ALEXA, 35mm lens, cinematic composition, realistic lighting, commercial interior photography quality.`;
+      // Sanitize the imagePrompt — remove brand/product names that could cause wrong-image generation
+      const cleanedPrompt = sanitizeEnvPrompt(env.imagePrompt || env.name, project.brandName, project.productPageTitle || project.productName);
+      // Environment prompts describe the ROOM only — no brand, no product, no animals
+      const envPrompt = `${cleanedPrompt}. Shot on ARRI ALEXA, 35mm lens, cinematic composition, realistic lighting, commercial interior photography quality.`;
       const url = await generateAIImage(envPrompt, 1024, 768, Math.floor(Math.random() * 999));
       if (!url) return null;
       return {

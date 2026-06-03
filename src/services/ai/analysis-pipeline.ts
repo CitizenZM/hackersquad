@@ -452,6 +452,8 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
           productDescription: project.productPageText?.slice(0, 400) || undefined,
           productName: project.productPageTitle || project.productName || undefined,
           campaignGoal: project.campaignGoal || undefined,
+          platform: (campaignSel?.platform as string | null) || undefined,
+          targetDurationSec: (campaignSel?.totalDurationSec as number | null) || undefined,
           selectedEnvironment: (campaignSel?.selectedEnvironment as string | null) || undefined,
           selectedActorRole: (campaignSel?.selectedActorRole as string | null) || undefined,
           selectedSellingPoints:
