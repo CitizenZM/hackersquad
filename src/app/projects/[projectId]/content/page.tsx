@@ -393,13 +393,12 @@ export default async function ContentPage({
                         <span className={`text-xs font-bold num ${scoreColor}`}>{score}</span>
                       </div>
                     )}
-                    {/* External link */}
+                    {/* External link — no onClick, target=_blank handles isolation */}
                     {asset.url && (
                       <a
                         href={asset.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
                         className="absolute bottom-2 right-2 p-1 rounded bg-background/80 backdrop-blur-sm text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Open on platform"
                       >
