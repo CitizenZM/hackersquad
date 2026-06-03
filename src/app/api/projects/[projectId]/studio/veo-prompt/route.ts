@@ -88,12 +88,13 @@ export async function POST(
   }
 
   try {
-    const [project, script, storyboard, audience, deepAnalysis] = await Promise.all([
+    const [project, script, storyboard, audience, deepAnalysis, campaignSel] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId }, include: { brand: true } }),
       prisma.script.findUnique({ where: { id: scriptId } }),
       prisma.storyboard.findFirst({ where: { projectId, scriptId } }),
       prisma.audienceProfile.findUnique({ where: { projectId } }),
       prisma.deepAnalysis.findUnique({ where: { projectId } }),
+      prisma.campaignSelection.findUnique({ where: { projectId } }).catch(() => null),
     ]);
 
     if (!project || !script) {
@@ -106,6 +107,20 @@ export async function POST(
     const segments = (audience?.segments as { name: string; ageRange: string; description: string }[]) || [];
     const vibeData = deepAnalysis?.vibeAnalysis as { dominantTones?: { tone: string }[]; pacingProfile?: string; visualStyleNotes?: string } | null;
     const ctaData = deepAnalysis?.ctaAnalysis as { commonCTAs?: { cta: string }[]; placement?: string } | null;
+
+    // Read campaign context — determines shot count and duration
+    const platform = (campaignSel?.platform as string | null) || "tiktok";
+    const totalDurationSec = (campaignSel?.totalDurationSec as number | null) || 5;
+    const isTikTok = platform === "tiktok" || platform === "instagram";
+    // TikTok 5s = 1 single focused shot. TVC 30s+ = 3 shots.
+    const shotCount = totalDurationSec <= 10 ? 1 : totalDurationSec <= 20 ? 2 : 3;
+    const shotDurationSec = Math.floor(totalDurationSec / shotCount);
+
+    // Product-specific safeguard — use the most precise product identifier available
+    const productRef = project.productPageTitle || project.productName || brand?.valueProposition || project.brandName;
+    const productText = project.productPageText?.slice(0, 300) || brand?.productDescription?.slice(0, 300) || "";
+    // Anti-animal / anti-wrong-product clause
+    const antiConfusion = `CRITICAL BRAND SAFETY: The product is "${productRef}". ${productText ? `It is described as: ${productText}` : ""} This is NOT a shark animal, NOT a fish, NOT any creature. It is a physical consumer product. Generate footage showing the ACTUAL product only.`;
 
     const system = `You are a senior director of photography and prompt engineer for top-tier TVC and short-form video ad production. Your prompts are used to direct AI video models (Kling 3.0, Wan 2.6, Grok Imagine) to produce cinematic, photorealistic footage indistinguishable from real camera work.
 
@@ -234,7 +249,18 @@ ${ctas.map((c, i) => `${i + 1}. ${c}`).join("\n")}
 ${storyboard ? `STORYBOARD REFERENCE:
 ${(storyboard.frames as { frameNumber: number; scene: string; voiceover: string; cameraNotes: string }[]).map(f => `Frame ${f.frameNumber}: ${f.scene} | Camera: ${f.cameraNotes} | VO: ${f.voiceover}`).join("\n")}` : ""}
 
-Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt paragraph. Format: vertical 9:16, 1080p, 24fps.`;
+PRODUCT IDENTITY (read carefully):
+${antiConfusion}
+
+CAMPAIGN CONSTRAINTS:
+- Platform: ${platform.toUpperCase()} — ${isTikTok ? "vertical 9:16, fast hook, scroll-stop" : "cinematic, longer narrative"}
+- Total duration: ${totalDurationSec} seconds
+- Shot count: ${shotCount} shot(s) of ${shotDurationSec}s each
+- Duration is NON-NEGOTIABLE — every scene must fit within ${shotDurationSec}s
+
+Generate exactly ${shotCount} VEO3 shot(s). Each shot is ${shotDurationSec} seconds.
+${shotCount === 1 ? `Single shot structure for ${totalDurationSec}s TikTok:\n- 0–${Math.round(totalDurationSec * 0.3)}s: Immediate hook (product visible instantly)\n- ${Math.round(totalDurationSec * 0.3)}–${Math.round(totalDurationSec * 0.7)}s: Key action / product moment\n- ${Math.round(totalDurationSec * 0.7)}–${totalDurationSec}s: Payoff / result` : ""}
+Format: vertical 9:16, 720p minimum, 24fps.`;
 
     const flat = await analyzeWithClaude({
       systemPrompt: system,
@@ -250,8 +276,8 @@ Generate 3 VEO3 shots (8s each). Each shot must have a complete veo_prompt parag
         brand: project.brandName,
         product_name: brand?.valueProposition || project.brandName,
         campaign_goal: project.campaignGoal || "conversion",
-        platform: "TikTok / Instagram Reels / YouTube Shorts",
-        video_format: { aspect_ratio: "9:16", resolution: "1080p", fps: 24, total_duration_seconds: 24, clip_duration_seconds: 8 },
+        platform: platform,
+        video_format: { aspect_ratio: "9:16", resolution: "720p", fps: 24, total_duration_seconds: totalDurationSec, clip_duration_seconds: shotDurationSec },
       },
       character_system: {
         main_character: {
