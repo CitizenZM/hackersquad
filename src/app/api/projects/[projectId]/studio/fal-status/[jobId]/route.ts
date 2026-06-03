@@ -21,10 +21,12 @@ export async function GET(
   if (!falKey) return NextResponse.json({ error: "FAL_KEY not set" }, { status: 500 });
 
   // Get model endpoint from stored model name
+  // IMPORTANT: Kling v3 requires /text-to-video in the path for status polling
   const MODEL_ENDPOINTS: Record<string, string> = {
     "grok-imagine-video": "xai/grok-imagine-video",
     "wan-2.6": "wan/v2.6",
-    "kling-v3-pro": "fal-ai/kling-video/v3/pro",
+    "kling-v3-pro": "fal-ai/kling-video/v3/pro/text-to-video",
+    "kling-v3-standard": "fal-ai/kling-video/v3/standard/text-to-video",
     "wan-2.5": "fal-ai/wan-25-preview",
   };
   const endpoint = MODEL_ENDPOINTS[job.model] || "xai/grok-imagine-video";
