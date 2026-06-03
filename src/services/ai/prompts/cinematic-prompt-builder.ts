@@ -387,36 +387,28 @@ export function buildWan26Prompt(input: CinematicPromptInput): string {
     productLower.includes("helmet") || productLower.includes("cycling") || catLower.includes("sports");
 
   if (isVacuum) {
-    return `Cinematic high-key lifestyle commercial, warm domestic interior, photorealistic material textures, SharkNinja brand vacuum cleaner appliance (NOT a shark animal — home cleaning product), golden retriever dog on carpet, 9:16 vertical TikTok format, ${dur} seconds.
-[camera tracks low alongside cordless upright vacuum cleaner moving across warm greige carpet; floor-level 3200K raking light illuminates individual golden retriever shed fur strands as amber filaments against carpet pile; camera at 3cm above carpet surface at 15-degree elevation angle; slow Steadicam dolly left to right]
-[golden retriever adult dog lying in mid-ground soft focus; flank breathing visible; shed fur distributed across carpet catching warm side light as individual amber strands; fur clumps at sofa perimeter]
-[female talent 32-36 years with brunette shoulder-length hair operating vacuum from behind; cream merino knit top; dark jeans; NOT looking at camera; focused downward; quiet competence expression]
-[vacuum brushroll macro insert: fur strand liberation from carpet pile at 120fps slow motion; transparent dustbin filling with extracted fur; clean carpet track revealed behind vacuum head]
-[5600K key light camera-left feathered; 4800K warm fill camera-right 3:1 ratio; 3200K tungsten rim above-behind talent; floor raking LED at carpet level creating micro-shadows in pile valleys and fur highlights]
-[warm greige carpet grain #CEC5B5; golden amber fur color #C8960C; product brushed aluminum anisotropic specular; practical floor lamp 2700K ambient background; Kodak Vision3 grain character]
-[negative: flat overhead lighting, uniform carpet texture, CGI dog fur, plastic skin, temporal flickering, shark animal or ocean, animated style]`;
+    // Wan 2.6: max 800 chars. Global style line + timed [shot] brackets.
+    return `Photorealistic commercial, warm domestic interior, SharkNinja vacuum cleaner home appliance (NOT a shark animal), golden retriever dog on greige carpet, 9:16 vertical, ${dur}s, Kodak Vision3 warmth.
+[0-${Math.round(dur*0.35)}s] Floor-level camera 3cm above carpet, slow track left. Individual golden retriever fur strands on carpet catching warm 3200K side-raking light as amber filaments. Highly detailed carpet pile texture, individual fiber self-shadows. Fur clumps at sofa perimeter, soft dog breathing in background.
+[${Math.round(dur*0.35)}s-${Math.round(dur*0.8)}s] Steadicam tracks vacuum across carpet. Clean carpet wake visible behind vacuum head. Brushroll macro: physically accurate fur liberation from pile. Transparent dustbin filling. Woman operating vacuum, brunette hair, cream knit top, NOT looking at camera.
+[${Math.round(dur*0.8)}s-${dur}s] Wide satisfied reveal. Clean carpet. Woman's quiet nod of competence. Warm 2700K ambient.
+negative: flat overhead light, uniform carpet, CGI fur, shark animal, fish, ocean, animated style, temporal flicker`;
   }
 
   if (isBaby) {
-    return `Soft warm lifestyle commercial, organic baby skincare brand, nursery interior, gentle morning window light, nurturing and safe emotional register, 9:16 vertical TikTok format, ${dur} seconds.
-[close-up shot of a glass bottle of ${productRef} organic lotion on white oak wood surface with woven cotton nursery mat; warm 5500K window light from camera-left casting soft shadow; gentle fill from camera-right 4800K; lotion bottle surface: smooth glass with slight caustic refraction at base]
-[woman's hands in frame: warm-toned, clean short nails, oat linen sleeve visible at wrist; slow gentle pump dispensing small ivory-cream lotion bead onto palm; the bead catches single specular highlight from window key]
-[both palms come together in slow circular motion spreading lotion; translucent film visible at spreading edge; warm skin tones catching diffuse window light; fabric of oat linen sleeve shows natural slub weave texture]
-[nursery environment in soft focus background: sage green wall, rattan basket, cream pampas grass in ceramic vase, warm 2700K floor lamp glow; everything cohesive and calm]
-[emotional register: quiet tender intimacy; no performance; purely absorbed; the private ritual of a parent caring for their child]
-[lifted blacks 10 IRE; warm amber midtones +200K; blue channel desaturated throughout; Fujifilm Eterna grain character; no clinical cool tones anywhere]
-[negative: harsh shadows, clinical white light, rushed movement, theatrical expressions, brand name as creature, any cool blue tones]`;
+    return `Soft warm commercial, organic baby skincare, nursery interior, gentle morning window light, nurturing register, 9:16 vertical, ${dur}s, Fujifilm Eterna warmth.
+[0-${Math.round(dur*0.4)}s] Close-up: ${productRef} glass lotion bottle on white oak surface, woven cotton mat. Highly detailed glass surface texture, caustic refraction at bottle base. 5500K window key from left, 4800K warm fill right.
+[${Math.round(dur*0.4)}s-${Math.round(dur*0.8)}s] Woman's hands: oat linen sleeve, clean nails. Pump dispenses ivory cream bead onto palm. Palms together slow circular motion — lotion spreads from opaque to translucent film edge. Slub linen weave texture visible.
+[${Math.round(dur*0.8)}s-${dur}s] Nursery soft focus background: sage walls, rattan basket, warm 2700K practical lamp. Private tender expression. No performance.
+negative: harsh shadows, clinical white, rushed motion, theatrical expressions, cool blue tones, brand name as creature`;
   }
 
   if (isCycling) {
-    return `Cinematic action sports commercial, cycling brand ${productRef}, urban golden hour exterior, high-energy athletic performance, teal-orange complementary grade, 9:16 vertical TikTok format, ${dur} seconds.
-[camera at ground level left of cycle path; cyclist passes right to left at 35 km/h; wheel spokes blur to radial silver lines; asphalt surface shows motion blur at bottom of frame; helmet ventilation slots cast shadow bars across rider's forehead under low-angle 2800K golden hour sun; jersey fabric under aerodynamic tension]
-[rapid cut to: 100mm macro close-up of helmet buckle mechanism; hand enters frame; three-beat grip then engage then satisfied nod; chrome studs visible at magnetic lens interface]
-[cycling jersey polyester-lycra semi-matte texture under compression; sweat darkening at collar and neck confirming physical effort; cheekbone warm flush from exertion; forearm vein visible from effort]
-[environment: urban cycle path with white line markings as compositional leading lines; glass office building bokeh background showing amber golden hour rectangles; tree canopy dappled light at 60Hz visual frequency on helmet surface]
-[golden hour sun at 8-12 degree elevation 2800-3200K; long horizontal shadows from rider; product matte polycarbonate shell with ventilation slot shadow bars on forehead skin]
-[teal-orange grade: shadows toward teal #1A3A3A; midtones toward amber #C8640A; high contrast blacks at 5 IRE; helmet color +20% saturation; 35mm Vision3 pushed grain]
-[negative: dry skin in athletic context, static camera over 2 seconds, actor looking at camera, over-saturated destroying skin, brand name as geological rock feature]`;
+    return `Cinematic action sports commercial, ${productRef} cycling brand, urban golden hour, teal-orange grade, 9:16 vertical, ${dur}s.
+[0-${Math.round(dur*0.4)}s] Ground-level camera. Cyclist at 35km/h. Wheel spokes blur to radial lines. Helmet ventilation slots cast defined shadow bars on forehead skin under 2800K golden hour sun. Jersey polyester-lycra texture under aerodynamic tension. Sweat bead formation at forehead.
+[${Math.round(dur*0.4)}s-${Math.round(dur*0.8)}s] 100mm macro: helmet buckle magnetic engagement. Chrome studs at 0.5mm gap. Satisfying click. Three-beat grip-engage-nod sequence.
+[${Math.round(dur*0.8)}s-${dur}s] Wide tracking shot. Urban path, white line markings, glass building bokeh background amber rectangles.
+negative: dry skin, static camera, actor looking at camera, brand name as rock or geological feature, CGI look`;
   }
 
   // Generic Wan 2.6 format
