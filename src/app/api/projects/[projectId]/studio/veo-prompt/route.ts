@@ -54,10 +54,10 @@ const veoResultSchema = z.object({
   story_benefit: z.string().optional().default(""),
   story_cta: z.string().optional().default(""),
   shots: z.array(z.object({
-    shot_id: z.string(),
-    duration_seconds: z.coerce.number().default(8),
-    purpose: z.string(),
-    scene_description: z.string(),
+    shot_id: z.string().optional().default("shot_1"),
+    duration_seconds: z.coerce.number().optional().default(5),
+    purpose: z.string().optional().default(""),
+    scene_description: z.string().optional().default(""),
     character_action: z.string().optional().default(""),
     product_action: z.string().optional().default(""),
     camera_angle: z.string().optional().default("eye-level"),
@@ -72,7 +72,7 @@ const veoResultSchema = z.object({
     veo_prompt: z.string().optional().default(""),
     test_prompt: z.string().optional().default(""),
     transition_to_next: z.string().optional().default("cut"),
-  })),
+  })).optional().default([]),
 });
 
 export async function POST(

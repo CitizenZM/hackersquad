@@ -30,6 +30,21 @@ export async function GET(
   return NextResponse.json(project);
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  const { projectId } = await params;
+  const body = await request.json();
+  const allowed = ["brandUrl", "productUrl", "productName", "campaignGoal", "briefingText", "category", "name"];
+  const data: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in body) data[key] = body[key];
+  }
+  const project = await prisma.project.update({ where: { id: projectId }, data });
+  return NextResponse.json(project);
+}
+
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ projectId: string }> }

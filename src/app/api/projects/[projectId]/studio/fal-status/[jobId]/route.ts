@@ -43,25 +43,40 @@ export async function GET(
   const falStatus: string = statusData.status;
 
   if (falStatus === "COMPLETED") {
-    // Fetch result
-    const resultRes = await fetch(
-      `https://queue.fal.run/${endpoint}/requests/${job.falRequestId}`,
-      { headers: { Authorization: `Key ${falKey}` } }
-    );
-    const result = await resultRes.json();
-    const video = result.video;
+    // Fetch result with retry on auth failure
+    let video: Record<string, unknown> | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const resultRes = await fetch(
+          `https://queue.fal.run/${endpoint}/requests/${job.falRequestId}`,
+          { headers: { Authorization: `Key ${falKey}` }, signal: AbortSignal.timeout(10000) }
+        );
+        if (!resultRes.ok) {
+          console.warn(`fal result fetch attempt ${attempt + 1} failed: ${resultRes.status}`);
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        const result = await resultRes.json();
+        video = result.video ?? null;
+        break;
+      } catch (e) {
+        console.warn(`fal result fetch attempt ${attempt + 1} error:`, e);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
 
     const updated = await prisma.falVideoJob.update({
       where: { id: jobId },
       data: {
-        status: "completed",
-        videoUrl: video?.url,
-        fileSizeBytes: video?.file_size,
-        widthPx: video?.width,
-        heightPx: video?.height,
-        fpS: video?.fps,
-        durationSec: video?.duration,
+        status: video?.url ? "completed" : "failed",
+        videoUrl: (video?.url as string | undefined) ?? null,
+        fileSizeBytes: (video?.file_size as number | undefined) ?? null,
+        widthPx: (video?.width as number | undefined) ?? null,
+        heightPx: (video?.height as number | undefined) ?? null,
+        fpS: (video?.fps as number | undefined) ?? null,
+        durationSec: (video?.duration as number | undefined) ?? null,
         completedAt: new Date(),
+        error: video?.url ? null : "Video URL not retrieved from fal.ai after 3 attempts",
       },
     });
     return NextResponse.json(updated);
