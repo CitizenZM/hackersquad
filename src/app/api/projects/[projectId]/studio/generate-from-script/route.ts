@@ -13,7 +13,7 @@
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildCinematicVideoPrompt } from "@/services/ai/prompts/cinematic-prompt-builder";
+import { buildDenseCinematicPrompt } from "@/services/ai/prompts/cinematic-prompt-builder";
 
 export const maxDuration = 30;
 
@@ -56,7 +56,7 @@ export async function POST(
   const platform = (campaignSel?.platform as string | null) || "tiktok";
 
   // Build the 1000-4000 word cinematic prompt from brand research
-  const prompt = customPrompt || buildCinematicVideoPrompt({
+  const prompt = customPrompt || buildDenseCinematicPrompt({
     brandName: project.brandName,
     productName,
     productDescription: project.productPageText?.slice(0, 400)
@@ -109,8 +109,12 @@ export async function POST(
 
   const falModel = FAL_MODELS[model] || FAL_MODELS["grok-imagine-video"];
 
+  // buildDenseCinematicPrompt produces ~3800 chars — under fal.ai 4096 limit.
+  // Hard-cap as safety net.
+  const finalPrompt = prompt.slice(0, 4000);
+
   const payload: Record<string, unknown> = {
-    prompt,
+    prompt: finalPrompt,
     aspect_ratio: aspectRatio,
     resolution,
     duration: totalSec,

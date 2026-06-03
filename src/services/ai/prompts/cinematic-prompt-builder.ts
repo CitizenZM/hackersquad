@@ -288,3 +288,78 @@ ${(input.sellingPoints || []).slice(0, 3).map((sp, i) => `${i + 1}. ${sp} — sh
 [NEGATIVE SPECIFICATION]
 No plastic skin, no AI smoothed complexion, no uniform carpet without pile self-shadowing, no helmet hair polygon structure, no dog fur without guard/undercoat differentiation, no temporal flickering, no hand morphing, no text overlays except brand lockup, no watermarks, no animals or wildlife except as specified.`;
 }
+
+// ─── Dense 3800-char optimized prompts for fal.ai 4096 char limit ────────────
+
+export function buildDenseCinematicPrompt(input: CinematicPromptInput): string {
+  const dur = input.totalDurationSec;
+  const productRef = input.productName;
+  const brandLower = input.brandName.toLowerCase();
+  const productLower = (productRef + " " + (input.productDescription || "")).toLowerCase();
+  const catLower = (input.category || "").toLowerCase();
+
+  const isVacuum = brandLower.includes("shark") || brandLower.includes("ninja") ||
+    productLower.includes("vacuum") || catLower.includes("home") || catLower.includes("appliance");
+  const isBaby = brandLower.includes("baby") || productLower.includes("baby") ||
+    productLower.includes("lotion") || catLower.includes("baby") || catLower.includes("kids");
+  const isCycling = brandLower.includes("rock") || brandLower.includes("bros") ||
+    productLower.includes("helmet") || productLower.includes("cycling") || catLower.includes("sports");
+
+  const hook = Math.round(dur * 0.3);
+  const demo = Math.round(dur * 0.75);
+
+  if (isVacuum) {
+    return `Arri Alexa Mini LF, Cooke S7/i 85mm T1.4, 24fps, 9:16 vertical, 800 ISO, Kodak Vision3 grain. ${dur}s TikTok Prime Day ad for ${productRef} — a home vacuum cleaner appliance by SharkNinja brand, NOT a shark animal, NOT wildlife, NOT ocean. Consumer home appliance only.
+
+LIGHTING: Key — 200cm Chimera Lightbank camera-left 5600K, 3:1 ratio, feathered penumbra. Fill — 4800K warm camera-right (color differential creates depth). Rim — 3200K tungsten at 170° offset, anisotropic specular halo through brunette hair. Floor raking light — LED panel at ground level 3200K 45° to carpet, illuminates golden retriever fur as amber filaments against greige pile, creates micro-shadows in carpet valleys. Product strip LED — anisotropic streak on brushed aluminum chassis, caustic glow through polycarbonate dustbin window.
+
+ENVIRONMENT: Suburban living room. Saxony cut-pile carpet 10mm, warm greige #CEC5B5, directional nap sheen, self-shadowing at pile apex, compression marks at furniture zones. Linen sofa warm grey, natural wrinkling. Practical floor lamp 2700K contributing ambient depth.
+
+GOLDEN RETRIEVER: Adult male, 3-4 years. Guard coat 65mm swept toward tail, semi-gloss specular. Ear feathering translucent amber in backlight. Undercoat cream-white at sternum parting. Root-to-tip: cream base to amber-gold tip. Flank breathing visible 16-18 cycles/min — ribcage expansion through coat. Occasional nose flare, soft full blink, ear micro-pivot. Shed fur on carpet: individual strands 40-70mm amber-gold interlocked with pile fiber, catching floor raking light as individual filaments. Fur clumps at sofa perimeter.
+
+TALENT: Female 32-36, brunette shoulder-length hair with natural wave, anisotropic specular streak from hair light. Skin: pore shadow at T-zone under directional key, subsurface scattering pinkish-amber luminance at nasal bridge and cheekbone, hemoglobin undertone at lip vermillion border, vellus hair at jaw in lateral fill, natural sebum sheen at nose bridge. Satin-finish makeup, diffused blush, natural mascara individual lash separation. Cream ribbed merino crewneck with directional nap sheen, dark straight jeans. Aspirational competence expression arc — NOT distressed, NOT performative.
+
+SHOT STRUCTURE — ${dur}s: 0s-${hook}s: Floor-level macro carpet shot (3-5cm off floor, 15° elevation), camera locked static, golden fur strands in floor raking light as amber filaments — the dirty carpet reveal. Dog breathing in soft focus background. ${hook}s-${demo}s: Steadicam tracking alongside vacuum, 35mm. Floor raking light shows fur-laden approach, clean carpet wake behind vacuum. INSERT 120fps: brushroll window macro — fur strand liberation from carpet pile in sequence, no hair accumulation on brushroll (anti-wrap proof), caustic dustbin glow. ${demo}s-${dur}s: Clean carpet callback angle matches hook. Talent: quiet composed satisfaction, zygomatic lift, NOT looking at camera. Dog head-lift, sniffs clean carpet, lies back — emotional resolution.
+
+COLOR: Lifted blacks 8 IRE, amber-gold midtones +150K, soft highlight rolloff, warm greige carpet, golden fur amber elevated, product housing cool grey-teal. Kodak Vision3 grain 12% luminance channel.
+
+NO: plastic skin, AI smoothed complexion, poreless texture, uniform carpet without pile self-shadowing, dog fur without guard/undercoat differentiation, temporal flickering, hand morphing, text overlays except logo lockup, shark animal or fish or ocean imagery.`;
+  }
+
+  if (isBaby) {
+    return `Sony Venice 2, Zeiss Supreme Prime 85mm T1.5, 24fps, 9:16 vertical, Fujifilm Eterna 500T grain. ${dur}s TikTok Prime Day ad for ${productRef} — organic baby skincare product, NOT an animal, NOT a creature.
+
+LIGHTING: 180cm Westcott Scrim Jim camera-left 5500K-5800K gradient (warmer center, cooler sky-edge — real window quality). Fill: large reflector card camera-right 4800K warm (differential creates golden hour through north window quality). Color contrast key vs fill: +700K differential creates depth. Practical: floor lamp 2700K background-left, nursery nightlight far background. Baby dedicated: silver reflector card between key and infant — maximum gentleness, zero hard shadow on infant skin. Hair light: small LitePad 3000K at 170° for mother's rim halo through brunette hair.
+
+NURSERY: White oak wide-plank flooring, wire-brushed open grain, micro-scratch accumulation confirming habitation. Large cream woven cotton play mat with sage stripe border. White birch changing unit, one folded ivory muslin with narrow sage stripe at corner, ceramic vase with pampas grass. ${productRef} bottle at frame edge partial view only. Warm white walls NCS S0505-Y20R. Sage/oat/peach palette — NO blue anywhere (reads clinical).
+
+INFANT (8-12 weeks): Translucent peach-pink dermis, NOT uniform — capillary blush differential: knuckle folds redder (higher capillary density), cheekbone honey-peach with subsurface scatter pinkish luminance, earlobe semi-translucent amber in backlight. Milia 2-3 micro-dots at nasal bridge. Vellus hair at forehead in hair light — biological authenticity. Frog-leg flexed posture, fencer arm reflex. MICRO-EXPRESSIONS: lip quiver 2Hz 0.5s, brow scrunch 1.5s hold, YAWN SEQUENCE (mandible drops maximum, tongue curl, eye compression, 3s recovery) — gold standard empathy trigger. Hand fan, toe curl at touch.
+
+MOTHER: 28-34 years, dark brunette hair in deliberate imperfect low bun, second-day wave texture, single strand across cheek. Skin: under-eye slight blue-grey shadow at orbital rim (confirms authentic parenthood), pore shadow at nasolabial fold, subsurface pinkish-amber at zygomatic, vellus hair at jaw, natural sebum sheen. Medium coverage foundation with pore bleed-through VISIBLE — NOT airbrushed. Oat linen nursing top 200gsm pre-washed, slub texture visible, V-neck, sleeves rolled mid-forearm. Natural nude satin lip. Short clean nails — visible in all hand shots.
+
+APPLICATION SEQUENCE — ${dur}s: 0-${hook}s: 85mm f/2.0. Pump dispense — 3ml ivory cream bead on palm (#F2EAD8), single specular highlight on bead surface. Both palms press together slow circular motion — lotion spreads from opaque center to translucent edge film. ${hook}s-${demo}s: 48fps capture played at 24fps. Index and middle finger first contact at baby's ankle. Slight blanching at pressure point — skin compression then capillary pink recovery (blanch-and-recover = product efficacy proof). Single upward stroke ankle to knee 5 seconds — skin surface transitions from dry micro-texture to hydrated micro-sheen. Baby leg slight reflexive extension at touch. ${demo}s-${dur}s: Mother's expression: Cupid's bow lifts 2mm, zygomatic minimal engagement, eye softening — private satisfaction NOT performed. Baby micro-expression: peaceful brow release. Cheek-to-cheek proximity shot if time.
+
+COLOR: Lifted blacks 10 IRE, +200K midtone warmth, soft highlight rolloff, Fujifilm Eterna grain 10% luminance. Blue channel -35% saturation throughout. Skin hue +12% saturation.
+
+NO: uniform plastic infant skin, any hard shadow on baby face, performed maternal expression, clinical cool tones, any blue in environment, airbrushed pore-free skin, rapid lotion application motion, hand morphing, brand name as literal creature.`;
+  }
+
+  if (isCycling) {
+    return `RED V-Raptor 8K primary, Arri Alexa Mini for athlete skin, Zeiss CP.3 16mm T2.1 (ground speed), 85mm T2.1 (portrait), 100mm macro T2.8 (product detail), 24fps master, 120fps inserts for buckle/lens/spokes, 9:16 vertical. ${dur}s TikTok Prime Day ad for ${productRef} — cycling accessories brand, NOT a geological feature, NOT a wrestling move.
+
+LIGHTING — GOLDEN HOUR EXTERIOR: Sun at 8-12° elevation. Color temperature 2800-3200K warm amber-orange. Long horizontal shadows from athlete 4-6 body-lengths west. HELMET SURFACE: ventilation slot shadow bars on forehead skin — each slot casts defined 12-15mm shadow bar on forehead below rim, hard leading edge feathering at distal. Single crown specular at 3200K warm white. ATHLETE SKIN AT EXERTION: micro-bead sweat formation 0.3-0.8mm diameter at forehead center, temple, nasal bridge — each bead as convex micro-lens catching golden backlight as warm white specular point. Forehead reads sparkling with 40-60 sweat beads. Cheekbone capillary flush pink-red from vasodilation. Forearm cephalic vein slight surface elevation confirming genuine effort.
+
+ENVIRONMENT: Urban cycle path pre-dawn/golden-hour. Smooth asphalt #1A1A1A with aggregate inclusion visible, micro-reflections from overnight dew. White cycle lane markings as compositional leading lines. Glass office building bokeh background showing warm amber golden hour rectangles. Tree canopy section: dappled golden-amber light patches moving on helmet and jersey at 60Hz visual frequency.
+
+ATHLETE: Male 26-32, lean cycling build 68-74kg. Fitted short-sleeve cycling jersey polyester-lycra semi-matte, sweat darkening at collar/neck confirming motion. Bib shorts black high-denier lycra. Cycling gloves. Helmet: RockBros matte polycarbonate, deep ventilation slots casting striped shadow bars across forehead in low sun, semi-matte absorptive surface, magnetic lens system with chrome studs visible.
+
+SHOT STRUCTURE — ${dur}s: 0s-${Math.round(dur*0.35)}s: COLD OPEN black silence 0.5s — tire-on-asphalt sound, chain-ring click. Hand enters frame grips helmet 100mm macro — polycarbonate texture, ventilation slot depth, brand emboss in rim light. ${Math.round(dur*0.35)}s-${Math.round(dur*0.75)}s: Tracking shot 35mm, camera car 4m behind rider, helmet upper 30% frame. Asphalt motion blur bottom frame. Dappled canopy light on helmet surface. Wheel spokes blur to radial silver lines. Rider NOT looking at camera — aero forward lean. ${Math.round(dur*0.75)}s-${dur}s: 120fps MAGNETIC LENS CLICK — chrome studs at 0.5mm gap, slight blur as magnetic attraction pulls lens final 3mm, sharp metallic click impact. OR buckle engagement: three-beat grip→engage→nod at 120fps. Product hero 85mm, ventilation slot shadows bar across face.
+
+COLOR: Teal-orange complementary grade. Shadows →teal #1A3A3A. Midtones →amber #C8640A. High contrast, blacks at 5 IRE. Product color +20% saturation. 35mm Vision3 200T pushed +1 grain 15% luminance.
+
+NO: dry unwet skin at athletic context, static camera on any shot over 2s, actor looking at camera except specified product beat, over-saturated grade destroying skin tones, helmet without slot shadow bars, any soft or gentle aesthetic (this is performance sport), brand name as literal "rock" or geological feature.`;
+  }
+
+  // Generic
+  return `Arri Alexa Mini LF, 85mm T1.4, 24fps, 9:16 vertical, ${dur}s TikTok ad. PRODUCT: ${productRef} — consumer product by ${input.brandName}, NOT an animal, NOT a creature, NOT a literal brand name interpretation. Lighting: 200cm octabox key 5600K 3:1, warm 4800K fill, 3200K rim, product dedicated strip LED. Skin: subsurface scattering pinkish-amber luminance at nasal bridge, pore shadow at T-zone, vellus hair at jaw in lateral fill, natural sebum sheen. Environment: ${input.selectedEnvironment || "modern domestic interior"}, carpet/floor with pile self-shadowing. Shot: 0-${hook}s hook/problem, ${hook}s-${demo}s product demonstration at 120fps insert, ${demo}s-${dur}s resolution. Actor NOT looking at camera. NO: plastic skin, AI smoothed complexion, temporal flickering, hand morphing, text overlays, watermarks, wildlife.`;
+}
