@@ -20,8 +20,10 @@ export function LofiFrame({
 }: LofiFrameProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [autoTriggered, setAutoTriggered] = useState(false);
 
+  // NO auto-generation on mount — only fires when user explicitly clicks.
+  // Auto-generation on page load burns fal.ai/Pollinations tokens for every
+  // frame rendered, even when the user has no intent to generate.
   async function generateImage() {
     setLoading(true);
     try {
@@ -41,12 +43,6 @@ export function LofiFrame({
     } finally {
       setLoading(false);
     }
-  }
-
-  // Auto-generate on first render
-  if (!autoTriggered && !imageUrl && !loading) {
-    setAutoTriggered(true);
-    generateImage();
   }
 
   return (

@@ -413,7 +413,9 @@ export default function VideoStudioPage() {
 
   useEffect(() => { loadJobs(); }, [loadJobs]);
 
-  // ── Poll active jobs ──
+  // ── Poll active jobs — ONLY when jobs are actively rendering ──
+  // Uses 15s interval (not 4s) to reduce unnecessary DB + fal.ai calls.
+  // Polling stops immediately when no active jobs remain.
   const pollJobs = useCallback(async () => {
     const active = jobs.filter(j => j.status === "queued" || j.status === "processing");
     if (active.length === 0) return;
@@ -432,8 +434,9 @@ export default function VideoStudioPage() {
 
   useEffect(() => {
     const hasActive = jobs.some(j => j.status === "queued" || j.status === "processing");
-    if (!hasActive) return;
-    pollRef.current = setTimeout(pollJobs, 4000);
+    if (!hasActive) return; // stop polling immediately when nothing is rendering
+    // 15s interval instead of 4s — reduces unnecessary API calls by 75%
+    pollRef.current = setTimeout(pollJobs, 15000);
     return () => { if (pollRef.current) clearTimeout(pollRef.current); };
   }, [jobs, pollJobs]);
 
