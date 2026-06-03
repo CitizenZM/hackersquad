@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
-import { LofiFrame } from "@/components/creative/lofi-frame";
+import { StoryboardFrameCard, type StoryboardFrameData } from "@/components/creative/storyboard-frame-card";
 
 interface Angle {
   id: number;
@@ -50,16 +50,8 @@ interface Script {
   predictedScore: number;
 }
 
-interface StoryboardFrame {
-  frameNumber: number;
-  duration: string;
-  scene: string;
-  visualDirection: string;
-  voiceover: string;
-  textOverlay: string;
-  cameraNotes: string;
-  imagePrompt: string;
-}
+// StoryboardFrame is now StoryboardFrameData from the component
+type StoryboardFrame = StoryboardFrameData;
 
 interface Storyboard {
   id: string;
@@ -506,60 +498,105 @@ export default function CreativePage() {
 
       {/* STEP 3: Storyboards */}
       {storyboards.length > 0 && (
-        <section className="space-y-3 pt-4 border-t border-border">
+        <section className="space-y-4 pt-4 border-t border-border">
           <div className="flex items-start justify-between gap-4 flex-wrap">
-            <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-              <Layout className="h-4 w-4" /> 3. Storyboards ({storyboards.length})
-            </h3>
-            <Button
-              onClick={goToStudio}
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-md text-xs"
-              disabled={selectedScriptIds.size === 0}
-            >
-              <Palette className="mr-1.5 h-3 w-3" />
-              Open in Studio
-            </Button>
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                <Layout className="h-4 w-4" /> 3. Storyboards ({storyboards.length})
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Frames auto-generate when you enter this page. Approve each frame or add feedback before proceeding.
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                onClick={goToStudio}
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-md text-xs"
+                disabled={selectedScriptIds.size === 0}
+              >
+                <Palette className="mr-1.5 h-3 w-3" />
+                Open in Studio
+              </Button>
+            </div>
           </div>
 
           {storyboards.map((storyboard) => {
             const linkedScript = scripts.find((s) => s.id === storyboard.scriptId);
+            const approvedCount = storyboard.frames.filter(f => f.approved === true).length;
+            const pendingCount = storyboard.frames.filter(f => f.approved === null || f.approved === undefined).length;
+            const revisedCount = storyboard.frames.filter(f => f.approved === false).length;
+
             return (
-              <div key={storyboard.id} className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
+              <div key={storyboard.id} className="space-y-4 rounded-xl border border-border bg-card/50 p-4">
+                {/* Storyboard header */}
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium">{storyboard.title}</p>
+                    <p className="text-sm font-semibold">{storyboard.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {linkedScript && <>From: <span className="font-medium">{linkedScript.title}</span> · </>}
+                      {linkedScript && <><span className="font-medium">{linkedScript.title}</span> · </>}
                       {storyboard.style} · {storyboard.totalDuration} · {storyboard.frames.length} frames
                     </p>
                   </div>
+                  {/* Approval progress */}
+                  <div className="flex items-center gap-2 text-[10px] shrink-0">
+                    {approvedCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
+                        ✓ {approvedCount}
+                      </span>
+                    )}
+                    {revisedCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">
+                        ✗ {revisedCount}
+                      </span>
+                    )}
+                    {pendingCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold">
+                        ? {pendingCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {storyboard.frames.map((frame) => (
-                    <div key={frame.frameNumber} className="rounded-lg border border-border bg-card overflow-hidden">
-                      <LofiFrame
-                        scene={frame.scene}
-                        imagePrompt={frame.imagePrompt}
-                        frameNumber={frame.frameNumber}
-                        duration={frame.duration}
-                        projectId={projectId}
-                      />
-                      <div className="p-3 space-y-1.5">
-                        <p className="text-sm font-medium leading-snug">{frame.scene}</p>
-                        {frame.voiceover && (
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">VO:</span> {frame.voiceover}
-                          </p>
-                        )}
-                        {frame.cameraNotes && (
-                          <p className="text-[11px] text-muted-foreground italic">{frame.cameraNotes}</p>
-                        )}
-                      </div>
-                    </div>
+
+                {/* Frame cards — vertical flow with transitions between them */}
+                <div className="space-y-0">
+                  {storyboard.frames.map((frame, idx) => (
+                    <StoryboardFrameCard
+                      key={frame.frameNumber}
+                      frame={frame}
+                      storyboardId={storyboard.id}
+                      projectId={projectId}
+                      autoLoad={true}
+                      isLast={idx === storyboard.frames.length - 1}
+                      onUpdate={(frameNumber, updates) => {
+                        setStoryboards(prev => prev.map(sb => {
+                          if (sb.id !== storyboard.id) return sb;
+                          return {
+                            ...sb,
+                            frames: sb.frames.map(f =>
+                              f.frameNumber === frameNumber ? { ...f, ...updates } : f
+                            ),
+                          };
+                        }));
+                      }}
+                    />
                   ))}
                 </div>
+
+                {/* Completion gate */}
+                {approvedCount === storyboard.frames.length && storyboard.frames.length > 0 && (
+                  <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800">All frames approved ✓</p>
+                      <p className="text-xs text-emerald-700">Ready to send to Studio for video generation</p>
+                    </div>
+                    <Button onClick={goToStudio} size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 gap-1.5">
+                      <Palette className="h-3 w-3" />
+                      Open in Studio
+                    </Button>
+                  </div>
+                )}
               </div>
             );
           })}

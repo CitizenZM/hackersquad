@@ -48,12 +48,16 @@ export async function POST(
       try {
         const hooks = script.hookVariants as string[];
         const ctas = script.ctaVariants as string[];
+        const campaignSel = await prisma.campaignSelection.findUnique({ where: { projectId } }).catch(() => null);
         const prompt = buildStoryboardPrompt({
           brandName: project.brandName,
+          productName: project.productPageTitle || project.productName || undefined,
           scriptTitle: script.title,
           scriptBody: script.body,
           hook: hooks[0] || "",
           cta: ctas[0] || "",
+          platform: (campaignSel?.platform as string | null) || "TikTok",
+          totalDurationSec: (campaignSel?.totalDurationSec as number | null) || 30,
         });
 
         const result = await analyzeWithClaude({
