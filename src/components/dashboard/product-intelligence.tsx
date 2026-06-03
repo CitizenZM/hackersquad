@@ -205,11 +205,14 @@ export function ProductIntelligence({ projectId }: { projectId: string }) {
     </div>
   );
 
-  // Split images by section
+  // Split images by section — no AI product images (they are inaccurate for specific branded products)
   const allImages = data.productImages || [];
-  const websiteImages = allImages.filter(i => i.source === "brand-website" || i.type === "website");
-  const aiProductImages = allImages.filter(i => i.source === "ai-generated" && i.type !== "ai-environment" && i.type !== "environment");
+  const realProductImages = allImages.filter(i => i.source === "brand-website" || i.type === "website");
   const environmentImages = allImages.filter(i => i.type === "ai-environment" || i.type === "environment");
+  const hasRealProductImages = realProductImages.length > 0;
+  // Keep websiteImages alias for summary display
+  const websiteImages = realProductImages;
+  const aiProductImages: ProductImage[] = []; // Never show AI product images — they are always wrong for specific products
 
   const tabs = [
     { id: "product" as const, label: "Product", icon: Package },
@@ -237,7 +240,9 @@ export function ProductIntelligence({ projectId }: { projectId: string }) {
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {data.productCategory || "Category not identified"}
-              {allImages.length > 0 && ` · ${allImages.length} images (${websiteImages.length} from website, ${aiProductImages.length} AI product, ${environmentImages.length} scenes)`}
+              {hasRealProductImages
+                ? ` · ${realProductImages.length} real product images · ${environmentImages.length} environment scenes`
+                : " · No product images yet — upload photos below"}
             </p>
           </div>
         </div>
@@ -268,23 +273,51 @@ export function ProductIntelligence({ projectId }: { projectId: string }) {
 
       {/* Generation summary */}
       {genSummary && (
-        <div className="rounded-lg bg-muted border border-border px-3 py-2 flex items-center gap-4 text-[10px] text-muted-foreground flex-wrap">
-          <span className="font-semibold text-foreground">Images generated:</span>
-          <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-blue-500" /> {genSummary.website} from brand website</span>
-          <span className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-purple-500" /> {genSummary.aiProduct} AI product shots</span>
+        <div className={cn(
+          "rounded-lg border px-3 py-2 flex items-center gap-4 text-[10px] flex-wrap",
+          (genSummary as { noProductImages?: boolean }).noProductImages
+            ? "bg-amber-50 border-amber-200 text-amber-800"
+            : "bg-muted border-border text-muted-foreground"
+        )}>
+          {(genSummary as { noProductImages?: boolean }).noProductImages ? (
+            <span className="font-semibold flex items-center gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {(genSummary as { message?: string }).message || "No product images found. Upload photos in Product Definition above."}
+            </span>
+          ) : (
+            <>
+              <span className="font-semibold text-foreground">Real images fetched:</span>
+              <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-blue-500" /> {(genSummary as { fromProductPage?: number }).fromProductPage || 0} from product page</span>
+              <span className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-blue-600" /> {(genSummary as { userUploaded?: number }).userUploaded || 0} user uploaded</span>
+            </>
+          )}
           <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-500" /> {genSummary.environment} environment scenes</span>
         </div>
       )}
 
-      {/* Warning if no images yet */}
-      {allImages.length === 0 && !generating && (
-        <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/50 p-5 text-center">
-          <Package className="h-8 w-8 mx-auto mb-2 text-amber-400" />
-          <p className="text-sm font-medium text-amber-800">No images yet — click &quot;Generate Images&quot;</p>
-          <p className="text-xs text-amber-700 mt-1">
-            Will retrieve up to 4 images from the brand website + generate 4 AI product shots + environment scenes.
-            <br />Review all images to confirm the AI understands the correct product (not a shark!)
-          </p>
+      {/* Warning if no real product images */}
+      {!hasRealProductImages && !generating && (
+        <div className="rounded-xl border-2 border-dashed border-red-300 bg-red-50/60 p-5 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-800">No real product images — AI cannot verify the correct product</p>
+              <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                AI-generated product images are <strong>unreliable for specific branded products</strong> — they generate generic shapes or wrong objects (e.g. a shark animal instead of a Shark vacuum).
+                The only reliable solution is to provide real photos directly.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-lg bg-white border border-red-200 p-3 space-y-2">
+            <p className="text-xs font-semibold text-red-800">To fix this — choose one option:</p>
+            <ol className="text-xs text-red-700 space-y-1.5 list-decimal list-inside">
+              <li><strong>Upload product photos</strong> — go to &quot;Product Definition&quot; section above → click &quot;Upload Photos&quot; → upload 2-4 real product photos from different angles</li>
+              <li><strong>Paste a specific product page URL</strong> — in &quot;Product Definition&quot;, paste the exact Amazon listing or DTC product page (not the homepage), then click &quot;Fetch Product Data&quot;</li>
+            </ol>
+            <p className="text-[10px] text-red-600 italic">
+              Once you provide real images, click &quot;Generate Images&quot; here to fetch environment scenes based on the actual product.
+            </p>
+          </div>
         </div>
       )}
 
@@ -316,22 +349,15 @@ export function ProductIntelligence({ projectId }: { projectId: string }) {
             <p className="text-sm leading-relaxed">{data.productDescription || "No description generated yet."}</p>
           </div>
 
-          {/* Brand website images */}
+          {/* Real product images — from product page or user uploads */}
           <ImageGrid
-            images={websiteImages}
-            title={`From Brand Website (${websiteImages.length})`}
-            emptyMessage="No website images retrieved. Brand website may block scraping."
+            images={realProductImages}
+            title={`Real Product Images (${realProductImages.length}) — from product page or uploads`}
+            emptyMessage="No real product images yet. Upload photos in Product Definition above, or paste a specific product page URL."
           />
 
-          {/* AI product images — full + detail */}
-          <ImageGrid
-            images={aiProductImages}
-            title={`AI-Generated Product Verification (${aiProductImages.length})`}
-            emptyMessage="No AI images yet. Click Generate Images."
-          />
-
-          {/* Review instruction */}
-          {allImages.length > 0 && !data.productVerified && (
+          {/* Review instruction — only shown when real images exist */}
+          {hasRealProductImages && !data.productVerified && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="text-xs text-amber-800 space-y-1">

@@ -186,6 +186,33 @@ export async function GET(
   });
 }
 
+/**
+ * Proxy an image URL through our server, returning a base64 data URI.
+ * Needed because many CDNs (SharkNinja, etc.) block direct browser requests.
+ */
+async function proxyImageToDataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/webp,image/avif,image/*,*/*",
+        Referer: new URL(url).origin,
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "image/jpeg";
+    // Only proxy actual images
+    if (!ct.startsWith("image/")) return null;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength < 1000) return null; // skip tiny images (tracking pixels etc.)
+    const b64 = Buffer.from(buf).toString("base64");
+    return `data:${ct};base64,${b64}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ projectId: string }> }
@@ -202,14 +229,11 @@ export async function POST(
   }
 
   const productDesc = brand.productDescription || `${brand.name} home appliance product`;
-  const productCategory = brand.productCategory || "home appliance";
   const brandUrl = brand.url || project.brandUrl || "";
-  const brandName = project.brandName;
 
-  // Primary source: real images scraped from user-specified product page URL
-  // These are the ground truth — use them directly instead of generating AI images
-  // that may not match the actual product appearance.
+  // Real images scraped from user-specified product page URL (source of truth)
   const productPageImages = (project.productPageImages as Array<{ url: string; alt: string }> | null) || [];
+  // User-uploaded images (highest trust)
   const userProductImages = (project.userProductImages as Array<{ url: string; caption: string }> | null) || [];
 
   const environments = (brand.useEnvironments as Array<{
@@ -218,96 +242,75 @@ export async function POST(
 
   const allImages: ProductImageRecord[] = [];
 
-  // ── Step 1a: Product page images (PRIMARY — user-specified, exact product) ──
-  if (productPageImages.length > 0) {
-    for (const img of productPageImages.slice(0, 4)) {
-      allImages.push({
-        url: img.url,
+  // ── Step 1: User-uploaded images (highest trust — user provided these) ──
+  for (const img of userProductImages.slice(0, 4)) {
+    allImages.push({
+      url: img.url, // Already a data URI from client upload
+      caption: img.caption || "User uploaded product image",
+      type: "website",
+      source: "brand-website",
+      verified: true, // User explicitly provided these
+    });
+  }
+
+  // ── Step 2: Proxy and serve real product page images ──
+  // These come from the scraped product URL — they are the actual product.
+  // We proxy them to data URIs to bypass CDN restrictions.
+  const productImageResults = await Promise.all(
+    productPageImages.slice(0, 4).map(async (img) => {
+      // Skip API-style URLs that return JSON (e.g. SharkNinja's /image/list/fn_select:jq:...)
+      if (img.url.includes("fn_select") || img.url.includes(".json")) return null;
+
+      const dataUri = await proxyImageToDataUri(img.url);
+      if (!dataUri) return null;
+      return {
+        url: dataUri,
         caption: img.alt || "Product image from product page",
-        type: "website",
-        source: "brand-website",
+        type: "website" as const,
+        source: "brand-website" as const,
         verified: false,
-      });
-    }
-  }
-
-  // ── Step 1b: User-uploaded images (also primary truth) ──
-  if (userProductImages.length > 0) {
-    for (const img of userProductImages.slice(0, 4)) {
-      allImages.push({
-        url: img.url,
-        caption: img.caption || "User uploaded product image",
-        type: "website",
-        source: "brand-website",
-        verified: false,
-      });
-    }
-  }
-
-  // ── Step 1c: Fallback — scrape brand website if no product URL images ──
-  if (allImages.length < 2 && brandUrl) {
-    const websiteImages = await scrapeWebsiteImages(brandUrl, productDesc);
-    allImages.push(...websiteImages.slice(0, 4 - allImages.length));
-  }
-
-  // ── Step 2: AI-generated product verification images ──
-  // Use specific product title if available, otherwise fall back to description
-  // IMPORTANT: Never use the brand name alone — always use the full product description
-  // to prevent AI image generators from producing animals (e.g. "Shark" → shark fish)
-  const safeProductRef = (project.productPageTitle && project.productPageTitle.length > 5)
-    ? project.productPageTitle  // e.g. "Shark PowerDetect™ Cordless Vacuum"
-    : productDesc.slice(0, 150); // fallback to description
-
-  const antiAnimalTerms = "not an animal, not a shark fish, not ocean creature, no wildlife, no sea life";
-
-  // 2a. Full product shot (white background, studio, all sides visible)
-  const fullShotPrompt = `${safeProductRef} — a home cleaning appliance/vacuum cleaner. Professional product photography, pure white background, studio three-point lighting, product centered in frame. ${antiAnimalTerms}. No humans, no text, photorealistic commercial product shot.`;
-
-  // 2b. Detail/close-up shot — key mechanical/functional features
-  const detailShotPrompt = `Close-up detail shot of ${safeProductRef} vacuum cleaner features — brush head, suction nozzle, dust canister, controls. Macro studio photography, white background, sharp mechanical details. ${antiAnimalTerms}. No humans.`;
-
-  // 2c. Full product at 3/4 angle
-  const quarterAnglePrompt = `${safeProductRef} vacuum cleaner at 3/4 angle. Light grey seamless background, dramatic side lighting showing product depth. ${antiAnimalTerms}. Photorealistic commercial photography, no humans.`;
-
-  // 2d. Product in realistic home/use setting — product only
-  const inUseAnglePrompt = `${safeProductRef} vacuum cleaner positioned on hardwood floor in modern living room, ready for use. Natural morning light, product prominently visible. ${antiAnimalTerms}. No humans, photorealistic.`;
-
-  const aiPrompts = [
-    { prompt: fullShotPrompt, caption: "Full Product — Studio White", type: "ai-full" as const, w: 1024, h: 1024 },
-    { prompt: detailShotPrompt, caption: "Close-up Detail — Key Features", type: "ai-detail" as const, w: 1024, h: 1024 },
-    { prompt: quarterAnglePrompt, caption: "3/4 Angle — Product Form", type: "ai-full" as const, w: 1024, h: 768 },
-    { prompt: inUseAnglePrompt, caption: "Product Position — Home Setting", type: "ai-detail" as const, w: 768, h: 1024 },
-  ];
-
-  // Generate all AI product images in parallel
-  const aiResults = await Promise.all(
-    aiPrompts.map(async ({ prompt, caption, type, w, h }, i) => {
-      const url = await generateAIImage(prompt, w, h, 100 + i * 37);
-      if (!url) return null;
-      return { url, caption, type, source: "ai-generated" as const, verified: false };
+      };
     })
   );
-  allImages.push(...(aiResults.filter(r => r !== null) as ProductImageRecord[]));
+  allImages.push(...(productImageResults.filter(r => r !== null) as ProductImageRecord[]));
 
-  // ── Step 3: Environment scenes (aligned with Insights useEnvironments) ──
+  // ── Step 3: Fallback — scrape brand website for direct image URLs ──
+  if (allImages.length < 2 && brandUrl) {
+    const websiteImages = await scrapeWebsiteImages(brandUrl, productDesc);
+    // Also proxy these to avoid CDN blocking
+    const proxied = await Promise.all(
+      websiteImages.slice(0, 4 - allImages.length).map(async (img) => {
+        if (img.url.includes("fn_select") || img.url.includes(".json")) return null;
+        const dataUri = await proxyImageToDataUri(img.url);
+        if (!dataUri) return img; // return original URL as fallback
+        return { ...img, url: dataUri };
+      })
+    );
+    allImages.push(...(proxied.filter(r => r !== null) as ProductImageRecord[]));
+  }
+
+  // ── Step 4: Environment scenes — AI generation is OK here ──
+  // We generate environment scenes (not the product itself) using AI.
+  // These describe the SETTING, not the product — no risk of wrong product appearance.
   const envList = environments.length > 0 ? environments.slice(0, 3) : [
     {
       name: "Living Room with Pet Fur",
-      imagePrompt: `${brandName} ${productCategory} positioned on plush carpet in a modern living room, golden retriever fur visible on carpet, natural afternoon light through large windows, product ready for use, photorealistic, no humans`,
+      imagePrompt: "Modern open-plan living room, plush cream carpet with visible golden retriever fur, large floor-to-ceiling windows letting in afternoon light, Scandinavian minimalist decor, no humans, no product, photorealistic interior photography",
     },
     {
       name: "Kitchen Hardwood Floor",
-      imagePrompt: `${brandName} ${productCategory} in an open-plan kitchen with light oak hardwood floor, morning light, debris visible, product leaning against kitchen island, photorealistic, no humans`,
+      imagePrompt: "Modern kitchen with light oak hardwood floor, small debris and crumbs visible near island, morning light from east-facing window, clean contemporary design, no humans, no product, photorealistic",
     },
     {
       name: "Bedroom Carpet",
-      imagePrompt: `${brandName} ${productCategory} in a bright bedroom with plush grey carpet, large windows with sheer curtains, product in use position, cinematic natural light, photorealistic, no humans`,
+      imagePrompt: "Bright airy bedroom with plush charcoal grey carpet, large windows with sheer curtains letting in natural light, minimal modern decor, no humans, no product, photorealistic interior",
     },
   ];
 
   const envResults = await Promise.all(
     envList.map(async (env) => {
-      const envPrompt = `${env.imagePrompt || env.name}. Realistic home environment photography, cinematic composition, natural lighting, photorealistic, no human figures, product clearly visible and correctly depicted, commercial photography quality`;
+      // Environment prompts describe the ROOM only — no mention of brand, product, or animals
+      const envPrompt = `${env.imagePrompt}. Shot on ARRI ALEXA, 35mm lens, cinematic composition, realistic lighting, commercial interior photography quality.`;
       const url = await generateAIImage(envPrompt, 1024, 768, Math.floor(Math.random() * 999));
       if (!url) return null;
       return {
@@ -327,11 +330,17 @@ export async function POST(
     data: { productImages: allImages as never },
   });
 
+  const noProductImages = allImages.filter(i => i.type !== "ai-environment").length === 0;
+
   const summary = {
     total: allImages.length,
-    website: allImages.filter(i => i.source === "brand-website").length,
-    aiProduct: allImages.filter(i => i.source === "ai-generated" && i.type !== "ai-environment").length,
+    userUploaded: allImages.filter(i => i.verified).length,
+    fromProductPage: allImages.filter(i => i.source === "brand-website" && !i.verified).length,
     environment: allImages.filter(i => i.type === "ai-environment").length,
+    noProductImages,
+    message: noProductImages
+      ? "No product images found. Please upload product photos directly using the upload button, or provide a specific product page URL (e.g. Amazon listing or DTC product page)."
+      : undefined,
   };
 
   return NextResponse.json({ productImages: allImages, summary });
