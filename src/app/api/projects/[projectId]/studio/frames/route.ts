@@ -1,18 +1,49 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import OpenAI from "openai";
 
 export const maxDuration = 30;
 
 /**
- * Generate a storyboard frame image via fal.ai Flux Schnell.
- * Fast (~3s), returns a CDN URL, no base64 encoding needed.
- * Falls back to Pollinations if FAL_KEY is not set.
+ * Image generation priority:
+ * 1. OpenAI gpt-image-1 (GPT Image 2 in the API) — highest quality, uses subscription plan
+ * 2. fal.ai flux/schnell — fast fallback if OPENAI_API_KEY not set/invalid
+ * 3. Pollinations — last resort, rate-limited
  */
 async function generateFrameImage(prompt: string, aspectRatio: "landscape_16_9" | "square" = "landscape_16_9"): Promise<string> {
+  const openaiKey = process.env.OPENAI_API_KEY;
   const falKey = process.env.FAL_KEY;
 
+  // ── Option 1: OpenAI GPT Image (gpt-image-1 = GPT Image 2 in the API) ──
+  if (openaiKey) {
+    try {
+      const openai = new OpenAI({ apiKey: openaiKey });
+      const size = aspectRatio === "landscape_16_9" ? "1536x1024" : "1024x1024";
+
+      const response = await openai.images.generate({
+        model: "gpt-image-1",   // GPT Image 2 — latest model
+        prompt,
+        n: 1,
+        size: size as "1024x1024" | "1536x1024",
+        quality: "medium",      // "low" | "medium" | "high" — medium balances cost/quality
+      });
+
+      const b64 = response.data?.[0]?.b64_json;
+      if (b64) return `data:image/png;base64,${b64}`;
+
+      const url = response.data?.[0]?.url;
+      if (url) return url;
+
+      throw new Error("OpenAI returned no image data");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("OpenAI image generation failed, falling back to fal.ai:", msg);
+      // Fall through to fal.ai
+    }
+  }
+
+  // ── Option 2: fal.ai Flux Schnell ──
   if (falKey) {
-    // fal.ai flux/schnell — fast, high quality, ~$0.003/image
     const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
       method: "POST",
       headers: {
@@ -40,15 +71,15 @@ async function generateFrameImage(prompt: string, aspectRatio: "landscape_16_9" 
     return url;
   }
 
-  // Fallback: Pollinations (no key needed but rate-limited)
+  // ── Option 3: Pollinations (last resort) ──
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
   const width = aspectRatio === "landscape_16_9" ? 1024 : 512;
   const height = aspectRatio === "landscape_16_9" ? 576 : 512;
   const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux&nofeed=true`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
-  if (!res.ok) throw new Error(`Pollinations error: ${res.status}`);
-  return url; // return URL directly (browser fetches lazily)
+  const pollRes = await fetch(url, { signal: AbortSignal.timeout(25000) });
+  if (!pollRes.ok) throw new Error(`Pollinations error: ${pollRes.status}`);
+  return url;
 }
 
 export async function POST(

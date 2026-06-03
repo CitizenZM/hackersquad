@@ -1,13 +1,21 @@
 import OpenAI from "openai";
 import { z, ZodSchema } from "zod";
 
-// Route: OpenRouter (free tier) → OpenAI fallback
-// Set OPENROUTER_API_KEY to use free models via OpenRouter.
-// Set AI_MODEL to override the model (default: openrouter/free auto-router).
-// Falls back to OPENAI_API_KEY + gpt-4o-mini if OpenRouter key is absent.
+// Route priority: OpenAI (subscription plan) → OpenRouter (free fallback)
+// OPENAI_API_KEY set → use directly, full GPT-4o + GPT Image 2 access
+// Only falls back to OpenRouter if OPENAI_API_KEY is absent
 let _client: OpenAI | null = null;
 function getClient(): OpenAI {
   if (_client) return _client;
+
+  // Priority 1: Direct OpenAI — uses your subscription plan
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    _client = new OpenAI({ apiKey: openaiKey });
+    return _client;
+  }
+
+  // Priority 2: OpenRouter free tier — fallback when no OpenAI key
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (openrouterKey) {
     _client = new OpenAI({
@@ -20,18 +28,18 @@ function getClient(): OpenAI {
     });
     return _client;
   }
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Neither OPENROUTER_API_KEY nor OPENAI_API_KEY is set");
-  }
-  _client = new OpenAI({ apiKey });
-  return _client;
+
+  throw new Error("No AI key configured — set OPENAI_API_KEY or OPENROUTER_API_KEY");
 }
 
 function getModel(): string {
+  // Explicit override always wins
   if (process.env.AI_MODEL) return process.env.AI_MODEL;
+  // OpenAI key present → use GPT-4o (subscription plan)
+  if (process.env.OPENAI_API_KEY) return "gpt-4o";
+  // Fallback to OpenRouter free
   if (process.env.OPENROUTER_API_KEY) return "openrouter/free";
-  return "gpt-4o-mini";
+  return "gpt-4o";
 }
 
 const MODEL = getModel();
@@ -53,8 +61,8 @@ export async function analyzeWithClaude<T>(options: {
     ? systemPrompt
     : systemPrompt + "\n\nRespond with valid JSON only.";
 
-  // json_object response_format is OpenAI-specific; OpenRouter free models ignore it
-  const useJsonFormat = !process.env.OPENROUTER_API_KEY;
+  // json_object response_format: supported by OpenAI, not by OpenRouter free models
+  const useJsonFormat = !!process.env.OPENAI_API_KEY;
   const response = await getClient().chat.completions.create({
     model: MODEL,
     max_tokens: maxTokens,
