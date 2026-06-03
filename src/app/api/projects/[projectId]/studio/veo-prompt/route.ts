@@ -127,7 +127,7 @@ export async function POST(
 CRITICAL PHILOSOPHY — read before writing anything:
 - NEVER use the word "realistic" or "real". Instead describe HOW the footage was shot: "Shot on ARRI ALEXA Mini LF, 75mm Cooke S7, T2.0" forces the model into a photographic latent space.
 - Actors NEVER look at camera. They look at objects, windows, each other, their hands — anything except the lens. Describe their eyeline explicitly every time.
-- Eliminate all "AI tells": plastic skin (use subsurface scattering), floaty movement (describe specific footfalls/weight shifts), uniform lighting (name exact practical light sources with Kelvin temperatures).
+- Eliminate all "AI tells": plastic skin (use translucent skin rendering — describe warm luminance quality and how light passes through thin skin areas), floaty movement (describe specific footfalls/weight shifts), uniform lighting (name exact practical light sources with Kelvin temperatures).
 - Every surface must have a specific material with two precise descriptors: "anodized matte aluminum" not "shiny metal". "22-momme mulberry silk" not "silky fabric".
 - Prompts must be 400–600 words each. Brevity kills quality. The model needs density to activate photographic rather than illustrative rendering.
 
@@ -140,7 +140,7 @@ CRITICAL PHILOSOPHY — read before writing anything:
    Example: "Medium close-up executing a slow imperceptible dolly push-in over 7 seconds — camera advances approximately 18cm, ending at tight close-up on subject's cheekbone. Movement begins at frame 1, never stops, viewer should feel pulled rather than see movement."
 
 3. SUBJECT ANATOMY: Age range + ethnicity + specific facial structure + skin quality (use SSS terms) + hair (fiber weight, length, movement)
-   Example: "Woman, late 30s, South Asian descent, oval face with high cheekbones, warm medium-brown complexion with visible subsurface scattering — soft pinkish-amber inner luminance at ear rim and nasal bridge. Fine vellus hair on upper lip glowing in sidelight. Crow's feet at eye corners when expression changes. Dark chestnut hair, thick, pulled loosely back, a few strands escaping at temple."
+   Example: "Woman, late 30s, South Asian descent, oval face with high cheekbones, warm medium-brown complexion with translucent skin quality in light — warm amber luminance at ear rim where thin skin catches the key source. Fine skin texture on upper lip glowing in sidelight. Natural expression lines at eye corners when her expression shifts. Dark chestnut hair, thick, pulled loosely back, a few strands escaping at temple."
 
 4. WARDROBE MATERIAL: Specific garment + fiber content + weight + fit + surface behavior in light
    Example: "Oversized ribbed merino wool crewneck, ecru, approximately 12-gauge knit, soft fuzzy nap catching key light as a directional sheen. Fabric falls from shoulders with natural gravity, no stiffness. A small pull in the knit visible near left cuff."
@@ -173,7 +173,7 @@ CRITICAL PHILOSOPHY — read before writing anything:
     Example: "0s: shot begins mid-motion (in media res, not from static). 4s: camera movement reaches closest point, then holds for 2 seconds. 6s: slight rack focus shift pulls attention from product to face. 8s: shot ends — cut will transition on motion to next shot for visual continuity."
 
 14. NEGATIVE TECHNICAL: Explicit list of what must NOT appear
-    Example: "NO text overlays. NO visible brand logos except product itself. NO distorted facial anatomy. NO extra fingers or hand morphing. NO inconsistent lighting direction between frames. NO plastic or poreless skin — subsurface scattering must be present. NO floating or weightless movement — every action has gravity and friction. NO actor eye contact with camera lens. NO artificial smile held for camera."
+    Example: "NO text overlays. NO visible brand logos except product itself. NO distorted facial anatomy. NO extra fingers or hand morphing. NO inconsistent lighting direction between frames. NO plastic or poreless skin — skin must show natural translucency and warmth in light. NO floating or weightless movement — every action has gravity and friction. NO actor eye contact with camera lens. NO artificial smile held for camera."
 
 ## SHOT STRUCTURE RULES:
 - Shot 1: Wide-to-medium establishing with environment, subject not yet aware of product. Camera movement: lateral track or low-angle reveal. Actor behavior: natural domestic/professional activity, completely unaware of camera.
@@ -266,7 +266,7 @@ Format: vertical 9:16, 720p minimum, 24fps.`;
       systemPrompt: system,
       userPrompt: user,
       responseSchema: veoResultSchema,
-      maxTokens: 6000,
+      maxTokens: shotCount <= 1 ? 2500 : shotCount <= 2 ? 3500 : 4500,
     });
 
     // Restructure into nested format for the UI
