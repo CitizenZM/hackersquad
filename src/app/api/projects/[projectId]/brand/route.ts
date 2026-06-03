@@ -8,13 +8,21 @@ export async function PATCH(
   const { projectId } = await params;
   const body = await request.json();
 
-  const allowedFields = [
+  const scalarFields = [
     "brandPromise", "valueProposition", "toneOfVoice",
-    "targetAudience", "pricingTheme",
+    "targetAudience", "pricingTheme", "productCategory", "productDescription",
   ];
 
-  const updates: Record<string, string> = {};
-  for (const field of allowedFields) {
+  const jsonFields = [
+    "useEnvironments", "actorSettings", "displayGuidelines",
+    "productFeatures", "ctaLanguage", "socialProof",
+  ];
+
+  const updates: Record<string, unknown> = {};
+  for (const field of scalarFields) {
+    if (field in body) updates[field] = body[field];
+  }
+  for (const field of jsonFields) {
     if (field in body) updates[field] = body[field];
   }
 
