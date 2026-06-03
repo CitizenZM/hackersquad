@@ -1,22 +1,54 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import OpenAI from "openai";
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
-// Free image generation via Pollinations.ai — fetches the image server-side
-// and returns a data URI so the browser doesn't need to hit Pollinations directly.
-async function generateImageFree(prompt: string): Promise<string> {
+/**
+ * Generate a storyboard frame image via fal.ai Flux Schnell.
+ * Fast (~3s), returns a CDN URL, no base64 encoding needed.
+ * Falls back to Pollinations if FAL_KEY is not set.
+ */
+async function generateFrameImage(prompt: string, aspectRatio: "landscape_16_9" | "square" = "landscape_16_9"): Promise<string> {
+  const falKey = process.env.FAL_KEY;
+
+  if (falKey) {
+    // fal.ai flux/schnell — fast, high quality, ~$0.003/image
+    const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${falKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt,
+        image_size: aspectRatio,
+        num_inference_steps: 4,
+        num_images: 1,
+        enable_safety_checker: false,
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      throw new Error(`fal.ai flux error ${res.status}: ${err.slice(0, 100)}`);
+    }
+
+    const data = await res.json();
+    const url = data?.images?.[0]?.url;
+    if (!url) throw new Error("fal.ai returned no image URL");
+    return url;
+  }
+
+  // Fallback: Pollinations (no key needed but rate-limited)
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
-  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
-  // GET with a generous timeout — Pollinations generates on first request (~5-15s)
+  const width = aspectRatio === "landscape_16_9" ? 1024 : 512;
+  const height = aspectRatio === "landscape_16_9" ? 576 : 512;
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux&nofeed=true`;
   const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
   if (!res.ok) throw new Error(`Pollinations error: ${res.status}`);
-  const buffer = await res.arrayBuffer();
-  const b64 = Buffer.from(buffer).toString("base64");
-  const mime = res.headers.get("content-type") || "image/jpeg";
-  return `data:${mime};base64,${b64}`;
+  return url; // return URL directly (browser fetches lazily)
 }
 
 export async function POST(
@@ -27,60 +59,33 @@ export async function POST(
   const body = await request.json();
   const { prompt, style, dimensions } = body;
 
-  const isLofi = dimensions === "256x256" || style === "lo-fi storyboard sketch";
+  const isSquare = dimensions === "256x256" || dimensions === "512x512";
+  const aspectRatio = isSquare ? "square" as const : "landscape_16_9" as const;
+
+  const noText = "No text overlays, no typography, no logos, no watermarks. Pure visual scene only.";
+  const fullPrompt = `Cinematic storyboard frame for a video ad: ${prompt}. ${style || "Commercial photography, natural lighting, photorealistic"}. ${noText}`;
 
   try {
     const asset = await prisma.previewAsset.create({
       data: {
         projectId,
-        prompt,
-        style: style || "photorealistic product ad",
-        dimensions: dimensions || "1024x1024",
+        prompt: fullPrompt,
+        style: style || "cinematic",
+        dimensions: dimensions || "landscape_16_9",
         status: "generating",
       },
     });
 
-    const noTextDirective = "Pure visual scene only. No text, no words, no typography, no logos, no signs.";
-    const fullPrompt = isLofi
-      ? `Cinematic storyboard frame for a video ad: ${prompt}. Style: clean commercial illustration, natural colors, advertising concept art. ${noTextDirective}`
-      : `Professional advertising cinematography frame: ${prompt}. Style: ${style || "cinematic, commercial photography, natural lighting, photorealistic, high production value"}. ${noTextDirective}`;
-
     try {
-      let imageUrl: string | null = null;
+      const imageUrl = await generateFrameImage(fullPrompt, aspectRatio);
 
-      // Primary: OpenAI gpt-image-1 (if key is valid)
-      if (process.env.OPENAI_API_KEY) {
-        try {
-          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-          const response = await openai.images.generate({
-            model: "gpt-image-1",
-            prompt: fullPrompt,
-            n: 1,
-            size: isLofi ? "1024x1024" : "1536x1024",
-            quality: isLofi ? "low" : "medium",
-          });
-          const b64 = response.data?.[0]?.b64_json;
-          if (b64) imageUrl = `data:image/png;base64,${b64}`;
-          else imageUrl = response.data?.[0]?.url ?? null;
-        } catch (openaiErr) {
-          console.warn("OpenAI image failed, falling back to Pollinations:", openaiErr instanceof Error ? openaiErr.message : openaiErr);
-        }
-      }
-
-      // Fallback: Pollinations.ai (free, no key required)
-      if (!imageUrl) {
-        imageUrl = await generateImageFree(fullPrompt);
-      }
-
-      if (imageUrl) {
-        await prisma.previewAsset.update({
-          where: { id: asset.id },
-          data: { imageUrl, status: "complete" },
-        });
-        return NextResponse.json({ ...asset, imageUrl, status: "complete" });
-      }
+      await prisma.previewAsset.update({
+        where: { id: asset.id },
+        data: { imageUrl, status: "complete" },
+      });
+      return NextResponse.json({ ...asset, imageUrl, status: "complete" });
     } catch (err) {
-      console.error("Image generation failed:", err);
+      console.error("Frame image generation failed:", err);
       await prisma.previewAsset.update({
         where: { id: asset.id },
         data: { status: "error" },
@@ -91,18 +96,9 @@ export async function POST(
         error: err instanceof Error ? err.message : "Generation failed",
       });
     }
-
-    await prisma.previewAsset.update({
-      where: { id: asset.id },
-      data: { status: "complete" },
-    });
-    return NextResponse.json({ ...asset, status: "complete" });
   } catch (err) {
-    console.error("Frame generation failed:", err);
-    return NextResponse.json(
-      { error: "Failed to generate frame" },
-      { status: 500 }
-    );
+    console.error("Frame DB create failed:", err);
+    return NextResponse.json({ error: "Failed to generate frame" }, { status: 500 });
   }
 }
 
