@@ -559,8 +559,8 @@ export default function CreativePage() {
                   </div>
                 </div>
 
-                {/* Frame cards — vertical flow with transitions between them */}
-                <div className="space-y-0">
+                {/* Frame grid — 3 columns, compact metric-board style */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {storyboard.frames.map((frame, idx) => (
                     <StoryboardFrameCard
                       key={frame.frameNumber}
