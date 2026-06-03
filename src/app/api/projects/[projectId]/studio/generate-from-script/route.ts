@@ -13,7 +13,7 @@
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildDenseCinematicPrompt } from "@/services/ai/prompts/cinematic-prompt-builder";
+import { buildDenseCinematicPrompt, buildWan26Prompt } from "@/services/ai/prompts/cinematic-prompt-builder";
 
 export const maxDuration = 30;
 
@@ -55,8 +55,9 @@ export async function POST(
   const totalSec = (campaignSel?.totalDurationSec as number | null) || 5;
   const platform = (campaignSel?.platform as string | null) || "tiktok";
 
-  // Build the 1000-4000 word cinematic prompt from brand research
-  const prompt = customPrompt || buildDenseCinematicPrompt({
+  // Use model-specific prompt builder — Wan 2.6 needs global style + shot separation
+  const promptBuilder = model === "wan-2.6" ? buildWan26Prompt : buildDenseCinematicPrompt;
+  const prompt = customPrompt || promptBuilder({
     brandName: project.brandName,
     productName,
     productDescription: project.productPageText?.slice(0, 400)

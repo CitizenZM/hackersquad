@@ -366,3 +366,63 @@ NO: dry unwet skin at athletic context, static camera on any shot over 2s, actor
   // Generic
   return `Arri Alexa Mini LF, 85mm T1.4, 24fps, 9:16 vertical, ${dur}s TikTok ad. PRODUCT: ${productRef} — consumer product by ${input.brandName}, NOT an animal, NOT a creature, NOT a literal brand name interpretation. Lighting: 200cm octabox key 5600K 3:1, warm 4800K fill, 3200K rim, product dedicated strip LED. Skin: subsurface scattering pinkish-amber luminance at nasal bridge, pore shadow at T-zone, vellus hair at jaw in lateral fill, natural sebum sheen. Environment: ${input.selectedEnvironment || "modern domestic interior"}, carpet/floor with pile self-shadowing. Shot: 0-${hook}s hook/problem, ${hook}s-${demo}s product demonstration at 120fps insert, ${demo}s-${dur}s resolution. Actor NOT looking at camera. NO: plastic skin, AI smoothed complexion, temporal flickering, hand morphing, text overlays, watermarks, wildlife.`;
 }
+
+// ─── Wan 2.6 optimized prompt (requires global style + shot separation) ────────
+// Research: Wan 2.6 processes global directives + shot execution in two layers.
+// Mixing camera mechanics with emotional direction causes "average" output.
+// Format: [GLOBAL STYLE LINE] \n [SHOT EXECUTION BLOCK]
+
+export function buildWan26Prompt(input: CinematicPromptInput): string {
+  const dur = input.totalDurationSec;
+  const productRef = input.productName;
+  const brandLower = input.brandName.toLowerCase();
+  const productLower = (productRef + " " + (input.productDescription || "")).toLowerCase();
+  const catLower = (input.category || "").toLowerCase();
+
+  const isVacuum = brandLower.includes("shark") || brandLower.includes("ninja") ||
+    productLower.includes("vacuum") || catLower.includes("home") || catLower.includes("appliance");
+  const isBaby = brandLower.includes("baby") || productLower.includes("baby") ||
+    productLower.includes("lotion") || catLower.includes("baby") || catLower.includes("kids");
+  const isCycling = brandLower.includes("rock") || brandLower.includes("bros") ||
+    productLower.includes("helmet") || productLower.includes("cycling") || catLower.includes("sports");
+
+  if (isVacuum) {
+    return `Cinematic high-key lifestyle commercial, warm domestic interior, photorealistic material textures, SharkNinja brand vacuum cleaner appliance (NOT a shark animal — home cleaning product), golden retriever dog on carpet, 9:16 vertical TikTok format, ${dur} seconds.
+[camera tracks low alongside cordless upright vacuum cleaner moving across warm greige carpet; floor-level 3200K raking light illuminates individual golden retriever shed fur strands as amber filaments against carpet pile; camera at 3cm above carpet surface at 15-degree elevation angle; slow Steadicam dolly left to right]
+[golden retriever adult dog lying in mid-ground soft focus; flank breathing visible; shed fur distributed across carpet catching warm side light as individual amber strands; fur clumps at sofa perimeter]
+[female talent 32-36 years with brunette shoulder-length hair operating vacuum from behind; cream merino knit top; dark jeans; NOT looking at camera; focused downward; quiet competence expression]
+[vacuum brushroll macro insert: fur strand liberation from carpet pile at 120fps slow motion; transparent dustbin filling with extracted fur; clean carpet track revealed behind vacuum head]
+[5600K key light camera-left feathered; 4800K warm fill camera-right 3:1 ratio; 3200K tungsten rim above-behind talent; floor raking LED at carpet level creating micro-shadows in pile valleys and fur highlights]
+[warm greige carpet grain #CEC5B5; golden amber fur color #C8960C; product brushed aluminum anisotropic specular; practical floor lamp 2700K ambient background; Kodak Vision3 grain character]
+[negative: flat overhead lighting, uniform carpet texture, CGI dog fur, plastic skin, temporal flickering, shark animal or ocean, animated style]`;
+  }
+
+  if (isBaby) {
+    return `Soft warm lifestyle commercial, organic baby skincare brand, nursery interior, gentle morning window light, nurturing and safe emotional register, 9:16 vertical TikTok format, ${dur} seconds.
+[close-up shot of a glass bottle of ${productRef} organic lotion on white oak wood surface with woven cotton nursery mat; warm 5500K window light from camera-left casting soft shadow; gentle fill from camera-right 4800K; lotion bottle surface: smooth glass with slight caustic refraction at base]
+[woman's hands in frame: warm-toned, clean short nails, oat linen sleeve visible at wrist; slow gentle pump dispensing small ivory-cream lotion bead onto palm; the bead catches single specular highlight from window key]
+[both palms come together in slow circular motion spreading lotion; translucent film visible at spreading edge; warm skin tones catching diffuse window light; fabric of oat linen sleeve shows natural slub weave texture]
+[nursery environment in soft focus background: sage green wall, rattan basket, cream pampas grass in ceramic vase, warm 2700K floor lamp glow; everything cohesive and calm]
+[emotional register: quiet tender intimacy; no performance; purely absorbed; the private ritual of a parent caring for their child]
+[lifted blacks 10 IRE; warm amber midtones +200K; blue channel desaturated throughout; Fujifilm Eterna grain character; no clinical cool tones anywhere]
+[negative: harsh shadows, clinical white light, rushed movement, theatrical expressions, brand name as creature, any cool blue tones]`;
+  }
+
+  if (isCycling) {
+    return `Cinematic action sports commercial, cycling brand ${productRef}, urban golden hour exterior, high-energy athletic performance, teal-orange complementary grade, 9:16 vertical TikTok format, ${dur} seconds.
+[camera at ground level left of cycle path; cyclist passes right to left at 35 km/h; wheel spokes blur to radial silver lines; asphalt surface shows motion blur at bottom of frame; helmet ventilation slots cast shadow bars across rider's forehead under low-angle 2800K golden hour sun; jersey fabric under aerodynamic tension]
+[rapid cut to: 100mm macro close-up of helmet buckle mechanism; hand enters frame; three-beat grip then engage then satisfied nod; chrome studs visible at magnetic lens interface]
+[cycling jersey polyester-lycra semi-matte texture under compression; sweat darkening at collar and neck confirming physical effort; cheekbone warm flush from exertion; forearm vein visible from effort]
+[environment: urban cycle path with white line markings as compositional leading lines; glass office building bokeh background showing amber golden hour rectangles; tree canopy dappled light at 60Hz visual frequency on helmet surface]
+[golden hour sun at 8-12 degree elevation 2800-3200K; long horizontal shadows from rider; product matte polycarbonate shell with ventilation slot shadow bars on forehead skin]
+[teal-orange grade: shadows toward teal #1A3A3A; midtones toward amber #C8640A; high contrast blacks at 5 IRE; helmet color +20% saturation; 35mm Vision3 pushed grain]
+[negative: dry skin in athletic context, static camera over 2 seconds, actor looking at camera, over-saturated destroying skin, brand name as geological rock feature]`;
+  }
+
+  // Generic Wan 2.6 format
+  return `Cinematic lifestyle commercial, ${productRef} consumer product by ${input.brandName} brand (NOT an animal, NOT a creature), ${dur}s TikTok 9:16 vertical format.
+[product hero shot: ${productRef} on clean surface; professional product photography lighting; warm key 5600K from camera-left; specular highlight reveals product material quality]
+[talent interaction with product: adult actor NOT looking at camera; absorbed in natural use context; warm domestic environment]
+[warm naturalistic color grade; Kodak Vision3 grain character; lifted blacks]
+[negative: plastic surfaces, AI smoothed skin, temporal flickering, hand morphing, text overlays, watermarks, wildlife]`;
+}
