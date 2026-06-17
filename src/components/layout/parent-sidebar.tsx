@@ -11,6 +11,7 @@ import {
   Mic,
   Smile,
   TrendingUp,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/stories", label: "Stories", icon: BookOpen },
   { href: "/voices", label: "Voices", icon: Mic },
   { href: "/avatars", label: "Avatars", icon: Smile },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function ParentSidebar() {

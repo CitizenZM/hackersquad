@@ -26,6 +26,10 @@ import {
   getVocabularyExtractionPrompts,
   vocabularyExtractionSchema,
 } from "./prompts/vocabulary-extraction";
+import {
+  getNarrationScriptPrompts,
+  narrationScriptSchema,
+} from "./prompts/narration-script";
 import { generateNarration } from "./services/tts-service";
 import { generateImage, generateCoverImage } from "./services/image-generation";
 import { moderateContent } from "./services/moderation-service";
@@ -146,7 +150,32 @@ export async function runStoryPipeline(
 
     for (let i = 0; i < episodes.length; i++) {
       const ep = episodes[i];
-      const audioUrl = await generateNarration(ep.scriptText, "nova", ep.id);
+
+      // Prepare TTS-ready script with natural pacing
+      let ttsText = ep.scriptText;
+      try {
+        const { systemPrompt: nSys, userPrompt: nUser } = getNarrationScriptPrompts(
+          ep.scriptText,
+          storyPack.storyGoal,
+          childProfile.ageGroup
+        );
+        const narrationScript = await analyzeWithClaude({
+          systemPrompt: nSys,
+          userPrompt: nUser,
+          responseSchema: narrationScriptSchema,
+          maxTokens: 8192,
+        });
+        ttsText = narrationScript.script;
+      } catch (err) {
+        console.error("Narration script preparation failed, using raw text:", err);
+        // Fall back to raw scriptText
+      }
+
+      const audioUrl = await generateNarration(
+        ttsText,
+        { storyGoal: storyPack.storyGoal },
+        ep.id
+      );
       await prisma.episode.update({
         where: { id: ep.id },
         data: { audioUrl },

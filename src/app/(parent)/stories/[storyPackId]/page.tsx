@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants";
 import { BookOpen, Play, Check } from "lucide-react";
 import { ApproveButton } from "@/components/parent/approve-button";
+import { CopyLinkButton } from "@/components/parent/copy-link-button";
 import { FlagButton } from "@/components/parent/flag-button";
 import { DeleteStoryButton } from "@/components/parent/delete-story-button";
 
@@ -68,9 +69,12 @@ export default async function StoryPackDetailPage({
               <ApproveButton storyPackId={storyPackId} />
             )}
             {isPublished && (
-              <Link href={`/play/${storyPack.childProfile.id}`}>
-                <Button><Play className="mr-2 h-4 w-4" /> Open Player</Button>
-              </Link>
+              <>
+                <CopyLinkButton path={`/play/${storyPack.childProfile.id}/${storyPackId}`} />
+                <Link href={`/play/${storyPack.childProfile.id}`}>
+                  <Button><Play className="mr-2 h-4 w-4" /> Open Player</Button>
+                </Link>
+              </>
             )}
             {!isProcessing && (
               <>
