@@ -16,6 +16,9 @@ import { ApproveButton } from "@/components/parent/approve-button";
 import { CopyLinkButton } from "@/components/parent/copy-link-button";
 import { FlagButton } from "@/components/parent/flag-button";
 import { DeleteStoryButton } from "@/components/parent/delete-story-button";
+import { UnpublishButton } from "@/components/parent/unpublish-button";
+import { RepublishButton } from "@/components/parent/republish-button";
+import { RegenerateButton } from "@/components/parent/regenerate-button";
 
 export default async function StoryPackDetailPage({
   params,
@@ -52,6 +55,8 @@ export default async function StoryPackDetailPage({
   const isProcessing = storyPack.status === "PROCESSING";
   const needsReview = storyPack.status === "REVIEW_READY";
   const isPublished = storyPack.status === "PUBLISHED";
+  const isApproved = storyPack.status === "APPROVED";
+  const isError = storyPack.status === "ERROR";
 
   return (
     <div>
@@ -59,7 +64,10 @@ export default async function StoryPackDetailPage({
         title={storyPack.title}
         description={`For ${storyPack.childProfile.name} (age ${storyPack.childProfile.age})`}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isError && (
+              <RegenerateButton storyPackId={storyPackId} />
+            )}
             {isProcessing && (
               <Link href={`/stories/${storyPackId}/progress`}>
                 <Button variant="outline">View Progress</Button>
@@ -68,8 +76,17 @@ export default async function StoryPackDetailPage({
             {needsReview && (
               <ApproveButton storyPackId={storyPackId} />
             )}
+            {isApproved && (
+              <>
+                <Link href={`/play/${storyPack.childProfile.id}`}>
+                  <Button variant="outline"><Play className="mr-2 h-4 w-4" /> Preview Player</Button>
+                </Link>
+                <RepublishButton storyPackId={storyPackId} />
+              </>
+            )}
             {isPublished && (
               <>
+                <UnpublishButton storyPackId={storyPackId} />
                 <CopyLinkButton path={`/play/${storyPack.childProfile.id}/${storyPackId}`} />
                 <Link href={`/play/${storyPack.childProfile.id}`}>
                   <Button><Play className="mr-2 h-4 w-4" /> Open Player</Button>

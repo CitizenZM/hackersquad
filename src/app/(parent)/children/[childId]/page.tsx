@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { ChildProfileForm } from "@/components/parent/child-profile-form";
+import { DeleteChildButton } from "@/components/parent/delete-child-button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function EditChildPage({
   params,
@@ -33,6 +35,14 @@ export default async function EditChildPage({
             pin: child.pin,
           }}
         />
+        <Card className="border-destructive/20 mt-6">
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground mb-3">
+              Deleting this profile will permanently remove all stories, progress, and data for {child.name}.
+            </p>
+            <DeleteChildButton childId={child.id} childName={child.name} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

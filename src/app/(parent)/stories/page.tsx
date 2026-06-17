@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { STORY_PACK_STATUS_LABELS, STORY_GOAL_LABELS } from "@/lib/constants";
 import { Plus, BookOpen } from "lucide-react";
+import { StatusActionLink } from "@/components/parent/status-action-link";
 
 export const dynamic = "force-dynamic";
 
@@ -59,47 +60,48 @@ export default async function StoriesPage() {
         ) : (
           <div className="space-y-3">
             {storyPacks.map((pack) => (
-              <Link key={pack.id} href={`/stories/${pack.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-4">
-                      {pack.coverImageUrl ? (
-                        <img
-                          src={pack.coverImageUrl}
-                          alt={pack.title}
-                          className="h-14 w-14 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10">
-                          <BookOpen className="h-6 w-6 text-primary" />
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="font-semibold">{pack.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          For {pack.childProfile.name} &middot;{" "}
-                          {pack._count.episodes} episodes &middot;{" "}
-                          {STORY_GOAL_LABELS[pack.storyGoal]}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {pack.source?.wordCount != null
-                            ? `${pack.source.wordCount.toLocaleString()} words`
-                            : "Unknown word count"}{" "}
-                          &middot;{" "}
-                          {new Date(pack.createdAt).toLocaleDateString(undefined, {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
+              <Card key={pack.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="flex items-center justify-between py-4">
+                  <Link href={`/stories/${pack.id}`} className="flex items-center gap-4 flex-1 min-w-0">
+                    {pack.coverImageUrl ? (
+                      <img
+                        src={pack.coverImageUrl}
+                        alt={pack.title}
+                        className="h-14 w-14 rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                        <BookOpen className="h-6 w-6 text-primary" />
                       </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="font-semibold truncate">{pack.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        For {pack.childProfile.name} &middot;{" "}
+                        {pack._count.episodes} episodes &middot;{" "}
+                        {STORY_GOAL_LABELS[pack.storyGoal]}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {pack.source?.wordCount != null
+                          ? `${pack.source.wordCount.toLocaleString()} words`
+                          : "Unknown word count"}{" "}
+                        &middot;{" "}
+                        {new Date(pack.createdAt).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
                     </div>
+                  </Link>
+                  <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                     <Badge variant={statusVariant(pack.status)}>
                       {STORY_PACK_STATUS_LABELS[pack.status]}
                     </Badge>
-                  </CardContent>
-                </Card>
-              </Link>
+                    <StatusActionLink storyPackId={pack.id} status={pack.status} />
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

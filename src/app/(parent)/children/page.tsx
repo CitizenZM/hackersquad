@@ -18,6 +18,14 @@ export default async function ChildrenPage() {
     include: { _count: { select: { storyPacks: true } } },
   });
 
+  const completedEpisodeCounts = await Promise.all(
+    children.map((child) =>
+      prisma.sessionEvent.count({
+        where: { childProfileId: child.id, eventType: "EPISODE_COMPLETE" },
+      })
+    )
+  );
+
   return (
     <div>
       <ParentHeader
@@ -43,7 +51,7 @@ export default async function ChildrenPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {children.map((child) => (
+            {children.map((child, index) => (
               <Link key={child.id} href={`/children/${child.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardContent className="pt-6">
@@ -63,7 +71,9 @@ export default async function ChildrenPage() {
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {child._count.storyPacks}{" "}
-                          {child._count.storyPacks === 1 ? "story" : "stories"}
+                          {child._count.storyPacks === 1 ? "story" : "stories"}{" "}
+                          &middot; {completedEpisodeCounts[index]}{" "}
+                          {completedEpisodeCounts[index] === 1 ? "episode" : "episodes"} completed
                         </p>
                       </div>
                     </div>
