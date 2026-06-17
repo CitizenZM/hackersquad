@@ -3,6 +3,7 @@
 import type { WizardData } from "./wizard-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   STORY_GOAL_LABELS,
   NARRATION_MODE_LABELS,
@@ -36,6 +37,24 @@ export function StepReviewConfirm({ data, onChange }: Props) {
           placeholder="Enter a title for this story pack"
           required
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">
+          Description{" "}
+          <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Textarea
+          id="description"
+          value={data.description}
+          onChange={(e) => onChange({ description: e.target.value })}
+          placeholder="A short description to help parents and children know what this story is about"
+          rows={2}
+          maxLength={200}
+        />
+        <p className="text-xs text-muted-foreground text-right">
+          {data.description.length}/200
+        </p>
       </div>
 
       <div className="rounded-lg border divide-y">

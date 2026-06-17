@@ -24,6 +24,7 @@ interface StoryShelfProps {
   storyPacks: Array<{
     id: string;
     title: string;
+    description?: string;
     coverImageUrl: string | null;
     episodeCount: number;
     completedEpisodes: number;
@@ -281,6 +282,7 @@ export function StoryShelf({
               childId={childId}
               storyPackId={pack.id}
               title={pack.title}
+              description={pack.description}
               coverImageUrl={pack.coverImageUrl}
               episodeCount={pack.episodeCount}
               completedEpisodes={pack.completedEpisodes}

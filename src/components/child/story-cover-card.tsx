@@ -19,6 +19,7 @@ interface StoryCoverCardProps {
   childId: string;
   storyPackId: string;
   title: string;
+  description?: string;
   coverImageUrl?: string | null;
   episodeCount: number;
   completedEpisodes: number;
@@ -33,6 +34,7 @@ export function StoryCoverCard({
   childId,
   storyPackId,
   title,
+  description,
   coverImageUrl,
   episodeCount,
   completedEpisodes,
@@ -82,6 +84,11 @@ export function StoryCoverCard({
               <h3 className="text-base font-bold text-white leading-tight line-clamp-2 drop-shadow-sm">
                 {title}
               </h3>
+              {description && (
+                <p className="text-xs text-white/80 mt-0.5 line-clamp-2 leading-snug">
+                  {description}
+                </p>
+              )}
               <p className="text-xs text-white/70 mt-0.5">
                 {episodeCount} episode{episodeCount !== 1 ? "s" : ""}
               </p>

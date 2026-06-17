@@ -532,7 +532,101 @@ const ROSE_EPISODE: SeedEpisode = {
   ],
 };
 
-for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE, BOAT_EPISODE, ROSE_EPISODE]) {
+// ─────────────────────────────────────────────────────────────
+// Story 5: "The Sharing Tree" — 1 episode, ~700 words
+// A moral-lesson story about Hazel the squirrel who learns the
+// joy of giving after hoarding acorns through a long winter.
+// ─────────────────────────────────────────────────────────────
+const HAZEL_EPISODE: SeedEpisode = {
+  title: "A Heart Full of Acorns",
+  scriptText: "",
+  scenes: [
+    {
+      text: "Deep in the forest stood a tall oak tree, and that oak tree belonged to Hazel the squirrel. Or at least, Hazel thought it did. Every single morning, before the birds had even opened their eyes, Hazel was already awake, counting her acorns. \"One, two, three...\" she counted, piling them up in neat little towers. \"Four hundred and twelve, four hundred and thirteen!\" Her tree was packed from the roots all the way up to the highest branch. Hazel patted her acorns and smiled a very proud smile. A bluebird landed nearby and peeked at the pile with curious eyes. \"Those look delicious!\" said the bird. Hazel puffed up her fluffy tail. \"These are ALL mine!\" she said. The bluebird blinked once and flew away.",
+      duration: 22,
+      theme: "forest",
+      character: { emoji: "🐿️", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🌰", sound: "tap", reaction: "An acorn!", position: "top-left" },
+        { emoji: "🌳", sound: "pop", reaction: "Hazel's oak tree!", position: "top-right" },
+      ],
+    },
+    {
+      text: "Then winter arrived. It came quickly, the way winter does, wrapping the whole forest in white. Snow fell softly on the branches and covered the ground like a thick, cold blanket. The berries were gone. The seeds were buried. One grey morning, a little brown rabbit named Biscuit hopped up to Hazel's tree. His nose was pink from the cold, and his tummy was growling. \"Please, Hazel,\" said Biscuit in a small voice, \"do you have even one acorn to spare? I am so very hungry.\" Hazel looked at her enormous pile. She had more acorns than she could ever eat. But she crossed her arms and shook her head. \"No!\" she said firmly. \"These are mine.\" Biscuit's long ears drooped. He turned and hopped slowly away through the snow, leaving tiny footprints behind him.",
+      duration: 22,
+      theme: "snow",
+      character: { emoji: "🐰", position: "bottom-left" },
+      hotspots: [
+        { emoji: "❄️", sound: "sparkle", reaction: "A snowflake!", position: "top-right" },
+        { emoji: "🌨️", sound: "whoosh", reaction: "Snowy day!", position: "top-left" },
+      ],
+    },
+    {
+      text: "The very next day, a tiny grey mouse named Pip came knocking on the bark of Hazel's tree. Pip wore a little scarf wrapped three times around his neck, and he shivered from the tips of his ears to the end of his tail. \"Good morning, Hazel,\" Pip said politely. \"I haven't eaten in two days. Could I please have just one small acorn?\" Hazel looked at Pip. She looked at her mountain of acorns. For just a moment, she felt something strange — a tiny pinch, deep inside her chest, like something was trying to get her attention. But Hazel pushed the feeling away. \"No,\" she said, and went back to counting. Pip nodded quietly and crept back out into the cold. Hazel watched him go. The tiny pinch in her chest stayed, even after he was gone.",
+      duration: 22,
+      theme: "snow",
+      character: { emoji: "🐭", position: "bottom-left" },
+      hotspots: [
+        { emoji: "🧣", sound: "pop", reaction: "A tiny scarf!", position: "top-right" },
+        { emoji: "❄️", sound: "sparkle", reaction: "Brrr, so cold!", position: "top-left" },
+      ],
+    },
+    {
+      text: "That evening Hazel sat alone in her tree, surrounded by her great pile of acorns. The wind howled outside and shook the branches. She had everything she needed. She had four hundred and fourteen acorns. She had a perfectly warm tree. She had nothing to worry about at all. And yet. The den felt very quiet. Too quiet. Hazel pulled her knees up to her chin and looked around at all the acorns stacked up on every side. They didn't talk back. They didn't smile. They didn't make the cold feel any less cold. Hazel thought about Biscuit's drooping ears. She thought about Pip's shivering paws. The tiny pinch in her chest had grown into something much bigger. Hazel sat very still for a very long time.",
+      duration: 22,
+      theme: "indoor",
+      character: { emoji: "🐿️", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🪵", sound: "pop", reaction: "A cozy tree!", position: "top-left" },
+        { emoji: "💭", sound: "sparkle", reaction: "Hmm, thinking...", position: "top-right" },
+      ],
+    },
+    {
+      text: "The next morning, before she could talk herself out of it, Hazel gathered two big pawfuls of acorns and marched through the snow. First she went to Biscuit's burrow. \"Here,\" she said, and she held out the acorns. Biscuit stared at her. Then his whole face lit up like the sun coming out from behind a cloud. \"Oh, Hazel! Thank you!\" he cried. He hugged the acorns close. Next she went to Pip's little hole beneath the roots of a birch tree. \"These are for you,\" Hazel said, setting down a pile. Pip looked up with the most grateful eyes she had ever seen. \"Really?\" he whispered. \"Really,\" said Hazel. And something strange and wonderful happened inside Hazel's chest. The pinch was gone. In its place was something warm and bright, like a small fire that had just been lit.",
+      duration: 22,
+      theme: "forest",
+      character: { emoji: "🐿️", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🌰", sound: "tap", reaction: "A gift of acorns!", position: "top-left" },
+        { emoji: "💛", sound: "sparkle", reaction: "What a kind heart!", position: "top-right" },
+      ],
+    },
+    {
+      text: "That afternoon, Biscuit and Pip came to Hazel's tree with a little bundle of dry sticks. Together, the three friends built a small fire just outside, where the big roots curled up into cozy seats. They sat in a circle, sharing acorns, and the fire crackled and glowed between them. Hazel still had four hundred and two acorns — more than enough. But for the first time all winter, she felt truly full. Not in her tummy, but in her heart. \"Sharing makes everything taste better,\" said Hazel, munching happily. Biscuit nodded. Pip smiled. Outside, the snow was still falling. But here, in the little circle of firelight, with her two new dear friends, Hazel was warm all the way through.",
+      duration: 22,
+      theme: "indoor",
+      character: { emoji: "🐿️", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🔥", sound: "sparkle", reaction: "A warm fire!", position: "top-left" },
+        { emoji: "🌰", sound: "tap", reaction: "Sharing acorns!", position: "top-right" },
+      ],
+    },
+  ],
+  vocab: [
+    {
+      word: "share",
+      definition: "To give some of what you have to someone else.",
+      example: "Hazel learned to share her acorns with her friends.",
+    },
+    {
+      word: "generous",
+      definition: "Happy to give and help others without being asked.",
+      example: "When Hazel brought the acorns, she felt generous and good.",
+    },
+    {
+      word: "lonely",
+      definition: "A sad feeling that comes from being all alone.",
+      example: "Hazel felt lonely when she had no one to share with.",
+    },
+    {
+      word: "grateful",
+      definition: "Feeling thankful for something kind that someone did.",
+      example: "Pip was grateful for every single acorn Hazel gave him.",
+    },
+  ],
+};
+
+for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE, BOAT_EPISODE, ROSE_EPISODE, HAZEL_EPISODE]) {
   ep.scriptText = ep.scenes.map((s) => s.text).join("\n\n");
 }
 
@@ -560,6 +654,12 @@ const ALL_STORIES = [
     storyGoal: "VOCABULARY" as const,
     visualStyle: "CARTOON" as const,
     episodes: [ROSE_EPISODE],
+  },
+  {
+    title: "The Sharing Tree",
+    storyGoal: "MORAL_LESSON" as const,
+    visualStyle: "STORYBOOK" as const,
+    episodes: [HAZEL_EPISODE],
   },
 ];
 

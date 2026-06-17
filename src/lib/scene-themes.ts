@@ -121,7 +121,7 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
   snow: {
     particles: ["❄️", "🌨️", "⛄", "💨"],
     gradient: "from-slate-100 via-blue-50 to-white",
-    keywords: ["snow", "ice", "cold", "frost", "winter", "flake"],
+    keywords: ["snow", "ice", "cold", "frost", "winter", "flake", "shiver", "frozen", "chilly"],
   },
   indoor: {
     particles: ["🕯️", "🧸", "💛", "🏠"],
@@ -136,6 +136,12 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
       "cozy",
       "warm",
       "lamp",
+      "fire",
+      "fireplace",
+      "kitchen",
+      "room",
+      "inside",
+      "snuggle",
     ],
   },
   default: {

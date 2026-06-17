@@ -54,6 +54,7 @@ export async function POST(request: Request) {
         narrationMode: data.narrationMode,
         visualStyle: data.visualStyle,
         episodeCount: estimateEpisodeCount(source.wordCount),
+        metadata: { description: data.description || "" },
       },
     });
 

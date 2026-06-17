@@ -18,6 +18,7 @@ export interface WizardData {
   childProfileId: string;
   childName: string;
   title: string;
+  description: string;
   storyGoal: string;
   narrationMode: string;
   visualStyle: string;
@@ -55,6 +56,7 @@ export function WizardShell({ sources, children, preSelectedSourceId }: WizardSh
     childProfileId: "",
     childName: "",
     title: "",
+    description: "",
     storyGoal: "ENTERTAIN",
     narrationMode: "DEFAULT_TTS",
     visualStyle: "CARTOON",
@@ -89,6 +91,7 @@ export function WizardShell({ sources, children, preSelectedSourceId }: WizardSh
           sourceId: data.sourceId,
           childProfileId: data.childProfileId,
           title: data.title,
+          description: data.description,
           storyGoal: data.storyGoal,
           narrationMode: data.narrationMode,
           visualStyle: data.visualStyle,

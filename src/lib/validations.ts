@@ -35,6 +35,7 @@ export const createStoryPackSchema = z.object({
   sourceId: z.string().min(1),
   childProfileId: z.string().min(1),
   title: z.string().min(1, "Title is required"),
+  description: z.string().max(200).default(""),
   storyGoal: z.enum(["ENTERTAIN", "EDUCATE", "MORAL_LESSON", "VOCABULARY", "BEDTIME"]).default("ENTERTAIN"),
   narrationMode: z.enum(["DEFAULT_TTS", "PARENT_VOICE"]).default("DEFAULT_TTS"),
   visualStyle: z.enum(["CARTOON", "WATERCOLOR", "STORYBOOK", "PIXEL_ART"]).default("CARTOON"),

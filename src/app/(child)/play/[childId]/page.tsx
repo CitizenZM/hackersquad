@@ -142,6 +142,7 @@ export default async function StoryShelfPage({
       storyPacks={storyPacks.map((p) => ({
         id: p.id,
         title: p.title,
+        description: (p.metadata as Record<string, unknown> | null)?.description as string | undefined,
         coverImageUrl: p.coverImageUrl,
         episodeCount: p._count.episodes,
         completedEpisodes: completedMap[p.id] || 0,
