@@ -6,14 +6,14 @@ interface ParentHeaderProps {
 
 export function ParentHeader({ title, description, action }: ParentHeaderProps) {
   return (
-    <div className="flex items-center justify-between border-b bg-background px-6 py-4">
-      <div>
-        <h1 className="text-xl font-semibold">{title}</h1>
+    <div className="flex flex-col gap-3 border-b bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold sm:text-xl truncate">{title}</h1>
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-xs text-muted-foreground sm:text-sm">{description}</p>
         )}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

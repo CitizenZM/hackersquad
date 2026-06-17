@@ -152,14 +152,16 @@ export function useVoiceGuide() {
       try {
         window.speechSynthesis.cancel();
 
+        // Split on sentence boundaries, but protect common abbreviations
         const sentences = text
+          .replace(/\b(Mr|Mrs|Ms|Dr|St|Jr|Sr)\./gi, "$1․")
           .split(/(?<=[.!?])\s+/)
-          .map((s) => s.trim())
+          .map((s) => s.replace(/․/g, ".").trim())
           .filter(Boolean);
 
         const chunks: { text: string; settings: ToneSettings }[] = [];
         for (const s of sentences) {
-          const parts = s.split(/("[^"]*"|'[^']*')/g).filter(Boolean);
+          const parts = s.split(/("[^"]*?"|'[^']*?')/g).filter(Boolean);
           for (const p of parts) {
             const trimmed = p.trim();
             if (!trimmed) continue;

@@ -16,6 +16,7 @@ export function SourceUploadForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [title, setTitle] = useState("");
   const [textContent, setTextContent] = useState("");
   const [fileData, setFileData] = useState<{
@@ -26,6 +27,8 @@ export function SourceUploadForm() {
   } | null>(null);
 
   const wordCount = fileData?.wordCount || textContent.trim().split(/\s+/).filter(Boolean).length;
+  const charCount = fileData ? (fileData.text?.length ?? 0) : textContent.length;
+  const readingMinutes = wordCount > 0 ? Math.ceil(wordCount / 150) : 0;
   const episodeEstimate = estimateEpisodeCount(wordCount);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -101,8 +104,11 @@ export function SourceUploadForm() {
         return;
       }
 
-      router.push("/sources");
-      router.refresh();
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/sources");
+        router.refresh();
+      }, 1200);
     } catch {
       setError("Something went wrong");
     } finally {
@@ -116,6 +122,12 @@ export function SourceUploadForm() {
         <CardTitle>Upload Content</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {success && (
+          <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700 font-medium">
+            Content saved! Redirecting to your sources...
+          </div>
+        )}
+
         {error && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -188,16 +200,26 @@ export function SourceUploadForm() {
         </Tabs>
 
         {wordCount > 0 && (
-          <div className="rounded-lg bg-secondary p-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="rounded-lg bg-secondary p-4 space-y-3">
+            <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Word Count:</span>{" "}
-                <span className="font-semibold">{wordCount.toLocaleString()}</span>
+                <div className="text-muted-foreground text-xs mb-0.5">Words</div>
+                <div className="font-semibold">{wordCount.toLocaleString()}</div>
               </div>
               <div>
-                <span className="text-muted-foreground">Estimated Episodes:</span>{" "}
-                <span className="font-semibold">{episodeEstimate}</span>
+                <div className="text-muted-foreground text-xs mb-0.5">Characters</div>
+                <div className="font-semibold">{charCount.toLocaleString()}</div>
               </div>
+              <div>
+                <div className="text-muted-foreground text-xs mb-0.5">Reading time</div>
+                <div className="font-semibold">
+                  {readingMinutes} {readingMinutes === 1 ? "min" : "mins"}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2">
+              <span className="text-sm font-medium text-primary">Suggested episodes</span>
+              <span className="text-lg font-bold text-primary">{episodeEstimate}</span>
             </div>
           </div>
         )}

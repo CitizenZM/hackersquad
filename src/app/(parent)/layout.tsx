@@ -14,7 +14,7 @@ export default async function ParentLayout({
   return (
     <div className="flex min-h-screen">
       <ParentSidebar />
-      <main className="ml-60 flex-1">{children}</main>
+      <main className="w-full pt-14 md:pt-0 md:ml-60 md:flex-1">{children}</main>
     </div>
   );
 }

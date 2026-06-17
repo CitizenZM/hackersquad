@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Users, FileText, Mic, Play } from "lucide-react";
+import { BookOpen, Users, FileText, Mic, Play, ArrowRight } from "lucide-react";
 import { DemoSeedButton } from "@/components/parent/demo-seed-button";
 
 export const dynamic = "force-dynamic";
@@ -85,50 +85,114 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Get started with common tasks</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link
-                href="/sources/new"
-                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
-              >
-                <FileText className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-medium text-sm">Upload Content</div>
-                  <div className="text-xs text-muted-foreground">
-                    Add text, PDF, or document for story creation
+          {childCount === 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Get Started</CardTitle>
+                <CardDescription>Follow these steps to create your first story</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[
+                  {
+                    step: 1,
+                    color: "bg-blue-500",
+                    icon: <Users className="h-5 w-5 text-blue-500" />,
+                    title: "Create a child profile",
+                    description: "Set up a profile so stories can be personalized for your child.",
+                    href: "/children/new",
+                    label: "Add profile",
+                  },
+                  {
+                    step: 2,
+                    color: "bg-amber-500",
+                    icon: <FileText className="h-5 w-5 text-amber-500" />,
+                    title: "Upload content",
+                    description: "Paste text or upload a PDF, DOC, or TXT file.",
+                    href: "/sources/new",
+                    label: "Upload now",
+                  },
+                  {
+                    step: 3,
+                    color: "bg-green-500",
+                    icon: <BookOpen className="h-5 w-5 text-green-500" />,
+                    title: "Create a story pack",
+                    description: "Turn your content into bite-sized story episodes.",
+                    href: "/stories/new",
+                    label: "Create pack",
+                  },
+                ].map(({ step, color, icon, title, description, href, label }) => (
+                  <div key={step} className="flex items-start gap-4">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${color} text-white text-sm font-bold`}
+                    >
+                      {step}
+                    </div>
+                    <div className="flex flex-1 items-center justify-between gap-3 rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        {icon}
+                        <div>
+                          <div className="font-medium text-sm">{title}</div>
+                          <div className="text-xs text-muted-foreground">{description}</div>
+                        </div>
+                      </div>
+                      <Link
+                        href={href}
+                        className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        {label}
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </Link>
-              <Link
-                href="/stories/new"
-                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
-              >
-                <BookOpen className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-medium text-sm">Create Story Pack</div>
-                  <div className="text-xs text-muted-foreground">
-                    Transform content into story episodes
+                ))}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Get started with common tasks</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Link
+                  href="/sources/new"
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                >
+                  <FileText className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-medium text-sm">Upload Content</div>
+                    <div className="text-xs text-muted-foreground">
+                      Add text, PDF, or document for story creation
+                    </div>
                   </div>
-                </div>
-              </Link>
-              <Link
-                href="/children/new"
-                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
-              >
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-medium text-sm">Add Child Profile</div>
-                  <div className="text-xs text-muted-foreground">
-                    Set up a profile for your child
+                </Link>
+                <Link
+                  href="/stories/new"
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                >
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-medium text-sm">Create Story Pack</div>
+                    <div className="text-xs text-muted-foreground">
+                      Transform content into story episodes
+                    </div>
                   </div>
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
+                </Link>
+                <Link
+                  href="/children/new"
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                >
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-medium text-sm">Add Child Profile</div>
+                    <div className="text-xs text-muted-foreground">
+                      Set up a profile for your child
+                    </div>
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
