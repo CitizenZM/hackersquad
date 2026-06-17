@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import type { SceneTheme } from "@/lib/scene-themes";
 
@@ -19,7 +20,7 @@ interface CartoonSceneProps {
  * sharp edges. Completely generated client-side, no external image
  * assets. Matches the design system's warm-cream + lavender palette.
  */
-export function CartoonScene({
+export const CartoonScene = React.memo(function CartoonScene({
   theme,
   sceneOrder,
   character,
@@ -73,7 +74,7 @@ export function CartoonScene({
       )}
     </div>
   );
-}
+});
 
 const POSITION_CLASS = {
   "top-left": "top-6 left-6",

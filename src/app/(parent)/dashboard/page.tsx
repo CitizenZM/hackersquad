@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Users, FileText, Mic } from "lucide-react";
+import { BookOpen, Users, FileText, Mic, Play } from "lucide-react";
 import { DemoSeedButton } from "@/components/parent/demo-seed-button";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     where: { parentId },
     orderBy: { createdAt: "desc" },
     take: 5,
-    include: { childProfile: { select: { name: true } } },
+    include: { childProfile: { select: { id: true, name: true } } },
   });
 
   return (
@@ -143,21 +143,31 @@ export default async function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   {recentStories.map((story) => (
-                    <Link
+                    <div
                       key={story.id}
-                      href={`/stories/${story.id}`}
                       className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors"
                     >
-                      <div>
+                      <Link href={`/stories/${story.id}`} className="flex-1 min-w-0">
                         <div className="font-medium text-sm">{story.title}</div>
                         <div className="text-xs text-muted-foreground">
                           For {story.childProfile.name} &middot; {story.episodeCount} episodes
                         </div>
+                      </Link>
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
+                          {story.status.replace("_", " ")}
+                        </span>
+                        {story.status === "PUBLISHED" && (
+                          <Link
+                            href={`/play/${story.childProfile.id}`}
+                            className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                          >
+                            <Play className="h-3 w-3" />
+                            Play
+                          </Link>
+                        )}
                       </div>
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-                        {story.status.replace("_", " ")}
-                      </span>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}

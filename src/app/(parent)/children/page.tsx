@@ -15,6 +15,7 @@ export default async function ChildrenPage() {
   const children = await prisma.childProfile.findMany({
     where: { parentId },
     orderBy: { createdAt: "desc" },
+    include: { _count: { select: { storyPacks: true } } },
   });
 
   return (
@@ -59,6 +60,10 @@ export default async function ChildrenPage() {
                           {(child.interests as string[]).length > 0
                             ? (child.interests as string[]).join(", ")
                             : "No interests set"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {child._count.storyPacks}{" "}
+                          {child._count.storyPacks === 1 ? "story" : "stories"}
                         </p>
                       </div>
                     </div>

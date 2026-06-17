@@ -1,12 +1,14 @@
 "use client";
 
+import React from "react";
+
 interface ProgressRingProps {
   progress: number; // 0-1
   size?: number;
   strokeWidth?: number;
 }
 
-export function ProgressRing({
+export const ProgressRing = React.memo(function ProgressRing({
   progress,
   size = 40,
   strokeWidth = 3,
@@ -40,4 +42,4 @@ export function ProgressRing({
       />
     </svg>
   );
-}
+});

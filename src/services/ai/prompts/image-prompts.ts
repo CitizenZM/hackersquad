@@ -41,7 +41,13 @@ SAFETY RULES:
 SCENES:
 ${scenes.map((s) => `Scene ${s.sceneOrder}: ${s.sceneDescription}`).join("\n")}
 
-For each scene, create a detailed DALL-E prompt that starts with the style prefix. Keep main character appearance consistent across scenes.
+CHARACTER CONSISTENCY (critical):
+- The main protagonist must have identical appearance across ALL scenes: same colors, clothing, features, body shape
+- Describe the protagonist's appearance explicitly in every prompt (e.g., "a small brown bear cub wearing a red scarf")
+- Supporting characters can vary in pose but must maintain their defining features
+- Use the same art style and color palette across all scenes for visual cohesion
+
+For each scene, create a detailed DALL-E prompt that starts with the style prefix.
 
 Respond with JSON: { "prompts": [{ "sceneOrder": 1, "imagePrompt": "..." }] }`,
   };

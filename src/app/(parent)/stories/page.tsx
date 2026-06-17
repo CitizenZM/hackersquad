@@ -18,7 +18,7 @@ export default async function StoriesPage() {
     orderBy: { createdAt: "desc" },
     include: {
       childProfile: { select: { name: true } },
-      source: { select: { title: true } },
+      source: { select: { title: true, wordCount: true } },
       _count: { select: { episodes: true } },
     },
   });
@@ -80,6 +80,17 @@ export default async function StoriesPage() {
                           For {pack.childProfile.name} &middot;{" "}
                           {pack._count.episodes} episodes &middot;{" "}
                           {STORY_GOAL_LABELS[pack.storyGoal]}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {pack.source?.wordCount != null
+                            ? `${pack.source.wordCount.toLocaleString()} words`
+                            : "Unknown word count"}{" "}
+                          &middot;{" "}
+                          {new Date(pack.createdAt).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
                         </p>
                       </div>
                     </div>

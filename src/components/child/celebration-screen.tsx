@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, ChevronRight, Home } from "lucide-react";
 import { RewardBadge } from "./reward-badge";
@@ -28,7 +28,7 @@ const PRAISE = [
 
 const CONFETTI_EMOJIS = ["⭐", "🌟", "✨", "💫", "🎉", "🎊", "🌈"];
 
-export function CelebrationScreen({
+export const CelebrationScreen = React.memo(function CelebrationScreen({
   visible,
   episodeNumber,
   hasNextEpisode,
@@ -163,4 +163,4 @@ export function CelebrationScreen({
       )}
     </AnimatePresence>
   );
-}
+});

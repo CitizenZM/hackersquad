@@ -353,7 +353,101 @@ const PIP_EPISODE: SeedEpisode = {
   ],
 };
 
-for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE]) {
+// ─────────────────────────────────────────────────────────────
+// Story 3: "The Brave Little Boat" — 1 episode, ~900 words
+// A small wooden toy boat rides the rain from a garden puddle
+// down a stream to a pond, learning how water flows along the way.
+// ─────────────────────────────────────────────────────────────
+const BOAT_EPISODE: SeedEpisode = {
+  title: "A Journey to the Pond",
+  scriptText: "",
+  scenes: [
+    {
+      text: "In a friendly garden sat a small wooden toy boat with a red sail and a round white pebble for an anchor. The boat lived on the windowsill most days, dreaming of adventures. One rainy morning, the biggest raindrop of all landed right on the windowsill — plop! — and knocked the little boat down into the garden puddle below. The boat rocked gently in the silver puddle, looking up at the wide grey sky. Rain pattered all around. \"Oh,\" said the little boat softly, \"I am floating! I am really, truly floating!\" And it smiled its painted wooden smile.",
+      duration: 20,
+      theme: "indoor",
+      character: { emoji: "🚢", position: "bottom-right" },
+      hotspots: [
+        { emoji: "💧", sound: "tap", reaction: "Drip drop!", position: "top-left" },
+        { emoji: "🪟", sound: "pop", reaction: "The windowsill!", position: "top-right" },
+      ],
+    },
+    {
+      text: "The rain kept falling, harder and harder, and the garden puddle grew bigger and bigger until it spilled over the edge of the path and trickled into a narrow little stream. The current — the moving water — carried the tiny boat gently forward. Float, float, float. The boat had never moved on its own before! Leaves swirled past, and tiny bubbles popped around its hull. \"Water always flows downhill,\" an earthworm called up helpfully from the muddy bank. \"Follow the current and it will take you somewhere wonderful!\" The little boat dipped its red sail in a thankful bow, and let the water carry it along.",
+      duration: 20,
+      theme: "water",
+      character: { emoji: "🚢", position: "bottom-left" },
+      hotspots: [
+        { emoji: "🌧️", sound: "tap", reaction: "Pitter-patter!", position: "top-right" },
+        { emoji: "🍃", sound: "whoosh", reaction: "A floating leaf!", position: "top-left" },
+      ],
+    },
+    {
+      text: "Soon the little boat had company on the stream. A broad brown oak leaf drifted alongside it, and a long straight stick bobbed behind like a friendly dog following its owner. \"Hello!\" called the little boat. \"Are you on a journey too?\" The leaf rustled its edges in a yes. The stick knocked gently on the boat's side, knock-knock, as if to say hello back. Together the three of them floated side by side down the winding stream. The trees on the bank leaned over to watch, and robins hopped from branch to branch keeping them company all the way.",
+      duration: 20,
+      theme: "water",
+      character: { emoji: "🚢", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🍂", sound: "pop", reaction: "An oak leaf!", position: "top-left" },
+        { emoji: "🐦", sound: "sparkle", reaction: "A robin!", position: "top-right" },
+      ],
+    },
+    {
+      text: "Around the next bend the stream grew louder — a rushing, tumbling, sparkling sound. Suddenly the water tipped over the edge of a flat mossy rock and fell down in a white curtain of spray. A waterfall! The little boat gave a tiny gasp — and then, whoooosh, it dropped right over the edge! Down, down, down through the cool white mist it fell, spinning slowly, red sail flapping. It landed in the swirling pool below with a happy little splash and bobbed right back up, safe and sound and very, very excited. \"A waterfall!\" the boat laughed, shaking sparkling drops from its sail. \"I went over a waterfall!\"",
+      duration: 22,
+      theme: "water",
+      character: { emoji: "🚢", position: "bottom-right" },
+      hotspots: [
+        { emoji: "💦", sound: "whoosh", reaction: "Whoosh!", position: "top-right" },
+        { emoji: "🌊", sound: "whoosh", reaction: "A waterfall!", position: "top-left" },
+      ],
+    },
+    {
+      text: "Below the waterfall the stream widened and slowed, and then it opened — like a door swinging open — into a wide, calm, glittering pond. The water here was still and quiet, reflecting the green meadow and the fluffy white clouds above. Ducks paddled in slow circles, leaving soft ripples. A family of moorhens bobbed between the reeds. The little boat drifted out into the middle of all that lovely stillness and turned slowly round and round, looking at everything with its painted eyes wide with wonder. \"This is the most beautiful place I have ever seen,\" it whispered.",
+      duration: 22,
+      theme: "meadow",
+      character: { emoji: "🚢", position: "bottom-left" },
+      hotspots: [
+        { emoji: "🦆", sound: "pop", reaction: "Quack quack!", position: "top-right" },
+        { emoji: "☁️", sound: "sparkle", reaction: "Fluffy clouds!", position: "top-left" },
+      ],
+    },
+    {
+      text: "And then the little boat saw them — three other toy boats resting by the reedy shore! A blue boat, a yellow boat, and a very small green boat with a stripy sail. \"Hello!\" they called across the water. \"We came down the stream too, long ago. The current brought us here. Welcome home!\" The ducks quacked cheerfully. The little boat sailed over and nudged gently up alongside them, red sail touching blue sail, and felt something warm and round settle in its wooden chest. It had floated from a garden puddle, ridden the current, plunged over a waterfall, and found a whole new home. Water had carried it all the way — and water, it turned out, knew exactly where to go.",
+      duration: 22,
+      theme: "meadow",
+      character: { emoji: "🚢", position: "bottom-right" },
+      hotspots: [
+        { emoji: "⛵", sound: "sparkle", reaction: "New friends!", position: "top-left" },
+        { emoji: "🌿", sound: "pop", reaction: "The reedy shore!", position: "top-right" },
+      ],
+    },
+  ],
+  vocab: [
+    {
+      word: "float",
+      definition: "To rest on top of water without sinking.",
+      example: "The little boat could float on the puddle.",
+    },
+    {
+      word: "current",
+      definition: "The flow of moving water in a stream or river.",
+      example: "The current carried the boat down the stream.",
+    },
+    {
+      word: "waterfall",
+      definition: "Water that flows over a ledge and drops down below.",
+      example: "The boat went over the waterfall with a splash!",
+    },
+    {
+      word: "journey",
+      definition: "A trip from one place to another, often full of discoveries.",
+      example: "The brave little boat had a wonderful journey to the pond.",
+    },
+  ],
+};
+
+for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE, BOAT_EPISODE]) {
   ep.scriptText = ep.scenes.map((s) => s.text).join("\n\n");
 }
 
@@ -369,6 +463,12 @@ const ALL_STORIES = [
     storyGoal: "ENTERTAIN" as const,
     visualStyle: "CARTOON" as const,
     episodes: [PIP_EPISODE],
+  },
+  {
+    title: "The Brave Little Boat",
+    storyGoal: "EDUCATE" as const,
+    visualStyle: "STORYBOOK" as const,
+    episodes: [BOAT_EPISODE],
   },
 ];
 

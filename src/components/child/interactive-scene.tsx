@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   detectTheme,
@@ -30,7 +30,7 @@ const POSITION_CLASSES: Record<string, string> = {
   center: "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
 };
 
-export function InteractiveScene({
+export const InteractiveScene = React.memo(function InteractiveScene({
   sceneId,
   sceneOrder,
   imageUrl: _imageUrl, // reserved for future AI-generated imagery
@@ -201,7 +201,7 @@ export function InteractiveScene({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Sensible default hotspots when no metadata is provided —

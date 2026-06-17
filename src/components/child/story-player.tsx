@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
@@ -317,14 +317,17 @@ export function StoryPlayer({
   const scene = scenes[currentScene];
 
   // Scene boundary markers for progress bar
-  const sceneMarkers: number[] = [];
-  if (scenes.length > 1 && duration > 0) {
-    let elapsed = 0;
-    for (let i = 0; i < scenes.length - 1; i++) {
-      elapsed += scenes[i].duration || duration / scenes.length;
-      sceneMarkers.push(elapsed / duration);
+  const sceneMarkers = useMemo(() => {
+    const markers: number[] = [];
+    if (scenes.length > 1 && duration > 0) {
+      let elapsed = 0;
+      for (let i = 0; i < scenes.length - 1; i++) {
+        elapsed += scenes[i].duration || duration / scenes.length;
+        markers.push(elapsed / duration);
+      }
     }
-  }
+    return markers;
+  }, [scenes, duration]);
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col bg-gradient-to-b from-sky-100 via-violet-50 to-rose-100">
