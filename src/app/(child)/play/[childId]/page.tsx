@@ -145,6 +145,7 @@ export default async function StoryShelfPage({
         coverImageUrl: p.coverImageUrl,
         episodeCount: p._count.episodes,
         completedEpisodes: completedMap[p.id] || 0,
+        estimatedMinutes: p._count.episodes * 5,
         isFavorite: favoriteIds.has(p.id),
         storyGoal: p.storyGoal,
       }))}

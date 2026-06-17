@@ -22,6 +22,7 @@ interface StoryCoverCardProps {
   coverImageUrl?: string | null;
   episodeCount: number;
   completedEpisodes: number;
+  estimatedMinutes: number;
   isNew?: boolean;
   isFavorite?: boolean;
   storyGoal: string;
@@ -35,6 +36,7 @@ export function StoryCoverCard({
   coverImageUrl,
   episodeCount,
   completedEpisodes,
+  estimatedMinutes,
   isNew,
   isFavorite = false,
   storyGoal,
@@ -83,6 +85,9 @@ export function StoryCoverCard({
               <p className="text-xs text-white/70 mt-0.5">
                 {episodeCount} episode{episodeCount !== 1 ? "s" : ""}
               </p>
+              <p className="text-xs text-white/60 mt-0.5">
+                ⏱️ ~{estimatedMinutes} min
+              </p>
               {GOAL_LABELS[storyGoal] && (
                 <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-black/30 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
                   {GOAL_LABELS[storyGoal].emoji} {GOAL_LABELS[storyGoal].text}
@@ -90,8 +95,17 @@ export function StoryCoverCard({
               )}
             </div>
 
+            {/* Complete badge — top-center overlay */}
+            {completedEpisodes >= episodeCount && episodeCount > 0 && (
+              <div className="absolute top-3 inset-x-0 flex justify-center pointer-events-none">
+                <span className="animate-shimmer rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-[length:200%_100%] px-3 py-1 text-xs font-bold text-amber-900 shadow-md shadow-amber-400/40 ring-1 ring-amber-300/60">
+                  ✅ Complete!
+                </span>
+              </div>
+            )}
+
             {/* Progress ring top-right */}
-            {completedEpisodes > 0 && (
+            {completedEpisodes > 0 && !(completedEpisodes >= episodeCount && episodeCount > 0) && (
               <div className="absolute top-3 right-3">
                 <ProgressRing progress={progress} size={36} strokeWidth={3} />
               </div>

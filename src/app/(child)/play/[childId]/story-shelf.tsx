@@ -27,6 +27,7 @@ interface StoryShelfProps {
     coverImageUrl: string | null;
     episodeCount: number;
     completedEpisodes: number;
+    estimatedMinutes: number;
     isFavorite: boolean;
     storyGoal: string;
   }>;
@@ -283,6 +284,7 @@ export function StoryShelf({
               coverImageUrl={pack.coverImageUrl}
               episodeCount={pack.episodeCount}
               completedEpisodes={pack.completedEpisodes}
+              estimatedMinutes={pack.estimatedMinutes}
               isNew={i === 0}
               isFavorite={pack.isFavorite}
               storyGoal={pack.storyGoal}

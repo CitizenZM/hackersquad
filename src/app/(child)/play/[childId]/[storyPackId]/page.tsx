@@ -49,17 +49,24 @@ export default async function EpisodePickerPage({
       storyPackId={storyPackId}
       title={storyPack.title}
       coverImageUrl={storyPack.coverImageUrl}
-      episodes={storyPack.episodes.map((ep) => ({
-        id: ep.id,
-        episodeNumber: ep.episodeNumber,
-        title: ep.title,
-        thumbnailUrl: ep.flashcardScenes[0]?.imageUrl || null,
-        state: completedSet.has(ep.id)
-          ? ("completed" as const)
-          : ep.id === nextEpisode?.id
-          ? ("current" as const)
-          : ("future" as const),
-      }))}
+      episodes={storyPack.episodes.map((ep) => {
+        const firstSentenceMatch = ep.scriptText?.match(/[^.!?]*[.!?]/);
+        const teaser = firstSentenceMatch
+          ? firstSentenceMatch[0].trim()
+          : undefined;
+        return {
+          id: ep.id,
+          episodeNumber: ep.episodeNumber,
+          title: ep.title,
+          teaser,
+          thumbnailUrl: ep.flashcardScenes[0]?.imageUrl || null,
+          state: completedSet.has(ep.id)
+            ? ("completed" as const)
+            : ep.id === nextEpisode?.id
+            ? ("current" as const)
+            : ("future" as const),
+        };
+      })}
       nextEpisodeId={nextEpisode?.id}
     />
   );

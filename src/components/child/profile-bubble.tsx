@@ -8,6 +8,7 @@ interface ProfileBubbleProps {
   name: string;
   avatarUrl?: string | null;
   index: number;
+  subtitle?: string;
 }
 
 const COLORS = [
@@ -19,7 +20,7 @@ const COLORS = [
   "from-cyan-400 to-teal-400",
 ];
 
-export function ProfileBubble({ id, name, avatarUrl, index }: ProfileBubbleProps) {
+export function ProfileBubble({ id, name, avatarUrl, index, subtitle }: ProfileBubbleProps) {
   const color = COLORS[index % COLORS.length];
 
   return (
@@ -59,6 +60,9 @@ export function ProfileBubble({ id, name, avatarUrl, index }: ProfileBubbleProps
         <p className="mt-1 text-center text-xl font-semibold text-foreground/80">
           {name}
         </p>
+        {subtitle && (
+          <p className="text-center text-xs text-foreground/40">{subtitle}</p>
+        )}
       </Link>
     </motion.div>
   );

@@ -9,5 +9,14 @@ export default async function ChildProfileSelectPage() {
     select: { id: true, name: true, avatarUrl: true },
   });
 
-  return <ProfileSelector profiles={children} />;
+  const profilesWithStats = await Promise.all(
+    children.map(async (child) => {
+      const completedEpisodes = await prisma.sessionEvent.count({
+        where: { childProfileId: child.id, eventType: "EPISODE_COMPLETE" },
+      });
+      return { ...child, completedEpisodes };
+    })
+  );
+
+  return <ProfileSelector profiles={profilesWithStats} />;
 }

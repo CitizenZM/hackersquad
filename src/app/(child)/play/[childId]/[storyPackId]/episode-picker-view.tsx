@@ -18,6 +18,7 @@ interface EpisodePickerViewProps {
     id: string;
     episodeNumber: number;
     title: string;
+    teaser?: string;
     thumbnailUrl: string | null;
     state: "completed" | "current" | "future";
   }>;

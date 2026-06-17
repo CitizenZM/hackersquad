@@ -13,6 +13,7 @@ interface Profile {
   id: string;
   name: string;
   avatarUrl: string | null;
+  completedEpisodes?: number;
 }
 
 export function ProfileSelector({ profiles }: { profiles: Profile[] }) {
@@ -143,6 +144,11 @@ export function ProfileSelector({ profiles }: { profiles: Profile[] }) {
               name={child.name}
               avatarUrl={child.avatarUrl}
               index={i}
+              subtitle={
+                child.completedEpisodes
+                  ? `${child.completedEpisodes} episode${child.completedEpisodes === 1 ? "" : "s"} heard`
+                  : undefined
+              }
             />
           ))}
         </div>

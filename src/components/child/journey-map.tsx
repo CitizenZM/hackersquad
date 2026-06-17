@@ -8,6 +8,7 @@ export interface JourneyNode {
   id: string;
   episodeNumber: number;
   title: string;
+  teaser?: string;
   state: "completed" | "current" | "future";
   thumbnailUrl: string | null;
 }
@@ -150,6 +151,11 @@ export function JourneyMap({ childId, storyPackId, nodes }: JourneyMapProps) {
             >
               {node.title}
             </p>
+            {node.teaser && (
+              <p className="child-caption text-foreground/50 line-clamp-2 mt-1 max-w-[120px] text-center">
+                {node.teaser}
+              </p>
+            )}
           </motion.div>
         );
 
