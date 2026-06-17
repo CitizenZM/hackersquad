@@ -52,12 +52,15 @@ export default async function SourcesPage() {
         ) : (
           <div className="space-y-3">
             {sources.map((source) => (
-              <Card key={source.id}>
+              <Card key={source.id} className="transition-colors hover:bg-accent/50">
                 <CardContent className="flex items-center justify-between py-4">
-                  <div className="flex items-center gap-4">
-                    <FileText className="h-8 w-8 text-primary/60" />
-                    <div>
-                      <h3 className="font-semibold">{source.title}</h3>
+                  <Link
+                    href={`/sources/${source.id}`}
+                    className="flex flex-1 items-center gap-4 min-w-0"
+                  >
+                    <FileText className="h-8 w-8 shrink-0 text-primary/60" />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold truncate">{source.title}</h3>
                       <p className="text-sm text-muted-foreground">
                         {SOURCE_TYPE_LABELS[source.sourceType]} &middot;{" "}
                         {source.wordCount.toLocaleString()} words &middot;{" "}
@@ -65,8 +68,8 @@ export default async function SourcesPage() {
                         {source._count.storyPacks} story packs
                       </p>
                     </div>
-                  </div>
-                  <Link href={`/stories/new?sourceId=${source.id}`}>
+                  </Link>
+                  <Link href={`/stories/new?sourceId=${source.id}`} className="ml-4 shrink-0">
                     <Button variant="outline" size="sm">Create Story</Button>
                   </Link>
                 </CardContent>

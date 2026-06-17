@@ -20,6 +20,10 @@ const COLORS = [
   "from-cyan-400 to-teal-400",
 ];
 
+function isEmojiAvatar(value: string) {
+  return !value.startsWith("http") && !value.startsWith("/");
+}
+
 export function ProfileBubble({ id, name, avatarUrl, index, subtitle }: ProfileBubbleProps) {
   const color = COLORS[index % COLORS.length];
 
@@ -44,7 +48,9 @@ export function ProfileBubble({ id, name, avatarUrl, index, subtitle }: ProfileB
           <div
             className={`flex h-[120px] w-[120px] items-center justify-center rounded-full bg-gradient-to-br ${color} shadow-lg shadow-black/10 ring-4 ring-white/50 transition-shadow group-active:shadow-xl`}
           >
-            {avatarUrl ? (
+            {avatarUrl && isEmojiAvatar(avatarUrl) ? (
+              <span className="text-5xl">{avatarUrl}</span>
+            ) : avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={name}

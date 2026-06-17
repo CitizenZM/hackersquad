@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { estimateEpisodeCount } from "@/lib/constants";
-import { Upload, FileText, Type } from "lucide-react";
+import { Upload, FileText, Type, BookOpen } from "lucide-react";
 
 export function SourceUploadForm() {
   const router = useRouter();
@@ -218,8 +218,11 @@ export function SourceUploadForm() {
               </div>
             </div>
             <div className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2">
-              <span className="text-sm font-medium text-primary">Suggested episodes</span>
-              <span className="text-lg font-bold text-primary">{episodeEstimate}</span>
+              <div className="flex items-center gap-2 text-primary">
+                <BookOpen className="h-4 w-4" />
+                <span className="text-sm font-medium">Estimated episodes</span>
+              </div>
+              <span className="text-2xl font-bold text-primary">{episodeEstimate}</span>
             </div>
           </div>
         )}

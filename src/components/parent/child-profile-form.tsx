@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AGE_GROUP_LABELS, LEARNING_MODE_LABELS } from "@/lib/constants";
+import { EmojiAvatarPicker } from "@/components/parent/emoji-avatar-picker";
 
 interface ChildProfileFormProps {
   initialData?: {
@@ -17,6 +18,7 @@ interface ChildProfileFormProps {
     interests: string[];
     learningMode: string;
     pin?: string | null;
+    avatarUrl?: string | null;
   };
 }
 
@@ -24,6 +26,7 @@ export function ChildProfileForm({ initialData }: ChildProfileFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [avatar, setAvatar] = useState(initialData?.avatarUrl || "🐻");
   const isEditing = !!initialData;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -39,6 +42,7 @@ export function ChildProfileForm({ initialData }: ChildProfileFormProps) {
       interests: (formData.get("interests") as string).split(",").map(s => s.trim()).filter(Boolean),
       learningMode: formData.get("learningMode") as string || "LISTEN",
       pin: (formData.get("pin") as string) || undefined,
+      avatarUrl: (formData.get("avatarUrl") as string) || undefined,
     };
 
     try {
@@ -76,6 +80,11 @@ export function ChildProfileForm({ initialData }: ChildProfileFormProps) {
               {error}
             </div>
           )}
+          <div className="space-y-2">
+            <Label>Avatar</Label>
+            <EmojiAvatarPicker value={avatar} onChange={setAvatar} />
+            <input type="hidden" name="avatarUrl" value={avatar} />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="name">Child&apos;s Name</Label>
             <Input id="name" name="name" defaultValue={initialData?.name} required />

@@ -32,6 +32,7 @@ export async function POST(request: Request) {
         interests: data.interests,
         learningMode: data.learningMode,
         pin: data.pin,
+        avatarUrl: data.avatarUrl,
       },
     });
 

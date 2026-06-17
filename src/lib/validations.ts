@@ -18,6 +18,7 @@ export const createChildSchema = z.object({
   interests: z.array(z.string()).default([]),
   learningMode: z.enum(["LISTEN", "READ_ALONG", "INTERACTIVE"]).default("LISTEN"),
   pin: z.string().length(4).regex(/^\d{4}$/).optional(),
+  avatarUrl: z.string().optional(),
 });
 
 export const updateChildSchema = createChildSchema.partial();
