@@ -14,12 +14,29 @@ export async function POST(
   });
 
   if (!storyPack) {
-    return Response.json({ error: "Not found" }, { status: 404 });
+    return Response.json(
+      { error: "Story pack not found or you don't have access" },
+      { status: 404 }
+    );
+  }
+
+  if (storyPack.status === "PROCESSING") {
+    return Response.json(
+      { error: "This story is already being generated. Check the progress page." },
+      { status: 400 }
+    );
+  }
+
+  if (storyPack.status === "REVIEW_READY" || storyPack.status === "PUBLISHED") {
+    return Response.json(
+      { error: "This story has already been generated. Use Regenerate to create a new version." },
+      { status: 400 }
+    );
   }
 
   if (storyPack.status !== "DRAFT" && storyPack.status !== "ERROR") {
     return Response.json(
-      { error: "Story pack is already processing or complete" },
+      { error: "Story pack cannot be generated in its current state." },
       { status: 400 }
     );
   }

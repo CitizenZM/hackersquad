@@ -54,6 +54,14 @@ export async function PUT(
       return Response.json({ error: "Not found" }, { status: 404 });
     }
 
+    const VALID_STATUSES = ["DRAFT", "PROCESSING", "REVIEW_READY", "PUBLISHED", "APPROVED", "ERROR"];
+    if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
+      return Response.json(
+        { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
     const updated = await prisma.storyPack.update({
       where: { id: storyPackId },
       data: { status: body.status },

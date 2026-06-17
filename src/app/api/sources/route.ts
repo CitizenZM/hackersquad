@@ -30,6 +30,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = createSourceSchema.parse(body);
 
+    if (data.rawText && data.rawText.length > 500000) {
+      return Response.json(
+        { error: "Content too large. Maximum 500,000 characters." },
+        { status: 413 }
+      );
+    }
+
     const source = await prisma.storySource.create({
       data: {
         parentId: parentId,

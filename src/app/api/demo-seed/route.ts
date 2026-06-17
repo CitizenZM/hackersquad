@@ -753,6 +753,20 @@ export async function POST() {
       where: { parentId, name: DEMO_CHILD.name },
     });
 
+    // Skip re-seeding if demo is already fully loaded
+    if (existingChild) {
+      const existingStoryCount = await prisma.storyPack.count({
+        where: { childProfileId: existingChild.id, status: "PUBLISHED" },
+      });
+      if (existingStoryCount >= 5) {
+        return Response.json({
+          success: true,
+          message: "Demo already loaded with all stories",
+          childId: existingChild.id,
+        });
+      }
+    }
+
     // Clean up old demo stories
     if (existingChild) {
       const oldTitles = ALL_STORIES.map((s) => s.title);

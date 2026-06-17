@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { hasParentAccess } from "@/lib/parent-access";
 import { ParentSidebar } from "@/components/layout/parent-sidebar";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s | StoryNest Kids",
+    default: "Parent Dashboard | StoryNest Kids",
+  },
+  robots: { index: false },
+};
 
 export default async function ParentLayout({
   children,
