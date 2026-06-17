@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /parent-access
+Disallow: /dashboard
+Disallow: /children
+Disallow: /sources
+Disallow: /stories
+Disallow: /voices
+Disallow: /avatars
+Disallow: /progress
+
+Sitemap: https://hackersquad.vercel.app/sitemap.xml

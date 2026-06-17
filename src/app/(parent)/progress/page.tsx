@@ -24,6 +24,8 @@ export default async function ProgressPage() {
         flashcardViews,
         vocabTaps,
         recentEvents,
+        uniqueVocabWords,
+        storyGoalCounts,
       ] = await Promise.all([
         prisma.sessionEvent.count({
           where: { childProfileId: child.id, eventType: "EPISODE_COMPLETE" },
@@ -52,6 +54,16 @@ export default async function ProgressPage() {
             episode: { select: { episodeNumber: true, title: true } },
           },
         }),
+        prisma.sessionEvent.groupBy({
+          by: ["episodeId"],
+          where: { childProfileId: child.id, eventType: "VOCABULARY_TAP" },
+          _count: { episodeId: true },
+        }),
+        prisma.sessionEvent.findMany({
+          where: { childProfileId: child.id, eventType: "EPISODE_START" },
+          select: { storyPack: { select: { storyGoal: true } } },
+          take: 50,
+        }),
       ]);
 
       // Calculate streak (consecutive days with activity)
@@ -77,6 +89,21 @@ export default async function ProgressPage() {
 
       const completionRate =
         episodeStarts > 0 ? Math.round((episodeCompletes / episodeStarts) * 100) : 0;
+
+      // Unique vocab words (count of distinct episodeIds with VOCABULARY_TAP)
+      const uniqueVocabWordCount = uniqueVocabWords.length;
+
+      // Preferred story goal
+      const goalTally: Record<string, number> = {};
+      for (const e of storyGoalCounts) {
+        const goal = e.storyPack?.storyGoal || "UNKNOWN";
+        goalTally[goal] = (goalTally[goal] || 0) + 1;
+      }
+      const preferredGoal = Object.entries(goalTally).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+      // Average episodes per active day
+      const activeDays = dayStrings.size;
+      const avgEpisodesPerDay = activeDays > 0 ? Math.round(episodeCompletes / activeDays) : 0;
 
       // Top replayed stories
       const storyReplays = await prisma.sessionEvent.groupBy({
@@ -112,6 +139,9 @@ export default async function ProgressPage() {
         streak,
         completionRate,
         topStories: topStoriesWithCount,
+        uniqueVocabWordCount,
+        preferredGoal,
+        avgEpisodesPerDay,
       };
     })
   );
@@ -171,9 +201,9 @@ export default async function ProgressPage() {
                     color="text-orange-600 bg-orange-50"
                   />
                   <StatBox
-                    icon={<Star className="h-4 w-4" />}
-                    label="Words Tapped"
-                    value={stats.vocabTaps}
+                    icon={<BookOpen className="h-4 w-4" />}
+                    label="Vocab Words"
+                    value={stats.uniqueVocabWordCount}
                     color="text-purple-600 bg-purple-50"
                   />
                 </div>
@@ -246,6 +276,36 @@ export default async function ProgressPage() {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Story Insights */}
+                {(stats.preferredGoal || stats.avgEpisodesPerDay > 0) && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      Insights
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {stats.preferredGoal && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
+                          📊 Preferred:{" "}
+                          {stats.preferredGoal === "BEDTIME"
+                            ? "🌙 Bedtime stories"
+                            : stats.preferredGoal === "EDUCATE"
+                            ? "🎓 Educational stories"
+                            : stats.preferredGoal === "ENTERTAIN"
+                            ? "🎉 Entertainment stories"
+                            : stats.preferredGoal.toLowerCase()}
+                        </span>
+                      )}
+                      {stats.avgEpisodesPerDay > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
+                          📅 Avg {stats.avgEpisodesPerDay}{" "}
+                          {stats.avgEpisodesPerDay === 1 ? "episode" : "episodes"} per active day
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
