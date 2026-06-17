@@ -19,3 +19,9 @@ Skip MOP for: trivial Q&A, single-file edits, single shell commands. Use
 - Source: github.com/CitizenZM/hackersquad branch `claude/brand-intelligence-platform-dT5Kh`
 - Vercel: prj_q3o6bBfw6lAoJvweykzF8Saar6ji → creativeintel.vercel.app
 - Internal package name remains `hackersquad`; deployed as `creativeintel`
+
+## CodeGraph
+Index at `.codegraph/` — semantic code search, call graph, impact analysis.
+- Query: `codegraph context "your task"` or use the MCP tools in Claude Code
+- After adding many files: `codegraph sync <project-path>`
+- Binary: `~/.local/bin/codegraph`
