@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants";
 import { BookOpen, Play, Check } from "lucide-react";
 import { ApproveButton } from "@/components/parent/approve-button";
+import { FlagButton } from "@/components/parent/flag-button";
 
 export default async function StoryPackDetailPage({
   params,
@@ -29,7 +30,14 @@ export default async function StoryPackDetailPage({
       childProfile: { select: { id: true, name: true, age: true } },
       episodes: {
         orderBy: { episodeNumber: "asc" },
-        include: {
+        select: {
+          id: true,
+          episodeNumber: true,
+          title: true,
+          wordBudget: true,
+          durationTarget: true,
+          audioUrl: true,
+          scriptText: true,
           flashcardScenes: { orderBy: { sceneOrder: "asc" }, take: 1 },
           _count: { select: { flashcardScenes: true, vocabularyCards: true } },
         },
@@ -130,6 +138,21 @@ export default async function StoryPackDetailPage({
                       {ep.audioUrl && (
                         <div className="flex items-center gap-1 mt-1 text-xs text-green-600">
                           <Check className="h-3 w-3" /> Audio ready
+                        </div>
+                      )}
+                      {ep.scriptText && (
+                        <details className="mt-2">
+                          <summary className="text-xs text-primary cursor-pointer hover:underline">
+                            Preview story text
+                          </summary>
+                          <p className="mt-1 text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                            {ep.scriptText.slice(0, 500)}...
+                          </p>
+                        </details>
+                      )}
+                      {isPublished && (
+                        <div className="mt-2">
+                          <FlagButton storyPackId={storyPackId} />
                         </div>
                       )}
                     </div>

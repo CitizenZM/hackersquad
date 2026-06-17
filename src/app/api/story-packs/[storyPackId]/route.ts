@@ -36,6 +36,36 @@ export async function GET(
   }
 }
 
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ storyPackId: string }> }
+) {
+  try {
+    const { parentId } = await getDefaultParent();
+
+    const { storyPackId } = await params;
+    const body = await request.json();
+
+    const storyPack = await prisma.storyPack.findFirst({
+      where: { id: storyPackId, parentId },
+    });
+
+    if (!storyPack) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const updated = await prisma.storyPack.update({
+      where: { id: storyPackId },
+      data: { status: body.status },
+    });
+
+    return Response.json(updated);
+  } catch (error) {
+    console.error("Route error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ storyPackId: string }> }

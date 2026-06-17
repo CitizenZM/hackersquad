@@ -4,6 +4,7 @@ import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, BookOpen, Clock, Award, Star, Users } from "lucide-react";
 import { AGE_GROUP_LABELS } from "@/lib/constants";
+import { CopyProgressButton } from "@/components/parent/copy-progress-button";
 
 export const dynamic = "force-dynamic";
 
@@ -167,16 +168,27 @@ export default async function ProgressPage() {
           childStats.map((stats) => (
             <Card key={stats.child.id}>
               <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-bold">
-                    {stats.child.name[0].toUpperCase()}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-bold">
+                      {stats.child.name[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <CardTitle>{stats.child.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Age {stats.child.age} &middot; {AGE_GROUP_LABELS[stats.child.ageGroup]}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle>{stats.child.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Age {stats.child.age} &middot; {AGE_GROUP_LABELS[stats.child.ageGroup]}
-                    </p>
-                  </div>
+                  <CopyProgressButton
+                    summary={{
+                      childName: stats.child.name,
+                      episodesCompleted: stats.episodeCompletes,
+                      completionRate: stats.completionRate,
+                      streak: stats.streak,
+                      vocabWords: stats.uniqueVocabWordCount,
+                    }}
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
