@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, ChevronRight, Home } from "lucide-react";
 import { RewardBadge } from "./reward-badge";
@@ -8,10 +8,13 @@ import { Mascot } from "./mascot";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
 
+const AUTO_ADVANCE_SECONDS = 10;
+
 interface CelebrationScreenProps {
   visible: boolean;
   episodeNumber: number;
   hasNextEpisode: boolean;
+  nextEpisodeId?: string;
   onReplay: () => void;
   onNext: () => void;
   onHome: () => void;
@@ -32,12 +35,15 @@ export const CelebrationScreen = React.memo(function CelebrationScreen({
   visible,
   episodeNumber,
   hasNextEpisode,
+  nextEpisodeId,
   onReplay,
   onNext,
   onHome,
 }: CelebrationScreenProps) {
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
+  const [countdown, setCountdown] = useState(AUTO_ADVANCE_SECONDS);
+  const [countdownCancelled, setCountdownCancelled] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -45,7 +51,33 @@ export const CelebrationScreen = React.memo(function CelebrationScreen({
       const phrase = PRAISE[episodeNumber % PRAISE.length];
       setTimeout(() => speak(`${phrase} You finished chapter ${episodeNumber}!`, { pitch: 1.3 }), 400);
     }
+    // Reset countdown state each time the screen becomes visible
+    if (visible) {
+      setCountdown(AUTO_ADVANCE_SECONDS);
+      setCountdownCancelled(false);
+    }
   }, [visible, episodeNumber, play, speak]);
+
+  // Auto-advance countdown: only runs when there is a next episode and
+  // the child hasn't cancelled it.
+  useEffect(() => {
+    if (!visible || !nextEpisodeId || countdownCancelled) return;
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          onNext();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [visible, nextEpisodeId, countdownCancelled, onNext]);
+
+  function cancelCountdown() {
+    setCountdownCancelled(true);
+  }
 
   const praise = PRAISE[episodeNumber % PRAISE.length];
 
@@ -57,6 +89,7 @@ export const CelebrationScreen = React.memo(function CelebrationScreen({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 z-20 flex flex-col items-center justify-center px-8 safe-top safe-bottom bg-gradient-to-b from-child-primary via-indigo-500 to-purple-600 overflow-hidden"
+          onClick={cancelCountdown}
         >
           {/* Confetti burst */}
           {Array.from({ length: 20 }).map((_, i) => (
@@ -125,7 +158,8 @@ export const CelebrationScreen = React.memo(function CelebrationScreen({
             className="w-full max-w-xs space-y-3"
           >
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 play("pop");
                 onReplay();
               }}
@@ -136,19 +170,37 @@ export const CelebrationScreen = React.memo(function CelebrationScreen({
             </button>
 
             {hasNextEpisode ? (
-              <button
-                onClick={() => {
-                  play("sparkle");
-                  onNext();
-                }}
-                className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-lg font-bold text-child-primary shadow-xl transition-colors active:bg-white/90"
-              >
-                Next Chapter
-                <ChevronRight className="h-5 w-5" />
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    play("sparkle");
+                    onNext();
+                  }}
+                  className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-lg font-bold text-child-primary shadow-xl transition-colors active:bg-white/90"
+                >
+                  Next Chapter
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                {nextEpisodeId && !countdownCancelled && countdown > 0 && (
+                  <p className="text-sm text-white/80">
+                    Next episode in {countdown}…{" "}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cancelCountdown();
+                      }}
+                      className="underline text-white/80 active:text-white"
+                    >
+                      Cancel
+                    </button>
+                  </p>
+                )}
+              </div>
             ) : (
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   play("sparkle");
                   onHome();
                 }}

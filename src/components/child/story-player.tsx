@@ -320,6 +320,7 @@ export function StoryPlayer({
         <button
           onClick={() => router.push(`/play/${childId}/${storyPackId}`)}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow"
+          aria-label="Go back"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -395,6 +396,7 @@ export function StoryPlayer({
               goToScene(Math.max(0, currentScene - 1));
             }}
             className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-md active:scale-90 transition-transform"
+            aria-label="Previous scene"
           >
             <RotateCcw className="h-6 w-6 text-foreground/60" />
           </button>
@@ -408,6 +410,7 @@ export function StoryPlayer({
               else logEvent("PLAY_RESUME");
             }}
             className="flex h-20 w-20 items-center justify-center rounded-full bg-child-primary shadow-xl shadow-child-primary/30 active:scale-90 transition-transform"
+            aria-label={isPlaying ? "Pause story" : "Play story"}
           >
             {isPlaying ? (
               <Pause className="h-8 w-8 text-white" fill="white" />
@@ -422,6 +425,7 @@ export function StoryPlayer({
               goToScene(Math.min(scenes.length - 1, currentScene + 1));
             }}
             className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-md active:scale-90 transition-transform"
+            aria-label="Next scene"
           >
             <SkipForward className="h-6 w-6 text-foreground/60" />
           </button>
@@ -437,6 +441,7 @@ export function StoryPlayer({
         visible={showCelebration}
         episodeNumber={episodeNumber}
         hasNextEpisode={!!nextEpisodeId}
+        nextEpisodeId={nextEpisodeId}
         onReplay={handleReplay}
         onNext={handleCelebrationNext}
         onHome={handleCelebrationHome}

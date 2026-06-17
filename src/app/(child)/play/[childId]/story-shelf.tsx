@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { StoryCoverCard } from "@/components/child/story-cover-card";
@@ -56,6 +56,35 @@ export function StoryShelf({
   const [activeFilter, setActiveFilter] = useState("all");
   const [showNotifBanner, setShowNotifBanner] = useState(false);
 
+  const { greeting, subtitle, mascotMood } = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      return {
+        greeting: `Good morning, ${childName}! ☀️`,
+        subtitle: "What shall we explore today?",
+        mascotMood: "happy" as const,
+      };
+    } else if (hour >= 12 && hour < 17) {
+      return {
+        greeting: `Good afternoon, ${childName}! 🌤️`,
+        subtitle: "Ready for an adventure?",
+        mascotMood: "happy" as const,
+      };
+    } else if (hour >= 17 && hour < 20) {
+      return {
+        greeting: `Good evening, ${childName}! 🌅`,
+        subtitle: "Pick a story for tonight!",
+        mascotMood: "sleepy" as const,
+      };
+    } else {
+      return {
+        greeting: `Time for a story, ${childName}! 🌙`,
+        subtitle: "Let's read a bedtime story",
+        mascotMood: "sleepy" as const,
+      };
+    }
+  }, [childName]);
+
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem("notif-dismissed")) {
       setShowNotifBanner(true);
@@ -87,10 +116,10 @@ export function StoryShelf({
   useEffect(() => {
     // Voice greeting after a brief delay (allows the page to render)
     const timer = setTimeout(() => {
-      speak(`Hi ${childName}! Let's pick a story!`, { pitch: 1.2 });
+      speak(`${greeting} ${subtitle}`, { pitch: 1.2 });
     }, 600);
     return () => clearTimeout(timer);
-  }, [childName, speak]);
+  }, [greeting, subtitle, speak]);
 
   const filteredPacks =
     activeFilter === "all"
@@ -106,7 +135,7 @@ export function StoryShelf({
         className="mb-4 flex items-center gap-3"
       >
         <Mascot
-          mood="happy"
+          mood={mascotMood}
           size={70}
           onTap={() => {
             play("pop");
@@ -114,9 +143,9 @@ export function StoryShelf({
           }}
         />
         <div className="flex-1">
-          <h1 className="child-heading leading-tight">Hi {childName}!</h1>
+          <h1 className="child-heading leading-tight">{greeting}</h1>
           <p className="child-caption text-foreground/50">
-            Pick a story to explore
+            {subtitle}
           </p>
         </div>
         <BedtimeToggle />
