@@ -109,6 +109,17 @@ export default async function StoryShelfPage({
     }
   }
 
+  // Weekly listening goal
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const weeklyEpisodes = await prisma.sessionEvent.count({
+    where: {
+      childProfileId: childId,
+      eventType: "EPISODE_COMPLETE",
+      createdAt: { gte: oneWeekAgo },
+    },
+  });
+
   // Continue listening
   const lastEvent = await prisma.sessionEvent.findFirst({
     where: {
@@ -127,6 +138,7 @@ export default async function StoryShelfPage({
       childId={child.id}
       childName={child.name}
       streak={streak}
+      weeklyEpisodes={weeklyEpisodes}
       storyPacks={storyPacks.map((p) => ({
         id: p.id,
         title: p.title,
@@ -134,6 +146,7 @@ export default async function StoryShelfPage({
         episodeCount: p._count.episodes,
         completedEpisodes: completedMap[p.id] || 0,
         isFavorite: favoriteIds.has(p.id),
+        storyGoal: p.storyGoal,
       }))}
       continueData={
         lastEvent?.storyPack && lastEvent?.episode

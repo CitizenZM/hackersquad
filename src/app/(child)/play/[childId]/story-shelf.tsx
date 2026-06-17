@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { StoryCoverCard } from "@/components/child/story-cover-card";
@@ -9,6 +9,13 @@ import { BedtimeToggle } from "@/components/child/bedtime-toggle";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
 import { Home, Play, BookOpen } from "lucide-react";
+
+const goalFilters = [
+  { value: "all", label: "All", emoji: "📖" },
+  { value: "BEDTIME", label: "Bedtime", emoji: "🌙" },
+  { value: "ENTERTAIN", label: "Fun", emoji: "🎉" },
+  { value: "EDUCATE", label: "Learn", emoji: "📚" },
+];
 
 interface StoryShelfProps {
   childId: string;
@@ -21,7 +28,9 @@ interface StoryShelfProps {
     episodeCount: number;
     completedEpisodes: number;
     isFavorite: boolean;
+    storyGoal: string;
   }>;
+  weeklyEpisodes: number;
   continueData: {
     storyPackId: string;
     storyTitle: string;
@@ -36,11 +45,13 @@ export function StoryShelf({
   childId,
   childName,
   streak,
+  weeklyEpisodes,
   storyPacks,
   continueData,
 }: StoryShelfProps) {
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
+  const [activeFilter, setActiveFilter] = useState("all");
 
   useEffect(() => {
     // Voice greeting after a brief delay (allows the page to render)
@@ -49,6 +60,11 @@ export function StoryShelf({
     }, 600);
     return () => clearTimeout(timer);
   }, [childName, speak]);
+
+  const filteredPacks =
+    activeFilter === "all"
+      ? storyPacks
+      : storyPacks.filter((p) => p.storyGoal === activeFilter);
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col px-5 pt-6 safe-top safe-x bg-gradient-to-b from-amber-50 via-rose-50 to-violet-50">
@@ -85,6 +101,38 @@ export function StoryShelf({
           </div>
         </div>
       )}
+
+      {/* Weekly Goal */}
+      {(() => {
+        const WEEKLY_GOAL = 5;
+        const weeklyProgress = Math.min(weeklyEpisodes / WEEKLY_GOAL, 1);
+        return (
+          <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎯</span>
+                <span className="child-caption font-semibold text-blue-800">
+                  Weekly Goal
+                </span>
+              </div>
+              <span className="child-caption text-blue-600">
+                {weeklyEpisodes}/{WEEKLY_GOAL} episodes
+              </span>
+            </div>
+            <div className="h-3 rounded-full bg-blue-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
+                style={{ width: `${weeklyProgress * 100}%` }}
+              />
+            </div>
+            {weeklyEpisodes >= WEEKLY_GOAL && (
+              <p className="child-caption text-blue-600 mt-2 text-center">
+                🌟 Goal reached! Amazing listener!
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Continue banner */}
       {continueData && (
@@ -125,6 +173,29 @@ export function StoryShelf({
         </motion.div>
       )}
 
+      {/* Goal filter pills */}
+      {storyPacks.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+          {goalFilters.map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => {
+                play("tap");
+                setActiveFilter(filter.value);
+              }}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                activeFilter === filter.value
+                  ? "bg-child-primary text-white shadow-md shadow-child-primary/30"
+                  : "bg-white/70 text-foreground/70 shadow-sm"
+              }`}
+            >
+              <span>{filter.emoji}</span>
+              <span>{filter.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Story grid */}
       {storyPacks.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center pb-20">
@@ -134,12 +205,20 @@ export function StoryShelf({
             Ask a parent to create one.
           </p>
         </div>
+      ) : filteredPacks.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center pb-20">
+          <Mascot mood="curious" size={100} />
+          <p className="child-body text-foreground/40 mt-4">No stories here yet!</p>
+          <p className="child-caption text-foreground/30">
+            Try a different filter.
+          </p>
+        </div>
       ) : (
         <div
           className="grid grid-cols-2 gap-4 pb-24"
           onClickCapture={() => play("tap")}
         >
-          {storyPacks.map((pack, i) => (
+          {filteredPacks.map((pack, i) => (
             <StoryCoverCard
               key={pack.id}
               childId={childId}
@@ -150,6 +229,7 @@ export function StoryShelf({
               completedEpisodes={pack.completedEpisodes}
               isNew={i === 0}
               isFavorite={pack.isFavorite}
+              storyGoal={pack.storyGoal}
               index={i}
             />
           ))}

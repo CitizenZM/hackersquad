@@ -6,6 +6,14 @@ import { BookOpen } from "lucide-react";
 import { ProgressRing } from "./progress-ring";
 import { FavoriteButton } from "./favorite-button";
 
+const GOAL_LABELS: Record<string, { emoji: string; text: string }> = {
+  BEDTIME: { emoji: "🌙", text: "Bedtime" },
+  ENTERTAIN: { emoji: "🎉", text: "Fun" },
+  EDUCATE: { emoji: "📚", text: "Learn" },
+  MORAL_LESSON: { emoji: "💛", text: "Lesson" },
+  VOCABULARY: { emoji: "📝", text: "Words" },
+};
+
 interface StoryCoverCardProps {
   childId: string;
   storyPackId: string;
@@ -15,6 +23,7 @@ interface StoryCoverCardProps {
   completedEpisodes: number;
   isNew?: boolean;
   isFavorite?: boolean;
+  storyGoal: string;
   index: number;
 }
 
@@ -27,6 +36,7 @@ export function StoryCoverCard({
   completedEpisodes,
   isNew,
   isFavorite = false,
+  storyGoal,
   index,
 }: StoryCoverCardProps) {
   const progress = episodeCount > 0 ? completedEpisodes / episodeCount : 0;
@@ -69,6 +79,11 @@ export function StoryCoverCard({
               <p className="text-xs text-white/70 mt-0.5">
                 {episodeCount} episode{episodeCount !== 1 ? "s" : ""}
               </p>
+              {GOAL_LABELS[storyGoal] && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-black/30 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
+                  {GOAL_LABELS[storyGoal].emoji} {GOAL_LABELS[storyGoal].text}
+                </span>
+              )}
             </div>
 
             {/* Progress ring top-right */}
