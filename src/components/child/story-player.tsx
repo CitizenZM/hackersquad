@@ -232,6 +232,20 @@ export function StoryPlayer({
     [scenes, hasAudio]
   );
 
+  // Play whoosh sound when scene changes during active playback (skip initial mount)
+  const prevSceneRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevSceneRef.current === null) {
+      prevSceneRef.current = currentScene;
+      return;
+    }
+    if (prevSceneRef.current !== currentScene && isPlaying) {
+      playSfx("whoosh");
+    }
+    prevSceneRef.current = currentScene;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScene]);
+
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -362,6 +376,33 @@ export function StoryPlayer({
             )}
           </AnimatePresence>
         </div>
+
+        {/* Scene dot indicators */}
+        {scenes.length > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-3 pb-1">
+            {scenes.map((_, i) => (
+              <motion.button
+                key={i}
+                aria-label={`Go to scene ${i + 1}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToScene(i);
+                }}
+                className={`rounded-full transition-all duration-300 ${
+                  i === currentScene
+                    ? "w-8 h-3 bg-child-primary shadow-md"
+                    : "w-3 h-3 bg-foreground/20"
+                }`}
+                animate={i === currentScene ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+                transition={
+                  i === currentScene
+                    ? { duration: 1.6, repeat: Infinity, ease: "easeInOut" }
+                    : {}
+                }
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Progress bar */}
@@ -438,7 +479,7 @@ export function StoryPlayer({
           </button>
         </div>
 
-        <p className="text-center child-caption text-foreground/40 mt-2">
+        <p className="text-center child-caption text-foreground/60 mt-2 font-semibold tracking-wide">
           Scene {currentScene + 1} of {scenes.length}
         </p>
       </div>
