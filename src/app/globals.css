@@ -182,3 +182,18 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/* ── Bedtime Mode ── */
+.bedtime-mode {
+  --child-bg: oklch(0.15 0.02 270);
+  --child-primary: oklch(0.50 0.12 270);
+  --child-accent: oklch(0.55 0.10 40);
+  --child-surface: oklch(0.20 0.02 270);
+  --child-muted: oklch(0.25 0.02 270);
+  --foreground: oklch(0.90 0.02 85);
+  color: oklch(0.90 0.02 85);
+}
+
+.bedtime-mode .animate-float {
+  animation-duration: 5s;
+}

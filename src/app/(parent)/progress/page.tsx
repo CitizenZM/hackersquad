@@ -78,6 +78,29 @@ export default async function ProgressPage() {
       const completionRate =
         episodeStarts > 0 ? Math.round((episodeCompletes / episodeStarts) * 100) : 0;
 
+      // Top replayed stories
+      const storyReplays = await prisma.sessionEvent.groupBy({
+        by: ["storyPackId"],
+        where: {
+          childProfileId: child.id,
+          eventType: "EPISODE_START",
+        },
+        _count: { storyPackId: true },
+        orderBy: { _count: { storyPackId: "desc" } },
+        take: 3,
+      });
+      const topStoryIds = storyReplays.map((s) => s.storyPackId);
+      const topStories = topStoryIds.length > 0
+        ? await prisma.storyPack.findMany({
+            where: { id: { in: topStoryIds } },
+            select: { id: true, title: true, storyGoal: true },
+          })
+        : [];
+      const topStoriesWithCount = topStories.map((s) => ({
+        ...s,
+        plays: storyReplays.find((r) => r.storyPackId === s.id)?._count.storyPackId || 0,
+      })).sort((a, b) => b.plays - a.plays);
+
       return {
         child,
         episodeCompletes,
@@ -88,6 +111,7 @@ export default async function ProgressPage() {
         recentEvents,
         streak,
         completionRate,
+        topStories: topStoriesWithCount,
       };
     })
   );
@@ -198,6 +222,33 @@ export default async function ProgressPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Top Stories */}
+                {stats.topStories.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <Star className="h-4 w-4 text-muted-foreground" />
+                      Most Played Stories
+                    </h4>
+                    <div className="space-y-2">
+                      {stats.topStories.map((story, i) => (
+                        <div
+                          key={story.id}
+                          className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{["🥇", "🥈", "🥉"][i] || "📖"}</span>
+                            <span className="font-medium">{story.title}</span>
+                            <span className="text-xs text-muted-foreground">{story.storyGoal.toLowerCase()}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-primary">
+                            {story.plays} {story.plays === 1 ? "play" : "plays"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground pt-3 border-t">
                   <div>

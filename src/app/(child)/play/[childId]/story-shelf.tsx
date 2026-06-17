@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { StoryCoverCard } from "@/components/child/story-cover-card";
 import { Mascot } from "@/components/child/mascot";
+import { BedtimeToggle } from "@/components/child/bedtime-toggle";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
 import { Home, Play, BookOpen } from "lucide-react";
@@ -12,12 +13,14 @@ import { Home, Play, BookOpen } from "lucide-react";
 interface StoryShelfProps {
   childId: string;
   childName: string;
+  streak: number;
   storyPacks: Array<{
     id: string;
     title: string;
     coverImageUrl: string | null;
     episodeCount: number;
     completedEpisodes: number;
+    isFavorite: boolean;
   }>;
   continueData: {
     storyPackId: string;
@@ -32,6 +35,7 @@ interface StoryShelfProps {
 export function StoryShelf({
   childId,
   childName,
+  streak,
   storyPacks,
   continueData,
 }: StoryShelfProps) {
@@ -62,13 +66,25 @@ export function StoryShelf({
             speak(`Hi ${childName}! What shall we read?`);
           }}
         />
-        <div>
+        <div className="flex-1">
           <h1 className="child-heading leading-tight">Hi {childName}!</h1>
           <p className="child-caption text-foreground/50">
             Pick a story to explore
           </p>
         </div>
+        <BedtimeToggle />
       </motion.div>
+
+      {/* Streak badge */}
+      {streak > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-100 to-orange-100 p-4 mb-6">
+          <span className="text-3xl">🔥</span>
+          <div>
+            <div className="child-title text-amber-800">{streak} Day Streak!</div>
+            <div className="child-caption text-amber-600">Keep listening every day!</div>
+          </div>
+        </div>
+      )}
 
       {/* Continue banner */}
       {continueData && (
@@ -133,6 +149,7 @@ export function StoryShelf({
               episodeCount={pack.episodeCount}
               completedEpisodes={pack.completedEpisodes}
               isNew={i === 0}
+              isFavorite={pack.isFavorite}
               index={i}
             />
           ))}

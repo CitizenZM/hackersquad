@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { ProgressRing } from "./progress-ring";
+import { FavoriteButton } from "./favorite-button";
 
 interface StoryCoverCardProps {
   childId: string;
@@ -13,6 +14,7 @@ interface StoryCoverCardProps {
   episodeCount: number;
   completedEpisodes: number;
   isNew?: boolean;
+  isFavorite?: boolean;
   index: number;
 }
 
@@ -24,6 +26,7 @@ export function StoryCoverCard({
   episodeCount,
   completedEpisodes,
   isNew,
+  isFavorite = false,
   index,
 }: StoryCoverCardProps) {
   const progress = episodeCount > 0 ? completedEpisodes / episodeCount : 0;
@@ -75,9 +78,16 @@ export function StoryCoverCard({
               </div>
             )}
 
-            {/* NEW badge */}
+            {/* Favorite button top-left */}
+            <FavoriteButton
+              storyPackId={storyPackId}
+              childId={childId}
+              isFavorite={isFavorite}
+            />
+
+            {/* NEW badge — shifted down when favorite button is present */}
             {isNew && completedEpisodes === 0 && (
-              <div className="absolute top-3 left-3 rounded-full bg-child-accent px-3 py-1 shadow-md">
+              <div className="absolute top-12 left-3 rounded-full bg-child-accent px-3 py-1 shadow-md">
                 <span className="text-xs font-bold text-white">NEW</span>
               </div>
             )}
