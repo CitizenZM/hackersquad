@@ -12,23 +12,7 @@ import { VocabCardDrawer } from "./vocab-card-drawer";
 import { InteractiveScene } from "./interactive-scene";
 import { TonePicker } from "./tone-picker";
 import { ChevronLeft, RotateCcw, Play, Pause, SkipForward } from "lucide-react";
-
-interface FlashcardScene {
-  id: string;
-  sceneOrder: number;
-  imageUrl: string | null;
-  textSnippet: string;
-  duration: number | null;
-  prompt?: string | null;
-}
-
-interface VocabWord {
-  id: string;
-  word: string;
-  definition: string;
-  example?: string | null;
-  imageUrl?: string | null;
-}
+import type { FlashcardScene, VocabWord } from "@/lib/types";
 
 interface StoryPlayerProps {
   childId: string;

@@ -6,14 +6,7 @@ import { useSwipeable } from "react-swipeable";
 import { Sparkles, X, Volume2 } from "lucide-react";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
-
-interface VocabWord {
-  id: string;
-  word: string;
-  definition: string;
-  example?: string | null;
-  imageUrl?: string | null;
-}
+import type { VocabWord } from "@/lib/types";
 
 interface VocabCardDrawerProps {
   visible: boolean;
