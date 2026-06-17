@@ -41,6 +41,14 @@ interface StoryShelfProps {
     episodeNumber: number;
     episodeTitle: string;
   } | null;
+  recentPlays: Array<{
+    id: string;
+    storyPackId: string;
+    storyTitle: string;
+    episodeId: string;
+    episodeNumber: number;
+    episodeTitle: string;
+  }>;
 }
 
 export function StoryShelf({
@@ -50,6 +58,7 @@ export function StoryShelf({
   weeklyEpisodes,
   storyPacks,
   continueData,
+  recentPlays,
 }: StoryShelfProps) {
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
@@ -322,6 +331,29 @@ export function StoryShelf({
               index={i}
             />
           ))}
+        </div>
+      )}
+
+      {/* Recently Played */}
+      {recentPlays.length > 0 && (
+        <div className="mt-6">
+          <h3 className="child-caption text-foreground/60 mb-3 px-1">Recently Played</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {recentPlays.map((play) => (
+              <Link
+                key={play.id}
+                href={`/play/${childId}/${play.storyPackId}/${play.episodeId}`}
+                className="flex-shrink-0 w-40 rounded-xl bg-child-surface shadow-sm p-3 active:scale-95 transition-transform"
+              >
+                <p className="child-caption font-semibold text-foreground/80 truncate">
+                  {play.storyTitle}
+                </p>
+                <p className="text-xs text-foreground/50 truncate">
+                  Ep {play.episodeNumber}: {play.episodeTitle}
+                </p>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

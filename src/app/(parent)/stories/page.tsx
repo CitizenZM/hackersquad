@@ -37,7 +37,7 @@ export default async function StoriesPage() {
     <div>
       <ParentHeader
         title="Stories"
-        description="Your story packs"
+        description={`Your story packs${storyPacks.length > 0 ? ` (${storyPacks.length} total)` : ""}`}
         action={
           <Link href="/stories/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Story</Button>

@@ -97,13 +97,32 @@ export function ChildProfileForm({ initialData }: ChildProfileFormProps) {
             <Input id="language" name="language" defaultValue={initialData?.language || "en"} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="interests">Interests (comma-separated)</Label>
+            <Label htmlFor="interests">Interests</Label>
             <Input
               id="interests"
               name="interests"
               placeholder="animals, space, dinosaurs"
               defaultValue={initialData?.interests?.join(", ")}
             />
+            <div className="flex flex-wrap gap-1.5">
+              {["animals", "space", "dinosaurs", "fairy tales", "adventure", "nature", "music", "science", "ocean", "magic"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={(e) => {
+                    const input = document.getElementById("interests") as HTMLInputElement;
+                    const current = input.value ? input.value.split(",").map(s => s.trim()).filter(Boolean) : [];
+                    if (!current.includes(tag)) {
+                      input.value = [...current, tag].join(", ");
+                    }
+                    (e.target as HTMLButtonElement).classList.add("opacity-50");
+                  }}
+                  className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="learningMode">Learning Mode</Label>

@@ -120,6 +120,21 @@ export default async function StoryShelfPage({
     },
   });
 
+  // Recently played episodes
+  const recentPlays = await prisma.sessionEvent.findMany({
+    where: {
+      childProfileId: childId,
+      eventType: "EPISODE_START",
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    distinct: ["episodeId"],
+    include: {
+      storyPack: { select: { id: true, title: true } },
+      episode: { select: { id: true, episodeNumber: true, title: true } },
+    },
+  });
+
   // Continue listening
   const lastEvent = await prisma.sessionEvent.findFirst({
     where: {
@@ -162,6 +177,16 @@ export default async function StoryShelfPage({
             }
           : null
       }
+      recentPlays={recentPlays
+        .filter((p) => p.storyPack && p.episode)
+        .map((p) => ({
+          id: p.id,
+          storyPackId: p.storyPackId,
+          storyTitle: p.storyPack!.title,
+          episodeId: p.episodeId!,
+          episodeNumber: p.episode!.episodeNumber,
+          episodeTitle: p.episode!.title,
+        }))}
     />
   );
 }
