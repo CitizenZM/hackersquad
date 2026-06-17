@@ -1,6 +1,22 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { StoryShelf } from "./story-shelf";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ childId: string }>;
+}): Promise<Metadata> {
+  const { childId } = await params;
+  const child = await prisma.childProfile.findUnique({
+    where: { id: childId },
+    select: { name: true },
+  });
+  return {
+    title: child ? `${child.name}'s Stories | StoryNest Kids` : "StoryNest Kids",
+  };
+}
 
 export default async function StoryShelfPage({
   params,

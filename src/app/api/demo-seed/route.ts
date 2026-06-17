@@ -277,28 +277,200 @@ const EPISODE_2: SeedEpisode = {
 };
 
 // Fill scriptText from scenes
-for (const ep of [EPISODE_1, EPISODE_2]) {
+// ─────────────────────────────────────────────────────────────
+// Story 2: "Pip's Puddle Parade" — 1 episode, ~800 words
+// A cheerful daytime story for younger kids (AGE_3_4)
+// ─────────────────────────────────────────────────────────────
+const PIP_EPISODE: SeedEpisode = {
+  title: "Splish, Splash, Hooray!",
+  scriptText: "",
+  scenes: [
+    {
+      text: "It rained and rained all morning long. Big fat raindrops went pitter-patter, pitter-patter on the leaves. Little Pip the frog sat under a big red mushroom, watching the rain come down. He wiggled his green toes and smiled his wide frog smile. Pip loved the rain because he knew what came after the rain. Puddles! Big, shiny, wonderful puddles, everywhere you looked!",
+      duration: 16,
+      theme: "water",
+      character: { emoji: "🐸", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🍄", sound: "pop", reaction: "A mushroom!", position: "top-left" },
+        { emoji: "💧", sound: "tap", reaction: "Drip drop!", position: "top-right" },
+      ],
+    },
+    {
+      text: "When the rain stopped, the sun peeked out from behind a fluffy cloud. \"Hello, sun!\" said Pip. He hopped out from under his mushroom and looked all around. The whole meadow was full of puddles. Some were tiny and round like coins. Some were big and long like little rivers. Every single puddle sparkled in the sunshine like a little mirror. \"Time for a puddle parade!\" Pip cheered, and he hopped to the very first puddle.",
+      duration: 18,
+      theme: "meadow",
+      character: { emoji: "🐸", position: "bottom-left" },
+      hotspots: [
+        { emoji: "☀️", sound: "sparkle", reaction: "Hello, sun!", position: "top-right" },
+        { emoji: "🌈", sound: "whoosh", reaction: "A rainbow!", position: "top-left" },
+      ],
+    },
+    {
+      text: "At the first puddle, Pip found Duckling. Duckling was splashing with her little yellow feet, going splash, splash, splash! Water flew everywhere! \"Come splash with me, Pip!\" said Duckling. So Pip jumped right in. Splash! The water went up, up, up and came back down like rain all over again. \"Wheee!\" laughed Pip. \"Wheee!\" laughed Duckling. They splashed and splashed until their tummies hurt from laughing.",
+      duration: 18,
+      theme: "water",
+      character: { emoji: "🐥", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🐥", sound: "pop", reaction: "Quack quack!", position: "top-left" },
+        { emoji: "🫧", sound: "tap", reaction: "Splash!", position: "top-right" },
+      ],
+    },
+    {
+      text: "At the next puddle, Pip found Snail. Snail was looking at her own face in the still, calm water. \"Look, Pip! I can see myself!\" said Snail. \"And I can see the sky in the puddle too!\" Pip leaned over and looked. He could see his own big yellow eyes looking back at him, and behind his face, the bright blue sky with white fluffy clouds. \"The puddle has a sky inside it!\" said Pip, and his eyes went wide with wonder.",
+      duration: 18,
+      theme: "meadow",
+      character: { emoji: "🐌", position: "bottom-left" },
+      hotspots: [
+        { emoji: "🐌", sound: "sparkle", reaction: "Hello, Snail!", position: "top-right" },
+        { emoji: "☁️", sound: "whoosh", reaction: "A cloud!", position: "top-left" },
+      ],
+    },
+    {
+      text: "The third puddle was the biggest one of all, right in the middle of the path. And there was Ladybug, sitting on a leaf, floating across the puddle like a tiny red boat! \"Ahoy, Pip!\" called Ladybug from her leaf boat. \"Want a ride?\" Pip climbed very carefully onto a big green leaf. Then the breeze pushed him across the puddle, slow and smooth. \"I'm sailing! I'm really sailing!\" Pip sang as he floated all the way to the other side.",
+      duration: 18,
+      theme: "water",
+      character: { emoji: "🐞", position: "top-right" },
+      hotspots: [
+        { emoji: "🐞", sound: "pop", reaction: "Ladybug!", position: "top-left" },
+        { emoji: "🍃", sound: "whoosh", reaction: "A leaf boat!", position: "bottom-left" },
+      ],
+    },
+    {
+      text: "By the end of the afternoon, Pip had visited every single puddle in the whole meadow. He had splashed with Duckling, looked at the sky with Snail, and sailed with Ladybug. His little green feet were very tired, but his heart was very full and happy. The sun was getting low and turning the sky orange and pink and gold. All the puddles glowed like little golden lights on the ground. \"What a wonderful puddle parade day,\" Pip whispered happily. Then he hopped slowly back to his mushroom, yawned a great big yawn, and fell fast asleep with a smile on his face.",
+      duration: 22,
+      theme: "meadow",
+      character: { emoji: "🐸", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🌅", sound: "sparkle", reaction: "Sunset!", position: "top-right" },
+        { emoji: "💤", sound: "tap", reaction: "Sleepy frog!", position: "top-left" },
+      ],
+    },
+  ],
+  vocab: [
+    { word: "puddle", definition: "A small pool of water on the ground after rain.", example: "Pip jumped into the biggest puddle." },
+    { word: "splash", definition: "When water jumps up and makes a wet sound.", example: "Duckling loved to splash in the water." },
+    { word: "float", definition: "To sit on top of water without sinking.", example: "The leaf boat floated across the puddle." },
+  ],
+};
+
+for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE]) {
   ep.scriptText = ep.scenes.map((s) => s.text).join("\n\n");
+}
+
+const ALL_STORIES = [
+  {
+    title: DEMO_STORY_TITLE,
+    storyGoal: "BEDTIME" as const,
+    visualStyle: "WATERCOLOR" as const,
+    episodes: [EPISODE_1, EPISODE_2],
+  },
+  {
+    title: "Pip's Puddle Parade",
+    storyGoal: "ENTERTAIN" as const,
+    visualStyle: "CARTOON" as const,
+    episodes: [PIP_EPISODE],
+  },
+];
+
+async function seedStory(
+  story: (typeof ALL_STORIES)[number],
+  childId: string,
+  parentId: string
+) {
+  const fullText = story.episodes.map((e) => e.scriptText).join("\n\n");
+  const wordCount = fullText.split(/\s+/).filter(Boolean).length;
+
+  const source = await prisma.storySource.create({
+    data: {
+      parentId,
+      sourceType: "TEXT_PASTE",
+      title: story.title,
+      rawText: fullText,
+      wordCount,
+      language: "en",
+    },
+  });
+
+  const storyPack = await prisma.storyPack.create({
+    data: {
+      sourceId: source.id,
+      childProfileId: childId,
+      parentId,
+      title: story.title,
+      storyGoal: story.storyGoal,
+      narrationMode: "DEFAULT_TTS",
+      visualStyle: story.visualStyle,
+      status: "PUBLISHED",
+      episodeCount: story.episodes.length,
+    },
+  });
+
+  for (let i = 0; i < story.episodes.length; i++) {
+    const ep = story.episodes[i];
+    const totalDuration = ep.scenes.reduce((a, s) => a + s.duration, 0);
+
+    const episode = await prisma.episode.create({
+      data: {
+        storyPackId: storyPack.id,
+        episodeNumber: i + 1,
+        title: ep.title,
+        scriptText: ep.scriptText,
+        wordBudget: ep.scriptText.split(/\s+/).filter(Boolean).length,
+        durationTarget: totalDuration,
+      },
+    });
+
+    for (let j = 0; j < ep.scenes.length; j++) {
+      const scene = ep.scenes[j];
+      const metadata: SceneMetadata = {
+        theme: scene.theme,
+        character: scene.character,
+        hotspots: scene.hotspots,
+      };
+      await prisma.flashcardScene.create({
+        data: {
+          episodeId: episode.id,
+          sceneOrder: j + 1,
+          prompt: JSON.stringify(metadata),
+          imageUrl: null,
+          textSnippet: scene.text,
+          duration: scene.duration,
+        },
+      });
+    }
+
+    for (const v of ep.vocab) {
+      await prisma.vocabularyCard.create({
+        data: {
+          episodeId: episode.id,
+          word: v.word,
+          definition: v.definition,
+          example: v.example,
+        },
+      });
+    }
+  }
+
+  return { storyPackId: storyPack.id, wordCount, episodeCount: story.episodes.length };
 }
 
 export async function POST() {
   try {
     const { parentId } = await getDefaultParent();
 
-    // Check if demo already exists
     const existingChild = await prisma.childProfile.findFirst({
       where: { parentId, name: DEMO_CHILD.name },
-      include: { storyPacks: { select: { id: true, title: true } } },
     });
 
-    // If a previous demo (old Luna story) exists, wipe its story pack so
-    // this new Milo demo can be seeded clean.
+    // Clean up old demo stories
     if (existingChild) {
+      const oldTitles = ALL_STORIES.map((s) => s.title);
+      oldTitles.push("Luna the Little Fox");
       await prisma.storyPack.deleteMany({
         where: {
           parentId,
           childProfileId: existingChild.id,
-          title: { in: [DEMO_STORY_TITLE, "Luna the Little Fox"] },
+          title: { in: oldTitles },
         },
       });
     }
@@ -317,92 +489,22 @@ export async function POST() {
         },
       }));
 
-    // Create demo source using concatenated episode text as the "source"
-    const fullText = [EPISODE_1, EPISODE_2].map((e) => e.scriptText).join("\n\n");
-    const wordCount = fullText.split(/\s+/).filter(Boolean).length;
-
-    const source = await prisma.storySource.create({
-      data: {
-        parentId,
-        sourceType: "TEXT_PASTE",
-        title: DEMO_STORY_TITLE,
-        rawText: fullText,
-        wordCount,
-        language: "en",
-      },
-    });
-
-    const episodes = [EPISODE_1, EPISODE_2];
-
-    const storyPack = await prisma.storyPack.create({
-      data: {
-        sourceId: source.id,
-        childProfileId: child.id,
-        parentId,
-        title: DEMO_STORY_TITLE,
-        storyGoal: "BEDTIME",
-        narrationMode: "DEFAULT_TTS",
-        visualStyle: "WATERCOLOR",
-        status: "PUBLISHED",
-        episodeCount: episodes.length,
-        coverImageUrl: null, // CartoonScene renders the cover-equivalent
-      },
-    });
-
-    for (let i = 0; i < episodes.length; i++) {
-      const ep = episodes[i];
-      const totalDuration = ep.scenes.reduce((a, s) => a + s.duration, 0);
-
-      const episode = await prisma.episode.create({
-        data: {
-          storyPackId: storyPack.id,
-          episodeNumber: i + 1,
-          title: ep.title,
-          scriptText: ep.scriptText,
-          wordBudget: ep.scriptText.split(/\s+/).filter(Boolean).length,
-          durationTarget: totalDuration,
-        },
-      });
-
-      for (let j = 0; j < ep.scenes.length; j++) {
-        const scene = ep.scenes[j];
-        const metadata: SceneMetadata = {
-          theme: scene.theme,
-          character: scene.character,
-          hotspots: scene.hotspots,
-        };
-        await prisma.flashcardScene.create({
-          data: {
-            episodeId: episode.id,
-            sceneOrder: j + 1,
-            // Store scene metadata (JSON) in the prompt column
-            prompt: JSON.stringify(metadata),
-            imageUrl: null, // CartoonScene renders the backdrop
-            textSnippet: scene.text,
-            duration: scene.duration,
-          },
-        });
-      }
-
-      for (const v of ep.vocab) {
-        await prisma.vocabularyCard.create({
-          data: {
-            episodeId: episode.id,
-            word: v.word,
-            definition: v.definition,
-            example: v.example,
-          },
-        });
-      }
+    const results = [];
+    for (const story of ALL_STORIES) {
+      const result = await seedStory(story, child.id, parentId);
+      results.push({ title: story.title, ...result });
     }
+
+    const totalWords = results.reduce((a, r) => a + r.wordCount, 0);
+    const totalEpisodes = results.reduce((a, r) => a + r.episodeCount, 0);
 
     return Response.json({
       success: true,
-      message: `Demo loaded: ${DEMO_STORY_TITLE} (${episodes.length} episodes, ${wordCount} words)`,
+      message: `Demo loaded: ${results.length} stories, ${totalEpisodes} episodes, ${totalWords} words`,
       childId: child.id,
-      storyPackId: storyPack.id,
-      wordCount,
-      episodeCount: episodes.length,
+      stories: results,
+      totalWords,
+      totalEpisodes,
     });
   } catch (error) {
     console.error("Demo seed error:", error);

@@ -2,6 +2,24 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { StoryPlayer } from "@/components/child/story-player";
 import type { StorytellerTone } from "@/lib/hooks/use-voice-guide";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ childId: string; storyPackId: string; episodeId: string }>;
+}): Promise<Metadata> {
+  const { episodeId, storyPackId } = await params;
+  const episode = await prisma.episode.findFirst({
+    where: { id: episodeId, storyPackId },
+    select: { title: true, episodeNumber: true, storyPack: { select: { title: true } } },
+  });
+  if (!episode) return { title: "StoryNest Kids" };
+  return {
+    title: `${episode.title} - ${episode.storyPack.title} | StoryNest Kids`,
+    description: `Listen to Episode ${episode.episodeNumber}: ${episode.title}`,
+  };
+}
 
 // Map story goal → default storyteller tone
 function toneForStoryGoal(goal: string): StorytellerTone {
