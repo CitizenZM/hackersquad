@@ -8,6 +8,7 @@ import Link from "next/link";
 import { SOURCE_TYPE_LABELS, estimateEpisodeCount } from "@/lib/constants";
 import { BookOpen, FileText } from "lucide-react";
 import { SourceTextPreview } from "./source-text-preview";
+import { DeleteSourceButton } from "@/components/parent/delete-source-button";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +42,18 @@ export default async function SourceDetailPage({
         title={source.title}
         description={SOURCE_TYPE_LABELS[source.sourceType] ?? source.sourceType}
         action={
-          <Link href={`/stories/new?sourceId=${source.id}`}>
-            <Button>
-              <BookOpen className="mr-2 h-4 w-4" />
-              Create Story from This
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <DeleteSourceButton
+              sourceId={source.id}
+              hasStories={source.storyPacks.length > 0}
+            />
+            <Link href={`/stories/new?sourceId=${source.id}`}>
+              <Button>
+                <BookOpen className="mr-2 h-4 w-4" />
+                Create Story from This
+              </Button>
+            </Link>
+          </div>
         }
       />
 
