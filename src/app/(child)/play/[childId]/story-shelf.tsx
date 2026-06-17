@@ -49,6 +49,11 @@ interface StoryShelfProps {
     episodeNumber: number;
     episodeTitle: string;
   }>;
+  vocabWords: Array<{
+    id: string;
+    word: string;
+    definition: string;
+  }>;
 }
 
 export function StoryShelf({
@@ -59,6 +64,7 @@ export function StoryShelf({
   storyPacks,
   continueData,
   recentPlays,
+  vocabWords,
 }: StoryShelfProps) {
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
@@ -357,8 +363,39 @@ export function StoryShelf({
         </div>
       )}
 
-      {/* Bottom home button */}
-      <div className="fixed bottom-0 inset-x-0 flex justify-center pb-4 safe-bottom pointer-events-none">
+      {/* Learning Cards */}
+      {vocabWords.length > 0 && (
+        <div className="mt-6 mb-2">
+          <h3 className="child-caption text-foreground/60 mb-3 px-1 flex items-center gap-1.5">
+            📝 Words You Know
+          </h3>
+          <div className="flex flex-wrap gap-2 pb-24">
+            {vocabWords.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => {
+                  speak(v.word + ". " + v.definition, { tone: "gentle" });
+                  play("sparkle");
+                }}
+                className="rounded-full bg-gradient-to-r from-purple-100 to-pink-100 px-3 py-1.5 text-sm font-medium text-purple-800 shadow-sm active:scale-95 transition-transform"
+              >
+                {v.word}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom navigation */}
+      <div className="fixed bottom-0 inset-x-0 flex justify-center gap-4 pb-4 safe-bottom pointer-events-none">
+        <Link
+          href={`/play/${childId}/calm`}
+          onClick={() => play("sparkle")}
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 shadow-lg shadow-black/10 active:scale-95 transition-transform"
+          aria-label="Calm Corner"
+        >
+          <span className="text-xl">🧘</span>
+        </Link>
         <Link
           href="/play"
           onClick={() => play("whoosh")}

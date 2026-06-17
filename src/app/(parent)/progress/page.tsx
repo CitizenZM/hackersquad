@@ -2,9 +2,10 @@ import { prisma } from "@/lib/db";
 import { getDefaultParent } from "@/lib/default-parent";
 import { ParentHeader } from "@/components/layout/parent-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, BookOpen, Clock, Award, Star, Users } from "lucide-react";
+import { TrendingUp, BookOpen, Clock, Award, Star, Users, BarChart2 } from "lucide-react";
 import { AGE_GROUP_LABELS } from "@/lib/constants";
 import { CopyProgressButton } from "@/components/parent/copy-progress-button";
+import { ActivityChart } from "@/components/parent/activity-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,31 @@ export default async function ProgressPage() {
       const activeDays = dayStrings.size;
       const avgEpisodesPerDay = activeDays > 0 ? Math.round(episodeCompletes / activeDays) : 0;
 
+      // Daily activity for last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const dailyActivity = await prisma.sessionEvent.findMany({
+        where: {
+          childProfileId: child.id,
+          eventType: "EPISODE_COMPLETE",
+          createdAt: { gte: sevenDaysAgo },
+        },
+        select: { createdAt: true },
+      });
+
+      // Group by day
+      const dayMap: Record<string, number> = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dayMap[d.toLocaleDateString("en", { weekday: "short" })] = 0;
+      }
+      for (const event of dailyActivity) {
+        const day = new Date(event.createdAt).toLocaleDateString("en", { weekday: "short" });
+        if (day in dayMap) dayMap[day]++;
+      }
+      const chartData = Object.entries(dayMap).map(([day, count]) => ({ day, episodes: count }));
+
       // Top replayed stories
       const storyReplays = await prisma.sessionEvent.groupBy({
         by: ["storyPackId"],
@@ -143,6 +169,7 @@ export default async function ProgressPage() {
         uniqueVocabWordCount,
         preferredGoal,
         avgEpisodesPerDay,
+        chartData,
       };
     })
   );
@@ -218,6 +245,15 @@ export default async function ProgressPage() {
                     value={stats.uniqueVocabWordCount}
                     color="text-purple-600 bg-purple-50"
                   />
+                </div>
+
+                {/* Weekly activity chart */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <BarChart2 className="h-4 w-4 text-muted-foreground" />
+                    This Week&apos;s Activity
+                  </h4>
+                  <ActivityChart data={stats.chartData} />
                 </div>
 
                 {/* Activity rows */}

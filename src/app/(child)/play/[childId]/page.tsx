@@ -120,6 +120,20 @@ export default async function StoryShelfPage({
     },
   });
 
+  // Vocabulary cards across all stories
+  const allVocab = await prisma.vocabularyCard.findMany({
+    where: {
+      episode: {
+        storyPack: {
+          childProfileId: childId,
+          status: "PUBLISHED",
+        },
+      },
+    },
+    select: { id: true, word: true, definition: true },
+    take: 20,
+  });
+
   // Recently played episodes
   const recentPlays = await prisma.sessionEvent.findMany({
     where: {
@@ -187,6 +201,7 @@ export default async function StoryShelfPage({
           episodeNumber: p.episode!.episodeNumber,
           episodeTitle: p.episode!.title,
         }))}
+      vocabWords={allVocab}
     />
   );
 }
