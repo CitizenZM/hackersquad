@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
@@ -40,6 +41,9 @@ export function StoryCoverCard({
   index,
 }: StoryCoverCardProps) {
   const progress = episodeCount > 0 ? completedEpisodes / episodeCount : 0;
+  const isCapacitor =
+    typeof window !== "undefined" && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
+  const [showTooltip, setShowTooltip] = useState(false);
 
   return (
     <motion.div
@@ -106,6 +110,42 @@ export function StoryCoverCard({
                 <span className="text-xs font-bold text-white">NEW</span>
               </div>
             )}
+
+            {/* Download / offline indicator */}
+            <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+              {isCapacitor ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Capacitor offline caching would be triggered here
+                  }}
+                  aria-label="Download for offline"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-lg leading-none active:scale-90 transition-transform"
+                >
+                  📥
+                </button>
+              ) : (
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowTooltip((v) => !v);
+                    }}
+                    aria-label="Available in the app"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-lg leading-none"
+                  >
+                    📥
+                  </button>
+                  {showTooltip && (
+                    <div className="absolute bottom-9 right-0 whitespace-nowrap rounded-lg bg-black/80 px-2 py-1 text-xs text-white shadow-lg">
+                      Available in the app
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
       </Link>

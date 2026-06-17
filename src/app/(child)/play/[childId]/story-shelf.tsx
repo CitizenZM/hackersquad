@@ -52,6 +52,35 @@ export function StoryShelf({
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
   const [activeFilter, setActiveFilter] = useState("all");
+  const [showNotifBanner, setShowNotifBanner] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("notif-dismissed")) {
+      setShowNotifBanner(true);
+    }
+  }, []);
+
+  function dismissNotif() {
+    localStorage.setItem("notif-dismissed", "1");
+    setShowNotifBanner(false);
+  }
+
+  async function handleTurnOnNotifications() {
+    const isCapacitor =
+      typeof window !== "undefined" &&
+      !!(window as unknown as { Capacitor?: unknown }).Capacitor;
+    if (isCapacitor) {
+      try {
+        const { PushNotifications } = await import(
+          "@capacitor/push-notifications"
+        );
+        await PushNotifications.requestPermissions();
+      } catch {
+        // silently ignore if plugin is unavailable
+      }
+    }
+    dismissNotif();
+  }
 
   useEffect(() => {
     // Voice greeting after a brief delay (allows the page to render)
@@ -90,6 +119,33 @@ export function StoryShelf({
         </div>
         <BedtimeToggle />
       </motion.div>
+
+      {/* Notifications prompt banner */}
+      {showNotifBanner && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-100 to-indigo-100 px-4 py-3 shadow-sm"
+        >
+          <span className="text-2xl">🔔</span>
+          <p className="flex-1 text-sm font-semibold text-violet-800">
+            Get reminders when new stories are ready!
+          </p>
+          <button
+            onClick={handleTurnOnNotifications}
+            className="rounded-full bg-violet-500 px-3 py-1 text-xs font-bold text-white shadow active:scale-95 transition-transform"
+          >
+            Turn On
+          </button>
+          <button
+            onClick={dismissNotif}
+            aria-label="Dismiss"
+            className="text-violet-400 text-lg leading-none active:scale-95 transition-transform"
+          >
+            ×
+          </button>
+        </motion.div>
+      )}
 
       {/* Streak badge */}
       {streak > 0 && (

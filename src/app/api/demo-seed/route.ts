@@ -447,7 +447,92 @@ const BOAT_EPISODE: SeedEpisode = {
   ],
 };
 
-for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE, BOAT_EPISODE]) {
+// ─────────────────────────────────────────────────────────────
+// Story 4: "The Color Garden" — 1 episode, ~600 words
+// A vocabulary-focused story for younger kids (AGE_3_4).
+// A little girl named Rose finds a magical garden where each
+// flower teaches her a new color word.
+// ─────────────────────────────────────────────────────────────
+const ROSE_EPISODE: SeedEpisode = {
+  title: "The Magical Color Garden",
+  scriptText: "",
+  scenes: [
+    {
+      text: "Little Rose loved her backyard. It had tall green grass and a big old tree. One sunny morning, Rose found a secret gate. It was hidden behind lots of curly, climbing ivy. The ivy was soft and cool and green. Rose put both hands on the gate. She pushed it open very slowly. It made a gentle creaking sound. Beyond the gate, Rose could see something magical. Colors! So many colors! She stepped through the gate on tippy-toes. \"Oh!\" she said softly. \"Oh, how beautiful!\"",
+      duration: 15,
+      theme: "meadow",
+      character: { emoji: "🧒", position: "bottom-right" },
+      hotspots: [
+        { emoji: "🌿", sound: "whoosh", reaction: "Rustling ivy!", position: "top-left" },
+        { emoji: "🚪", sound: "tap", reaction: "A secret gate!", position: "top-right" },
+      ],
+    },
+    {
+      text: "Inside the garden, Rose saw roses. But these roses were singing! They swayed back and forth, singing a soft, sweet song. Their petals were deep and rich and warm. \"Hello, Rose!\" sang the roses. \"Do you know our color?\" Rose shook her head. \"We are crimson!\" they sang. \"Crimson means a deep, deep red. Like warm fire. Like cozy mittens. Say it with us: crimson!\" Rose smiled a big smile. \"Crimson,\" she said. \"Crimson roses!\" The roses clapped their petals together happily.",
+      duration: 15,
+      theme: "meadow",
+      character: { emoji: "🌹", position: "bottom-left" },
+      hotspots: [
+        { emoji: "🌹", sound: "sparkle", reaction: "Crimson roses!", position: "top-right" },
+        { emoji: "🎵", sound: "pop", reaction: "Singing flowers!", position: "top-left" },
+      ],
+    },
+    {
+      text: "Rose walked further into the garden. She came to a little pond. The water was still and cool. Dragonflies danced above the water. Their wings shimmered and glowed. They were the most beautiful blue Rose had ever seen. \"What color are you?\" Rose asked. A dragonfly landed on her finger. \"We are sapphire!\" it said. \"Sapphire means a bright, bright blue. Like the sky on a clear day. Like a bluebird's egg. Say it: sapphire!\" \"Sapphire,\" Rose whispered. The dragonfly winked and flew away.",
+      duration: 15,
+      theme: "water",
+      character: { emoji: "🧒", position: "bottom-left" },
+      hotspots: [
+        { emoji: "🫧", sound: "pop", reaction: "Tiny bubbles!", position: "top-right" },
+        { emoji: "💙", sound: "sparkle", reaction: "Sapphire blue!", position: "top-left" },
+      ],
+    },
+    {
+      text: "Next, Rose found the sunflowers. They were so, so tall! They grew up and up, all the way to the sky. Their big round faces were bright and sunny and warm. Rose stood right next to one. The sunflower was just as tall as she was! \"We are golden!\" boomed the sunflower in a big, cheerful voice. \"Golden means a bright, sunny yellow. Like butter on toast. Like the sun at noon. Say it with me: golden!\" \"Golden!\" Rose shouted, her arms wide open. She loved that word.",
+      duration: 15,
+      theme: "meadow",
+      character: { emoji: "🌻", position: "top-right" },
+      hotspots: [
+        { emoji: "🌻", sound: "sparkle", reaction: "Golden sunflower!", position: "top-left" },
+        { emoji: "☀️", sound: "tap", reaction: "So sunny!", position: "top-right" },
+      ],
+    },
+    {
+      text: "Then a butterfly floated down from the sky. Its wings were soft and purple and lovely. It landed on Rose's nose and tickled her. \"I am violet!\" said the butterfly. \"Violet means a soft, pretty purple. Like lavender flowers. Like a sunset sky.\" It fluttered its wings twice. Then it flew slowly toward the gate. Rose followed it, step by gentle step. It led her all the way home. Mama was waiting. \"Mama!\" Rose ran to hug her. \"I learned four new colors today! Crimson! Sapphire! Golden! Violet!\" Mama smiled the biggest smile. \"Tell me everything,\" she said.",
+      duration: 15,
+      theme: "sky",
+      character: { emoji: "🦋", position: "top-right" },
+      hotspots: [
+        { emoji: "🦋", sound: "whoosh", reaction: "Violet butterfly!", position: "top-left" },
+        { emoji: "🏡", sound: "pop", reaction: "Home sweet home!", position: "bottom-right" },
+      ],
+    },
+  ],
+  vocab: [
+    {
+      word: "crimson",
+      definition: "A deep, rich shade of red, like warm fire.",
+      example: "The crimson roses sang a sweet song.",
+    },
+    {
+      word: "sapphire",
+      definition: "A bright, clear blue, like a sunny sky.",
+      example: "The sapphire dragonflies danced above the pond.",
+    },
+    {
+      word: "golden",
+      definition: "A bright, warm yellow, like sunshine or butter.",
+      example: "The golden sunflowers were as tall as Rose!",
+    },
+    {
+      word: "violet",
+      definition: "A soft, pretty purple, like lavender flowers.",
+      example: "The violet butterfly led Rose back home.",
+    },
+  ],
+};
+
+for (const ep of [EPISODE_1, EPISODE_2, PIP_EPISODE, BOAT_EPISODE, ROSE_EPISODE]) {
   ep.scriptText = ep.scenes.map((s) => s.text).join("\n\n");
 }
 
@@ -469,6 +554,12 @@ const ALL_STORIES = [
     storyGoal: "EDUCATE" as const,
     visualStyle: "STORYBOOK" as const,
     episodes: [BOAT_EPISODE],
+  },
+  {
+    title: "The Color Garden",
+    storyGoal: "VOCABULARY" as const,
+    visualStyle: "CARTOON" as const,
+    episodes: [ROSE_EPISODE],
   },
 ];
 

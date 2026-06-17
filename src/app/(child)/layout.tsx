@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { BedtimeProvider } from "@/lib/hooks/use-bedtime-mode";
+import { NetworkIndicator } from "@/components/child/network-indicator";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -24,6 +25,7 @@ export default function ChildLayout({
   return (
     <div className="min-h-[100dvh] bg-child-bg overflow-x-hidden">
       <BedtimeProvider>
+        <NetworkIndicator />
         {children}
       </BedtimeProvider>
     </div>

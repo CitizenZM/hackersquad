@@ -70,3 +70,19 @@ export function ageToAgeGroup(age: number): "AGE_3_4" | "AGE_5_6" | "AGE_7_9" {
 export function estimateEpisodeCount(wordCount: number): number {
   return Math.max(1, Math.ceil(wordCount / WORDS_PER_EPISODE));
 }
+
+export function estimateDurationMinutes(wordCount: number): number {
+  return Math.max(1, Math.ceil(wordCount / 150));
+}
+
+export const STORY_GOAL_EMOJIS: Record<string, string> = {
+  BEDTIME: "🌙",
+  ENTERTAIN: "🎉",
+  EDUCATE: "📚",
+  MORAL_LESSON: "💛",
+  VOCABULARY: "📝",
+};
+
+export function getStoryGoalEmoji(goal: string): string {
+  return STORY_GOAL_EMOJIS[goal] || "📖";
+}
