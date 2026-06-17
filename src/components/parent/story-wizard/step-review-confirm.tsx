@@ -67,10 +67,32 @@ export function StepReviewConfirm({ data, onChange }: Props) {
         <SummaryRow label="Visual Style" value={VISUAL_STYLE_LABELS[data.visualStyle] || data.visualStyle} />
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        The AI will transform your source content into {episodeCount} child-friendly episode(s)
-        with narration audio and illustrated flashcards. You can review everything before publishing.
-      </p>
+      {/* What you'll get */}
+      <div className="rounded-lg bg-primary/5 p-4 space-y-3">
+        <p className="text-sm font-semibold text-primary">What the AI will create:</p>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span>📖</span>
+            <span>{episodeCount} episode{episodeCount !== 1 ? "s" : ""} (~5 min each)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>🎨</span>
+            <span>6-10 illustrated scenes per episode</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>🔊</span>
+            <span>AI narration audio</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>📝</span>
+            <span>Vocabulary cards per episode</span>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Estimated processing time: ~{Math.max(2, episodeCount * 3)} minutes.
+          You can review everything before publishing to your child.
+        </p>
+      </div>
     </div>
   );
 }

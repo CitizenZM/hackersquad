@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StoryCoverCard } from "@/components/child/story-cover-card";
 import { Mascot } from "@/components/child/mascot";
 import { BedtimeToggle } from "@/components/child/bedtime-toggle";
 import { useSoundEffects } from "@/lib/hooks/use-sound-effects";
 import { useVoiceGuide } from "@/lib/hooks/use-voice-guide";
+import { useBedtimeMode } from "@/lib/hooks/use-bedtime-mode";
 import { Home, Play, BookOpen } from "lucide-react";
 
 const goalFilters = [
@@ -68,6 +70,8 @@ export function StoryShelf({
 }: StoryShelfProps) {
   const { play } = useSoundEffects();
   const { speak } = useVoiceGuide();
+  const { isBedtime } = useBedtimeMode();
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showNotifBanner, setShowNotifBanner] = useState(false);
 
@@ -127,6 +131,14 @@ export function StoryShelf({
     }
     dismissNotif();
   }
+
+  useEffect(() => {
+    if (isBedtime) {
+      setActiveFilter("BEDTIME");
+    } else {
+      setActiveFilter("all");
+    }
+  }, [isBedtime]);
 
   useEffect(() => {
     // Voice greeting after a brief delay (allows the page to render)
@@ -296,6 +308,33 @@ export function StoryShelf({
             </button>
           ))}
         </div>
+      )}
+
+      {/* Bedtime Playlist button */}
+      {isBedtime && filteredPacks.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4"
+        >
+          <button
+            onClick={() => {
+              play("sparkle");
+              // Navigate to the first bedtime story's first episode
+              const firstBedtime = filteredPacks[0];
+              if (firstBedtime) {
+                router.push(`/play/${childId}/${firstBedtime.id}`);
+              }
+            }}
+            className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 p-4 text-white text-center shadow-lg active:scale-[0.98] transition-transform"
+          >
+            <span className="text-2xl block mb-1">🌙</span>
+            <span className="child-body font-semibold">Start Bedtime Playlist</span>
+            <span className="block child-caption text-white/70 mt-0.5">
+              {filteredPacks.length} bedtime {filteredPacks.length === 1 ? "story" : "stories"} ready
+            </span>
+          </button>
+        </motion.div>
       )}
 
       {/* Story grid */}

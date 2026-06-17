@@ -174,6 +174,13 @@ export default async function ProgressPage() {
     })
   );
 
+  const familyStats = {
+    totalEpisodes: childStats.reduce((a, s) => a + s.episodeCompletes, 0),
+    totalVocab: childStats.reduce((a, s) => a + (s.uniqueVocabWordCount || 0), 0),
+    longestStreak: Math.max(...childStats.map((s) => s.streak), 0),
+    totalChildren: childStats.length,
+  };
+
   return (
     <div>
       <ParentHeader
@@ -192,7 +199,26 @@ export default async function ProgressPage() {
             </CardContent>
           </Card>
         ) : (
-          childStats.map((stats) => (
+          <>
+            {childStats.length > 1 && (
+              <Card className="bg-gradient-to-r from-primary/5 to-accent/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Family Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <StatBox icon={<BookOpen className="h-4 w-4" />} label="Total Episodes" value={familyStats.totalEpisodes} color="text-blue-600 bg-blue-50" />
+                    <StatBox icon={<Users className="h-4 w-4" />} label="Children" value={familyStats.totalChildren} color="text-green-600 bg-green-50" />
+                    <StatBox icon={<Clock className="h-4 w-4" />} label="Best Streak" value={familyStats.longestStreak} color="text-orange-600 bg-orange-50" />
+                    <StatBox icon={<Star className="h-4 w-4" />} label="Vocab Words" value={familyStats.totalVocab} color="text-purple-600 bg-purple-50" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {childStats.map((stats) => (
             <Card key={stats.child.id}>
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
@@ -205,6 +231,11 @@ export default async function ProgressPage() {
                       <p className="text-sm text-muted-foreground">
                         Age {stats.child.age} &middot; {AGE_GROUP_LABELS[stats.child.ageGroup]}
                       </p>
+                      {stats.recentEvents[0] && (
+                        <span className="text-xs text-muted-foreground">
+                          Last active: {formatRelativeTime(stats.recentEvents[0].createdAt)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <CopyProgressButton
@@ -380,7 +411,8 @@ export default async function ProgressPage() {
                 </div>
               </CardContent>
             </Card>
-          ))
+          ))}
+          </>
         )}
       </div>
     </div>
