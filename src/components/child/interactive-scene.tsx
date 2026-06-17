@@ -162,6 +162,7 @@ export function InteractiveScene({
           return (
             <motion.button
               key={`${sceneId}-hot-${idx}`}
+              aria-label={h.reaction}
               onClick={(e) => {
                 e.stopPropagation();
                 onHotspotTap(idx, h);

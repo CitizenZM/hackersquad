@@ -8,6 +8,7 @@ export async function GET(request: Request) {
   const voices = await prisma.voiceProfile.findMany({
     where: { parentId: parentId },
     orderBy: { createdAt: "desc" },
+    take: 100,
   });
 
   return Response.json(voices);

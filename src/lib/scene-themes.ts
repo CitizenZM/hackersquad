@@ -22,7 +22,7 @@ export interface ThemeConfig {
 
 export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
   night: {
-    particles: ["⭐", "✨", "🌙", "💫"],
+    particles: ["⭐", "🌌", "🌙", "💫"],
     gradient: "from-indigo-900 via-purple-800 to-slate-900",
     keywords: [
       "night",
@@ -60,7 +60,7 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
     ],
   },
   water: {
-    particles: ["💧", "🫧", "🐟", "✨"],
+    particles: ["💧", "🫧", "🐟", "🌊"],
     gradient: "from-sky-200 via-cyan-100 to-blue-100",
     keywords: [
       "stream",
@@ -77,7 +77,7 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
     ],
   },
   meadow: {
-    particles: ["🌼", "🌸", "🦋", "🌿"],
+    particles: ["🌼", "🐝", "🦋", "🌻"],
     gradient: "from-amber-100 via-yellow-50 to-lime-50",
     keywords: [
       "meadow",
@@ -91,7 +91,7 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
     ],
   },
   sky: {
-    particles: ["☁️", "✨", "⭐", "🌈"],
+    particles: ["☁️", "🕊️", "🎈", "🌈"],
     gradient: "from-sky-200 via-blue-100 to-violet-100",
     keywords: [
       "sky",
@@ -119,12 +119,12 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
     ],
   },
   snow: {
-    particles: ["❄️", "✨", "⛄", "💨"],
+    particles: ["❄️", "🌨️", "⛄", "💨"],
     gradient: "from-slate-100 via-blue-50 to-white",
     keywords: ["snow", "ice", "cold", "frost", "winter", "flake"],
   },
   indoor: {
-    particles: ["🕯️", "✨", "💛"],
+    particles: ["🕯️", "🧸", "💛", "🏠"],
     gradient: "from-amber-100 via-orange-50 to-yellow-50",
     keywords: [
       "home",
@@ -147,6 +147,7 @@ export const SCENE_THEMES: Record<SceneTheme, ThemeConfig> = {
 
 export function detectTheme(text: string): SceneTheme {
   const lower = text.toLowerCase();
+  const words = lower.split(/\s+/);
   let bestTheme: SceneTheme = "default";
   let bestScore = 0;
 
@@ -154,7 +155,11 @@ export function detectTheme(text: string): SceneTheme {
     if (name === "default") continue;
     let score = 0;
     for (const kw of config.keywords) {
-      if (lower.includes(kw)) score += 1;
+      // Count occurrences for stronger signal
+      const count = words.filter((w) => w.includes(kw)).length;
+      if (count > 0) {
+        score += Math.min(count, 3); // cap per keyword to avoid single-word dominance
+      }
     }
     if (score > bestScore) {
       bestScore = score;

@@ -28,10 +28,13 @@ EPISODE TEXT:
 ${scriptText}
 
 For each scene:
-- textSnippet: The narration text for this scene (a few sentences from the episode)
-- sceneDescription: A vivid description of what the illustration should show
+- textSnippet: The narration text for this scene (roughly 100-160 words, or 3-5 sentences). This text will be read aloud during the scene.
+- sceneDescription: A vivid description of what the illustration should show. Focus on the most visually interesting moment.
 
-The scenes should cover the entire episode text sequentially. Every word of the episode should belong to exactly one scene.
+BALANCE RULES:
+- Each scene's textSnippet should be roughly similar in length (100-160 words each). Avoid one scene having 50 words and another having 250.
+- The scenes should cover the entire episode text sequentially. Every word of the episode should belong to exactly one scene.
+- Start each scene at a natural narrative beat (new setting, new character, new action).
 
 Respond with JSON: { "scenes": [{ "sceneOrder": 1, "textSnippet": "...", "sceneDescription": "..." }] }`,
   };

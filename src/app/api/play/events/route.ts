@@ -13,7 +13,9 @@ export async function POST(request: Request) {
         episodeId: data.episodeId,
         eventType: data.eventType,
         duration: data.duration,
-        metadata: (data.metadata ?? undefined) as never,
+        metadata: data.metadata
+          ? JSON.parse(JSON.stringify(data.metadata))
+          : undefined,
       },
     });
 

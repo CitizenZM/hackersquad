@@ -1,10 +1,17 @@
 import { cookies } from "next/headers";
+import { randomInt } from "crypto";
 
 const PARENT_ACCESS_COOKIE = "storynest-parent";
-const DEFAULT_PIN = "1234";
+let _generatedPin: string | undefined;
 
 export function getParentPin(): string {
-  return process.env.PARENT_PIN || DEFAULT_PIN;
+  if (process.env.PARENT_PIN) {
+    return process.env.PARENT_PIN;
+  }
+  if (!_generatedPin) {
+    _generatedPin = String(randomInt(100000, 1000000));
+  }
+  return _generatedPin;
 }
 
 export async function hasParentAccess(): Promise<boolean> {

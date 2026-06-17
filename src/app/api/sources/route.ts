@@ -8,6 +8,7 @@ export async function GET(request: Request) {
   const sources = await prisma.storySource.findMany({
     where: { parentId: parentId },
     orderBy: { createdAt: "desc" },
+    take: 100,
     select: {
       id: true,
       sourceType: true,

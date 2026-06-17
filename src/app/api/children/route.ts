@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const children = await prisma.childProfile.findMany({
     where: { parentId: parentId },
     orderBy: { createdAt: "desc" },
+    take: 100,
   });
 
   return Response.json(children);

@@ -248,6 +248,25 @@ export function StoryPlayer({
     [scenes, hasAudio]
   );
 
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") {
+        goToScene(currentScene - 1);
+      } else if (e.key === "ArrowRight") {
+        goToScene(currentScene + 1);
+      } else if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === "Escape") {
+        router.back();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScene, goToScene]);
+
   const swipeHandlers = useSwipeable({
     onSwipedLeft: () => goToScene(currentScene + 1),
     onSwipedRight: () => goToScene(currentScene - 1),

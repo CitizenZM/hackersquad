@@ -5,16 +5,21 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ voiceId: string }> }
 ) {
-  const { parentId } = await getDefaultParent();
+  try {
+    const { parentId } = await getDefaultParent();
 
-  const { voiceId } = await params;
-  const result = await prisma.voiceProfile.deleteMany({
-    where: { id: voiceId, parentId: parentId },
-  });
+    const { voiceId } = await params;
+    const result = await prisma.voiceProfile.deleteMany({
+      where: { id: voiceId, parentId: parentId },
+    });
 
-  if (result.count === 0) {
-    return Response.json({ error: "Not found" }, { status: 404 });
+    if (result.count === 0) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Route error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  return Response.json({ success: true });
 }

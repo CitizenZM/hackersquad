@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const storyPacks = await prisma.storyPack.findMany({
     where: { parentId: parentId },
     orderBy: { createdAt: "desc" },
+    take: 100,
     include: {
       childProfile: { select: { name: true, ageGroup: true } },
       source: { select: { title: true, wordCount: true } },

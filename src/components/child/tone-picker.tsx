@@ -30,6 +30,8 @@ export function TonePicker({ tone, onChange }: TonePickerProps) {
           play("tap");
           setOpen((o) => !o);
         }}
+        aria-label="Change storyteller voice"
+        aria-expanded={open}
         className="flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-1.5 shadow ring-1 ring-black/5 text-xs font-semibold"
       >
         <span className="text-base leading-none">{current.emoji}</span>
