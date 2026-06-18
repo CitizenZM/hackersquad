@@ -16,9 +16,17 @@ import { ApproveButton } from "@/components/parent/approve-button";
 import { CopyLinkButton } from "@/components/parent/copy-link-button";
 import { FlagButton } from "@/components/parent/flag-button";
 import { DeleteStoryButton } from "@/components/parent/delete-story-button";
+import { DuplicateStoryButton } from "@/components/parent/duplicate-story-button";
 import { UnpublishButton } from "@/components/parent/unpublish-button";
 import { RepublishButton } from "@/components/parent/republish-button";
 import { RegenerateButton } from "@/components/parent/regenerate-button";
+
+function getReadingLevel(wordCount: number): string {
+  if (wordCount <= 500) return "🟢 Easy (Ages 3-4)";
+  if (wordCount <= 1200) return "🟡 Medium (Ages 5-6)";
+  if (wordCount <= 3000) return "🟠 Advanced (Ages 7-9)";
+  return "🔴 Long Read (Ages 7+)";
+}
 
 export default async function StoryPackDetailPage({
   params,
@@ -96,6 +104,7 @@ export default async function StoryPackDetailPage({
             {!isProcessing && (
               <>
                 <span className="h-5 w-px bg-border" />
+                <DuplicateStoryButton storyPackId={storyPackId} currentChildId={storyPack.childProfile.id} />
                 <DeleteStoryButton storyPackId={storyPackId} />
               </>
             )}
@@ -103,7 +112,7 @@ export default async function StoryPackDetailPage({
         }
       />
       <div className="p-6 space-y-6">
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-5">
           <Card>
             <CardContent className="pt-4">
               <div className="text-sm text-muted-foreground">Status</div>
@@ -126,6 +135,14 @@ export default async function StoryPackDetailPage({
             <CardContent className="pt-4">
               <div className="text-sm text-muted-foreground">Visual Style</div>
               <div className="font-medium mt-1">{VISUAL_STYLE_LABELS[storyPack.visualStyle]}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">Reading Level</div>
+              <div className="font-medium mt-1">
+                {getReadingLevel(storyPack.source.wordCount)}
+              </div>
             </CardContent>
           </Card>
         </div>

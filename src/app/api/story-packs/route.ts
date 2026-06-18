@@ -58,7 +58,10 @@ export async function POST(request: Request) {
       },
     });
 
-    return Response.json(storyPack, { status: 201 });
+    return Response.json(
+      { ...storyPack, source: { wordCount: source.wordCount } },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
       return Response.json({ error: "Invalid input", details: error }, { status: 400 });
