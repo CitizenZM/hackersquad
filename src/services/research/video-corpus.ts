@@ -10,6 +10,26 @@ import type { ScoredVideo } from "./video-relevance";
 
 type CorpusVideo = VideoResult & Partial<ScoredVideo>;
 
+// Only store the BEST videos in the corpus — top-ranked and high quality
+// (high views/likes/engagement). A video qualifies if it was LLM-verified, or
+// it carries a strong combined score, or its raw engagement is clearly high.
+// Anything weaker is intentionally NOT persisted.
+const MIN_COMBINED_SCORE = 0.5;
+const HIGH_VIEW_COUNT = 50_000;
+const HIGH_ENGAGEMENT_RATE = 0.03; // (likes + comments) / views
+
+function isHighQuality(v: CorpusVideo): boolean {
+  if (v.verified) return true;
+  if ((v.combinedScore ?? 0) >= MIN_COMBINED_SCORE) return true;
+  const views = v.viewCount || 0;
+  if (views >= HIGH_VIEW_COUNT) return true;
+  if (views > 0) {
+    const eng = ((v.likeCount || 0) + (v.commentCount || 0)) / views;
+    if (eng >= HIGH_ENGAGEMENT_RATE) return true;
+  }
+  return false;
+}
+
 function mergeBrands(existing: unknown, brandName?: string): string[] {
   const set = new Set<string>();
   if (Array.isArray(existing)) {
@@ -38,12 +58,14 @@ export async function recordDiscoveredVideos(
   videos: CorpusVideo[],
   opts: { brandName?: string; workspaceId?: string | null } = {}
 ): Promise<number> {
-  if (!videos.length) return 0;
+  // Keep only top-ranked, high-quality videos out of whatever was passed in.
+  const qualified = videos.filter(isHighQuality);
+  if (!qualified.length) return 0;
   const now = new Date();
   let saved = 0;
 
   await Promise.all(
-    videos.map(async (v) => {
+    qualified.map(async (v) => {
       if (!v.videoId || !v.platform) return;
       try {
         const existing = await prisma.discoveredVideo.findUnique({
