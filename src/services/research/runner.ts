@@ -6,6 +6,7 @@ import {
   extractSearchKeywords,
 } from "./keyword-extractor";
 import { searchVerifiedVideos, type VideoResult } from "./video-search";
+import { getCampaignPlatform } from "@/lib/campaign-platform";
 import { searchTikTokTopAds } from "./tiktok-creative-center";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
 import {
@@ -86,20 +87,32 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
     // Step 3: parallel video search across brand + competitors
     await startStep(jobId, "Video search");
 
-    // Determine search strategy based on campaign goal
-    const goal = (project.campaignGoal || "").toLowerCase();
-    const isShortFormSocial =
-      goal.includes("tiktok") || goal.includes("instagram") ||
-      goal.includes("shop") || goal.includes("social") ||
-      goal.includes("creator") || goal.includes("affiliate");
-    const isTVC =
-      goal.includes("tvc") || goal.includes("television") ||
-      goal.includes("brand awareness") || goal.includes("hero") ||
-      goal.includes("landing page");
+    // Search strategy + platform constraint come from the user's selected
+    // campaign platform when available; otherwise fall back to a campaign-goal
+    // heuristic. This keeps search consistent with "Platform & Duration".
+    const campaignSelection = await prisma.campaignSelection
+      .findUnique({ where: { projectId }, select: { platform: true } })
+      .catch(() => null);
+    const campaignPlatform = getCampaignPlatform(campaignSelection?.platform);
 
-    let searchStrategy: "short_social" | "tvc" | "mixed" = "mixed";
-    if (isShortFormSocial) searchStrategy = "short_social";
-    else if (isTVC) searchStrategy = "tvc";
+    let searchStrategy: "short_social" | "tvc" | "mixed";
+    let allowedPlatforms: VideoResult["platform"][] | undefined;
+
+    if (campaignPlatform) {
+      searchStrategy = campaignPlatform.searchStrategy;
+      allowedPlatforms = campaignPlatform.videoPlatforms;
+    } else {
+      const goal = (project.campaignGoal || "").toLowerCase();
+      const isShortFormSocial =
+        goal.includes("tiktok") || goal.includes("instagram") ||
+        goal.includes("shop") || goal.includes("social") ||
+        goal.includes("creator") || goal.includes("affiliate");
+      const isTVC =
+        goal.includes("tvc") || goal.includes("television") ||
+        goal.includes("brand awareness") || goal.includes("hero") ||
+        goal.includes("landing page");
+      searchStrategy = isShortFormSocial ? "short_social" : isTVC ? "tvc" : "mixed";
+    }
 
     const brandProductName =
       project.productPageTitle || project.productName || undefined;
@@ -120,6 +133,7 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
           productName: t.productName,
           targetCount: 6,
           maxRounds: 3,
+          allowedPlatforms,
         });
         const verifiedCount = videos.filter((v) => v.verified).length;
         await updateStep(

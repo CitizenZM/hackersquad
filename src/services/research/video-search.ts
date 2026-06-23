@@ -316,6 +316,11 @@ export interface VerifiedSearchOptions {
   targetCount?: number;
   maxRounds?: number;
   select?: SelectOptions;
+  /**
+   * Restrict results to these VideoResult platforms (e.g. ["tiktok"] when the
+   * campaign platform is TikTok). When omitted, all platforms are kept.
+   */
+  allowedPlatforms?: VideoResult["platform"][];
 }
 
 /**
@@ -338,6 +343,10 @@ export async function searchVerifiedVideos(
     keywords,
   };
 
+  const allowed = opts.allowedPlatforms?.length
+    ? new Set(opts.allowedPlatforms)
+    : null;
+
   const pool = new Map<string, VideoResult>();
   let best: ScoredVideo[] = [];
 
@@ -345,7 +354,11 @@ export async function searchVerifiedVideos(
     const roundKeywords = broadenKeywords(keywords, round, brandName);
     try {
       const found = await searchAllPlatforms(brandName, roundKeywords, strategy);
-      for (const v of found) pool.set(`${v.platform}:${v.videoId}`, v);
+      for (const v of found) {
+        // Keep results consistent with the chosen campaign platform.
+        if (allowed && !allowed.has(v.platform)) continue;
+        pool.set(`${v.platform}:${v.videoId}`, v);
+      }
     } catch {
       // keep whatever we have; try next round
     }
