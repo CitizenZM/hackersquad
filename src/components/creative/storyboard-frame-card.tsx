@@ -37,6 +37,8 @@ export type TransitionId = typeof TRANSITIONS[number]["id"];
 export interface StoryboardFrameData {
   frameNumber: number;
   duration: string;
+  startSec?: number;
+  endSec?: number;
   scene: string;
   visualDirection: string;
   voiceover: string;
