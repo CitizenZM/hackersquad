@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { NARRATIVE_TYPE_LABELS, CONTENT_TYPE_LABELS, CONTENT_CATEGORY_LABELS } from "@/lib/constants";
 import { getCampaignPlatform } from "@/lib/campaign-platform";
+import { ContentPlatformControls } from "@/components/content/content-platform-controls";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
 import { LoadMoreButton } from "@/components/dashboard/action-buttons";
 import { Eye, ThumbsUp, ExternalLink, ChevronRight } from "lucide-react";
@@ -136,7 +137,7 @@ export default async function ContentPage({
   // TikTok → only TikTok/Reels content). An explicit chip filter or ?platform=all
   // overrides this.
   const campaignSelection = await prisma.campaignSelection
-    .findUnique({ where: { projectId }, select: { platform: true } })
+    .findUnique({ where: { projectId }, select: { platform: true, totalDurationSec: true } })
     .catch(() => null);
   const campaignPlatform = getCampaignPlatform(campaignSelection?.platform);
   const campaignScopeActive = !showAll && !platformFilter && !!campaignPlatform;
@@ -241,6 +242,14 @@ export default async function ContentPage({
           ))}
         </div>
       </div>
+
+      {/* Video mode: platform + duration → research / regenerate */}
+      <ContentPlatformControls
+        projectId={projectId}
+        initialPlatform={campaignSelection?.platform ?? null}
+        initialDuration={campaignSelection?.totalDurationSec ?? null}
+        hasContent={allAssets.length > 0}
+      />
 
       {/* Campaign-platform scope banner */}
       {campaignScopeActive && (
