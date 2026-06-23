@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { NARRATIVE_TYPE_LABELS, CONTENT_TYPE_LABELS, CONTENT_CATEGORY_LABELS } from "@/lib/constants";
+import { getCampaignPlatform } from "@/lib/campaign-platform";
+import { ContentPlatformControls } from "@/components/content/content-platform-controls";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
 import { LoadMoreButton } from "@/components/dashboard/action-buttons";
 import { Eye, ThumbsUp, ExternalLink, ChevronRight } from "lucide-react";
@@ -126,8 +128,19 @@ export default async function ContentPage({
   const sp = await searchParams;
   const sortBy = sp.sort || "overallScore";
   const order = sp.order || "desc";
-  const platformFilter = sp.platform || "";
+  const showAll = sp.platform === "all";
+  const platformFilter = showAll ? "" : sp.platform || "";
   const categoryFilter = sp.category || "";
+
+  // Scope the content view to the user's selected campaign platform so the
+  // displayed videos stay consistent with "Platform & Duration" (e.g. choose
+  // TikTok → only TikTok/Reels content). An explicit chip filter or ?platform=all
+  // overrides this.
+  const campaignSelection = await prisma.campaignSelection
+    .findUnique({ where: { projectId }, select: { platform: true, totalDurationSec: true } })
+    .catch(() => null);
+  const campaignPlatform = getCampaignPlatform(campaignSelection?.platform);
+  const campaignScopeActive = !showAll && !platformFilter && !!campaignPlatform;
 
   const orderByMap: Record<string, Record<string, string>> = {
     overallScore: { overallScore: order },
@@ -138,6 +151,7 @@ export default async function ContentPage({
 
   const whereClause: Record<string, unknown> = { projectId };
   if (platformFilter) whereClause.type = platformFilter;
+  else if (campaignScopeActive) whereClause.type = { in: campaignPlatform!.contentTypes };
   if (categoryFilter) whereClause.contentCategory = categoryFilter;
 
   const assets = await prisma.contentAsset.findMany({
@@ -228,6 +242,30 @@ export default async function ContentPage({
           ))}
         </div>
       </div>
+
+      {/* Video mode: platform + duration → research / regenerate */}
+      <ContentPlatformControls
+        projectId={projectId}
+        initialPlatform={campaignSelection?.platform ?? null}
+        initialDuration={campaignSelection?.totalDurationSec ?? null}
+        hasContent={allAssets.length > 0}
+      />
+
+      {/* Campaign-platform scope banner */}
+      {campaignScopeActive && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
+          <span className="text-muted-foreground">
+            Showing content for your campaign platform:{" "}
+            <span className="font-medium text-foreground">{campaignPlatform!.label}</span>
+          </span>
+          <Link
+            href={`?${new URLSearchParams({ sort: sortBy, order, platform: "all", ...(categoryFilter ? { category: categoryFilter } : {}) }).toString()}`}
+            className="font-medium text-foreground hover:underline whitespace-nowrap"
+          >
+            Show all platforms
+          </Link>
+        </div>
+      )}
 
       {/* Source filter row */}
       {hasMultiplePlatforms && (

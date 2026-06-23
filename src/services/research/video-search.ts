@@ -1,8 +1,14 @@
 import { searchYouTubeVideos, type YouTubeVideo } from "./youtube-service";
 import { searchDuckDuckGo } from "./duckduckgo";
-import { scrapeTikTokVideo, type TikTokVideo } from "./tiktok-scraper";
-import { getVimeoMetadata, type VimeoVideo } from "./vimeo-service";
+import { scrapeTikTokVideo } from "./tiktok-scraper";
+import { getVimeoMetadata } from "./vimeo-service";
 import type { SearchKeywords } from "./keyword-extractor";
+import {
+  selectRelevantVideos,
+  type RelevanceContext,
+  type ScoredVideo,
+  type SelectOptions,
+} from "./video-relevance";
 
 export interface VideoResult {
   platform: "youtube" | "youtube_short" | "tiktok" | "vimeo";
@@ -262,96 +268,6 @@ async function searchTikTok(
   return results;
 }
 
-async function searchInstagram(
-  brandName: string,
-  keywords: SearchKeywords
-): Promise<VideoResult[]> {
-  const results: VideoResult[] = [];
-  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
-
-  // Search for Instagram Reels via DuckDuckGo
-  const queries = [
-    `"${brandName}" ${disambig} instagram reel`,
-    `"${brandName}" instagram video ad`,
-  ];
-
-  for (const query of queries) {
-    try {
-      const ddgResults = await searchDuckDuckGo(query, 8);
-      const igUrls = ddgResults
-        .filter((r) =>
-          r.url.includes("instagram.com") &&
-          (r.url.includes("/reel/") || r.url.includes("/p/"))
-        )
-        .slice(0, 3);
-
-      for (const igResult of igUrls) {
-        results.push({
-          platform: "tiktok", // stored as social post but displayed as IG
-          videoId: `ig_${igResult.url.split("/").filter(Boolean).pop() || ""}`,
-          title: igResult.title || `${brandName} Instagram Reel`,
-          description: igResult.snippet || "",
-          url: igResult.url,
-          thumbnailUrl: "",
-          channelTitle: "Instagram",
-          viewCount: 0,
-          likeCount: 0,
-          commentCount: 0,
-          publishedAt: new Date().toISOString(),
-        });
-      }
-    } catch {
-      // continue
-    }
-    if (results.length >= 3) break;
-  }
-
-  return results;
-}
-
-async function searchVimeo(
-  brandName: string,
-  keywords: SearchKeywords
-): Promise<VideoResult[]> {
-  const results: VideoResult[] = [];
-  const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
-
-  try {
-    const ddgResults = await searchDuckDuckGo(
-      `site:vimeo.com "${brandName}" ${disambig} commercial ad`,
-      5
-    );
-    const vimeoUrls = ddgResults
-      .filter((r) => r.url.includes("vimeo.com"))
-      .slice(0, 3);
-
-    const scraped = await Promise.all(
-      vimeoUrls.map((r) => getVimeoMetadata(r.url))
-    );
-
-    for (const video of scraped) {
-      if (!video) continue;
-      results.push({
-        platform: "vimeo",
-        videoId: video.videoId,
-        title: video.title,
-        description: video.description,
-        url: video.url,
-        thumbnailUrl: video.thumbnailUrl,
-        channelTitle: video.author,
-        viewCount: 0, // Vimeo oEmbed doesn't provide view counts
-        likeCount: 0,
-        commentCount: 0,
-        publishedAt: video.publishedAt,
-      });
-    }
-  } catch {
-    // continue
-  }
-
-  return results;
-}
-
 function youtubeToResult(
   v: YouTubeVideo,
   platform: "youtube" | "youtube_short"
@@ -369,4 +285,91 @@ function youtubeToResult(
     commentCount: v.commentCount,
     publishedAt: v.publishedAt,
   };
+}
+
+// ─── Verified search loop ─────────────────────────────────────────────────────
+
+/**
+ * Broaden the search keywords for a given retry round by surfacing fresh
+ * ad/category query variants to the FRONT (YouTube long-form only reads the
+ * first two adSearchQueries, so order matters).
+ */
+function broadenKeywords(
+  kw: SearchKeywords,
+  round: number,
+  brandName: string
+): SearchKeywords {
+  if (round <= 0) return kw;
+  const cat =
+    kw.categoryKeywords?.[0] || kw.brandContext?.industry || "product";
+  const byRound: string[][] = [
+    [],
+    [`${brandName} ${cat} ad commercial`, `${brandName} official ad`, `${brandName} ${cat} review`],
+    [`${brandName} viral ad`, `best ${cat} ads`, `${brandName} unboxing`],
+  ];
+  const extra = byRound[Math.min(round, byRound.length - 1)] ?? [];
+  return { ...kw, adSearchQueries: [...extra, ...(kw.adSearchQueries ?? [])] };
+}
+
+export interface VerifiedSearchOptions {
+  productName?: string;
+  targetCount?: number;
+  maxRounds?: number;
+  select?: SelectOptions;
+  /**
+   * Restrict results to these VideoResult platforms (e.g. ["tiktok"] when the
+   * campaign platform is TikTok). When omitted, all platforms are kept.
+   */
+  allowedPlatforms?: VideoResult["platform"][];
+}
+
+/**
+ * Search across platforms and KEEP SEARCHING (broadening queries each round)
+ * until we have `targetCount` videos that are both verified-relevant and
+ * high-engagement, or `maxRounds` is exhausted. Candidates accumulate and
+ * de-duplicate across rounds; the best-scored selection is always returned.
+ */
+export async function searchVerifiedVideos(
+  brandName: string,
+  keywords: SearchKeywords,
+  strategy: "short_social" | "tvc" | "mixed" = "mixed",
+  opts: VerifiedSearchOptions = {}
+): Promise<ScoredVideo[]> {
+  const targetCount = opts.targetCount ?? 6;
+  const maxRounds = opts.maxRounds ?? 3;
+  const ctx: RelevanceContext = {
+    brandName,
+    productName: opts.productName,
+    keywords,
+  };
+
+  const allowed = opts.allowedPlatforms?.length
+    ? new Set(opts.allowedPlatforms)
+    : null;
+
+  const pool = new Map<string, VideoResult>();
+  let best: ScoredVideo[] = [];
+
+  for (let round = 0; round < maxRounds; round++) {
+    const roundKeywords = broadenKeywords(keywords, round, brandName);
+    try {
+      const found = await searchAllPlatforms(brandName, roundKeywords, strategy);
+      for (const v of found) {
+        // Keep results consistent with the chosen campaign platform.
+        if (allowed && !allowed.has(v.platform)) continue;
+        pool.set(`${v.platform}:${v.videoId}`, v);
+      }
+    } catch {
+      // keep whatever we have; try next round
+    }
+
+    best = await selectRelevantVideos([...pool.values()], ctx, {
+      targetCount,
+      ...opts.select,
+    });
+
+    if (best.length >= targetCount) break;
+  }
+
+  return best;
 }

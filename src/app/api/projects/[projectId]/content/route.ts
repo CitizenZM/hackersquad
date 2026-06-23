@@ -7,12 +7,37 @@ export async function GET(
 ) {
   const { projectId } = await params;
   const url = new URL(request.url);
-  const type = url.searchParams.get("type");
-  const sortBy = url.searchParams.get("sortBy") || "overallScore";
-  const order = url.searchParams.get("order") || "desc";
+
+  // Allowlist query params — they flow into Prisma orderBy/where, so raw values
+  // would let a malformed query trigger a PrismaClientValidationError (500).
+  const SORTABLE = new Set([
+    "overallScore",
+    "viewCount",
+    "likeCount",
+    "commentCount",
+    "publishedAt",
+    "createdAt",
+  ]);
+  const CONTENT_TYPES = new Set([
+    "YOUTUBE_VIDEO",
+    "YOUTUBE_SHORT",
+    "TIKTOK_VIDEO",
+    "VIMEO_VIDEO",
+    "WEBSITE_PAGE",
+    "SOCIAL_POST",
+    "WEB_MENTION",
+    "REVIEW",
+  ]);
+
+  const typeParam = url.searchParams.get("type");
+  const sortByParam = url.searchParams.get("sortBy") || "overallScore";
+  const orderParam = url.searchParams.get("order") || "desc";
+
+  const sortBy = SORTABLE.has(sortByParam) ? sortByParam : "overallScore";
+  const order = orderParam === "asc" ? "asc" : "desc";
 
   const where: Record<string, unknown> = { projectId };
-  if (type) where.type = type;
+  if (typeParam && CONTENT_TYPES.has(typeParam)) where.type = typeParam;
 
   const assets = await prisma.contentAsset.findMany({
     where,

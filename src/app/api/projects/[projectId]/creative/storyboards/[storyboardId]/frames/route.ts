@@ -27,7 +27,10 @@ export async function PATCH(
   }
 
   // Merge updates into the specific frame
-  const frames = (storyboard.frames as Array<Record<string, unknown>>).map(frame => {
+  const existingFrames = Array.isArray(storyboard.frames)
+    ? (storyboard.frames as Array<Record<string, unknown>>)
+    : [];
+  const frames = existingFrames.map(frame => {
     if (frame.frameNumber === frameNumber) {
       return { ...frame, ...updates };
     }

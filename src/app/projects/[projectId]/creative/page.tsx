@@ -19,6 +19,7 @@ import {
   Zap,
   CheckSquare,
   Square,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScoreBar, StatusBadge } from "@/components/dashboard/status-badge";
@@ -88,6 +89,7 @@ export default function CreativePage() {
   const [loadingScripts, setLoadingScripts] = useState(false);
   const [loadingStoryboards, setLoadingStoryboards] = useState(false);
   const [loadingMatrix, setLoadingMatrix] = useState(false);
+  const [sendingMatrixRow, setSendingMatrixRow] = useState<number | null>(null);
   const [loadingAll, setLoadingAll] = useState(false);
   const [allProgress, setAllProgress] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -203,6 +205,43 @@ export default function CreativePage() {
       setTestMatrix(data.variants || []);
     } finally {
       setLoadingMatrix(false);
+    }
+  }
+
+  // Promote a single test-matrix variant into a full script. The scripts
+  // endpoint takes a free-form `angle` string, so we synthesize one from the
+  // variant's hook, outline, narrative and CTA.
+  async function sendVariantToScript(v: TestVariant, index: number) {
+    setSendingMatrixRow(index);
+    try {
+      const narrativeLabel = NARRATIVE_TYPE_LABELS[v.narrativeType] || v.narrativeType;
+      const angle = [
+        `Hook: ${v.hookVariant}`,
+        v.scriptOutline ? `Outline: ${v.scriptOutline}` : "",
+        `Narrative: ${narrativeLabel}`,
+        `CTA: ${v.ctaVariant}`,
+        `Format: ${v.format}`,
+      ]
+        .filter(Boolean)
+        .join(". ");
+
+      const res = await fetch(`/api/projects/${projectId}/creative/scripts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ angle }),
+      });
+      const script = await res.json().catch(() => null);
+      if (!res.ok || !script?.id) return;
+
+      setScripts((prev) => [script, ...prev]);
+      setSelectedScriptIds((prev) => {
+        const next = new Set(prev);
+        next.add(script.id);
+        return next;
+      });
+      setExpandedScript(script.id);
+    } finally {
+      setSendingMatrixRow(null);
     }
   }
 
@@ -629,6 +668,7 @@ export default function CreativePage() {
                     <th className="text-left font-medium px-3 py-2.5 hidden lg:table-cell">CTA</th>
                     <th className="text-left font-medium px-3 py-2.5 hidden sm:table-cell">Format</th>
                     <th className="text-left font-medium px-3 py-2.5 w-28">Score</th>
+                    <th className="text-right font-medium px-3 py-2.5 w-32">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -646,6 +686,22 @@ export default function CreativePage() {
                         </td>
                         <td className="px-3 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{v.format}</td>
                         <td className="px-3 py-2.5"><ScoreBar score={v.predictedScore} /></td>
+                        <td className="px-3 py-2.5 text-right">
+                          <Button
+                            onClick={() => sendVariantToScript(v, i)}
+                            disabled={sendingMatrixRow !== null}
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-md text-xs whitespace-nowrap"
+                          >
+                            {sendingMatrixRow === i ? (
+                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            ) : (
+                              <FileText className="mr-1.5 h-3 w-3" />
+                            )}
+                            To script
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -666,15 +722,24 @@ export default function CreativePage() {
               Send {selectedScriptIds.size} selected script{selectedScriptIds.size !== 1 ? "s" : ""} to Studio for a detailed video brief and keyframe reel.
             </p>
           </div>
-          <Button
-            onClick={goToStudio}
-            disabled={selectedScriptIds.size === 0}
-            className="h-10 rounded-md bg-foreground text-background hover:bg-foreground/90 font-medium shrink-0"
-          >
-            <Palette className="mr-2 h-4 w-4" />
-            Open Studio
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={`/api/projects/${projectId}/export`}
+              className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-border bg-background hover:bg-muted/60 text-sm font-medium transition-colors"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export package
+            </a>
+            <Button
+              onClick={goToStudio}
+              disabled={selectedScriptIds.size === 0}
+              className="h-10 rounded-md bg-foreground text-background hover:bg-foreground/90 font-medium"
+            >
+              <Palette className="mr-2 h-4 w-4" />
+              Open Studio
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

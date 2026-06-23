@@ -54,7 +54,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { angle } = body;
 
   try {

@@ -5,7 +5,9 @@ import {
   quickBrandUnderstanding,
   extractSearchKeywords,
 } from "./keyword-extractor";
-import { searchAllPlatforms, type VideoResult } from "./video-search";
+import { searchVerifiedVideos, type VideoResult } from "./video-search";
+import { recordDiscoveredVideos } from "./video-corpus";
+import { getCampaignPlatform } from "@/lib/campaign-platform";
 import { searchTikTokTopAds } from "./tiktok-creative-center";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
 import {
@@ -86,34 +88,66 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
     // Step 3: parallel video search across brand + competitors
     await startStep(jobId, "Video search");
 
-    // Determine search strategy based on campaign goal
-    const goal = (project.campaignGoal || "").toLowerCase();
-    const isShortFormSocial =
-      goal.includes("tiktok") || goal.includes("instagram") ||
-      goal.includes("shop") || goal.includes("social") ||
-      goal.includes("creator") || goal.includes("affiliate");
-    const isTVC =
-      goal.includes("tvc") || goal.includes("television") ||
-      goal.includes("brand awareness") || goal.includes("hero") ||
-      goal.includes("landing page");
+    // Search strategy + platform constraint come from the user's selected
+    // campaign platform when available; otherwise fall back to a campaign-goal
+    // heuristic. This keeps search consistent with "Platform & Duration".
+    const campaignSelection = await prisma.campaignSelection
+      .findUnique({ where: { projectId }, select: { platform: true } })
+      .catch(() => null);
+    const campaignPlatform = getCampaignPlatform(campaignSelection?.platform);
 
-    let searchStrategy: "short_social" | "tvc" | "mixed" = "mixed";
-    if (isShortFormSocial) searchStrategy = "short_social";
-    else if (isTVC) searchStrategy = "tvc";
+    let searchStrategy: "short_social" | "tvc" | "mixed";
+    let allowedPlatforms: VideoResult["platform"][] | undefined;
 
+    if (campaignPlatform) {
+      searchStrategy = campaignPlatform.searchStrategy;
+      allowedPlatforms = campaignPlatform.videoPlatforms;
+    } else {
+      const goal = (project.campaignGoal || "").toLowerCase();
+      const isShortFormSocial =
+        goal.includes("tiktok") || goal.includes("instagram") ||
+        goal.includes("shop") || goal.includes("social") ||
+        goal.includes("creator") || goal.includes("affiliate");
+      const isTVC =
+        goal.includes("tvc") || goal.includes("television") ||
+        goal.includes("brand awareness") || goal.includes("hero") ||
+        goal.includes("landing page");
+      searchStrategy = isShortFormSocial ? "short_social" : isTVC ? "tvc" : "mixed";
+    }
+
+    const brandProductName =
+      project.productPageTitle || project.productName || undefined;
     const videoTargets = [
-      { name: project.brandName, ownerId: null as string | null },
-      ...project.competitors.map((c) => ({ name: c.name, ownerId: c.id })),
+      { name: project.brandName, ownerId: null as string | null, productName: brandProductName },
+      ...project.competitors.map((c) => ({
+        name: c.name,
+        ownerId: c.id,
+        productName: undefined as string | undefined,
+      })),
     ];
     const videoResults = await pMapSettled(
       videoTargets,
       async (t, i) => {
-        const videos = await searchAllPlatforms(t.name, keywords, searchStrategy);
+        // Search → score → LLM-verify → loop, keeping only videos that are
+        // relevant AND high-engagement (or exhausting the retry rounds).
+        const videos = await searchVerifiedVideos(t.name, keywords, searchStrategy, {
+          productName: t.productName,
+          targetCount: 6,
+          maxRounds: 3,
+          allowedPlatforms,
+        });
+        const verifiedCount = videos.filter((v) => v.verified).length;
+        // Accumulate into the cross-project learning corpus (additive, never
+        // cleared) so discoveries persist across refreshes and projects.
+        await recordDiscoveredVideos(videos, {
+          brandName: t.name,
+          workspaceId: project.workspaceId ?? null,
+        });
         await updateStep(
           jobId,
           "Video search",
           Math.round(((i + 1) / Math.max(videoTargets.length, 1)) * 100),
-          `${videos.length} videos for ${t.name}`
+          `${verifiedCount} verified videos for ${t.name}`
         );
         return { ownerId: t.ownerId, videos };
       },

@@ -72,16 +72,17 @@ export async function POST(
     environmentNotes: (campaignSel?.selectedEnvNotes as string | null) || undefined,
     sellingPoints: [
       ...sellingPoints.map(sp => sp.point),
-      ...(
-        (campaignSel?.selectedSellingPoints as { point: string }[] | null)
-          ?.map(s => s.point) || []
-      ),
+      ...(Array.isArray(campaignSel?.selectedSellingPoints)
+        ? (campaignSel.selectedSellingPoints as { point: string }[]).map(s => s.point)
+        : []),
     ].slice(0, 5),
-    scenes: script ? (script.scenes as Array<{
-      startSec?: number; endSec?: number; segmentLabel?: string;
-      shotType?: string; location?: string; lighting?: string;
-      actorAction?: string; productAction?: string; voiceover?: string;
-    }> | null) || [] : [],
+    scenes: Array.isArray(script?.scenes)
+      ? (script.scenes as Array<{
+          startSec?: number; endSec?: number; segmentLabel?: string;
+          shotType?: string; location?: string; lighting?: string;
+          actorAction?: string; productAction?: string; voiceover?: string;
+        }>)
+      : [],
   });
 
   // Map model to fal.ai endpoint

@@ -10,6 +10,7 @@ import {
   Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 
 const navItems = [
   { href: "/", label: "Home", icon: LayoutGrid },
@@ -33,10 +34,15 @@ export function Sidebar() {
         </span>
       </div>
 
+      {/* Workspace switcher */}
+      <div className="px-3 pt-3">
+        <WorkspaceSwitcher />
+      </div>
+
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 p-3">
         <p className="px-2 pb-1.5 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          Workspace
+          Navigation
         </p>
         {navItems.map((item) => {
           const Icon = item.icon;

@@ -1,6 +1,43 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Only these fields may be written from the request body. A raw `...body` spread
+// would let an unknown field or a wrong-typed value (e.g. totalDurationSec as a
+// string) throw a PrismaClientValidationError (500).
+const STRING_FIELDS = [
+  "selectedProductName",
+  "selectedProductImage",
+  "selectedEnvironment",
+  "selectedEnvImage",
+  "selectedEnvNotes",
+  "selectedActorRole",
+  "selectedActorImage",
+  "selectedActorDesc",
+  "selectedActorAge",
+  "platform",
+] as const;
+const JSON_FIELDS = [
+  "selectedSellingPoints",
+  "videoTimeline",
+  "referenceVideoIds",
+] as const;
+
+function sanitizeSelection(body: Record<string, unknown>): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  for (const k of STRING_FIELDS) {
+    if (typeof body[k] === "string") data[k] = body[k];
+  }
+  for (const k of JSON_FIELDS) {
+    if (body[k] !== undefined) data[k] = body[k];
+  }
+  if (body.totalDurationSec !== undefined) {
+    const n = Number(body.totalDurationSec);
+    if (Number.isFinite(n)) data.totalDurationSec = Math.round(n);
+  }
+  if (typeof body.confirmed === "boolean") data.confirmed = body.confirmed;
+  return data;
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ projectId: string }> }
@@ -16,11 +53,12 @@ export async function POST(
 ) {
   const { projectId } = await params;
   const body = await req.json().catch(() => ({}));
+  const data = sanitizeSelection(body);
 
   const sel = await prisma.campaignSelection.upsert({
     where: { projectId },
-    create: { projectId, ...body },
-    update: body,
+    create: { projectId, ...data },
+    update: data,
   });
   return NextResponse.json(sel);
 }
@@ -42,10 +80,11 @@ export async function PATCH(
     return NextResponse.json(sel);
   }
 
+  const data = sanitizeSelection(body);
   const sel = await prisma.campaignSelection.upsert({
     where: { projectId },
-    create: { projectId, ...body },
-    update: body,
+    create: { projectId, ...data },
+    update: data,
   });
   return NextResponse.json(sel);
 }

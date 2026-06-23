@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createProjectSchema } from "@/lib/validations";
 import {
-  ensureDefaultWorkspace,
   upsertBrandProfile,
   upsertCompetitorProfile,
 } from "@/services/brand-library";
+import { getActiveWorkspace, projectWorkspaceFilter } from "@/services/workspace";
 import { scrapeProductPage } from "@/services/research/product-page-scraper";
 
 export const maxDuration = 30;
 
 export async function GET() {
   const projects = await prisma.project.findMany({
+    where: await projectWorkspaceFilter(),
     orderBy: { updatedAt: "desc" },
     include: {
       competitors: { select: { id: true, name: true, url: true } },
@@ -23,10 +24,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const data = createProjectSchema.parse(body);
 
-    const workspace = await ensureDefaultWorkspace();
+    const workspace = await getActiveWorkspace();
     const brandProfile = await upsertBrandProfile({
       workspaceId: workspace.id,
       name: data.brandName,
