@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ChevronRight } from "lucide-react";
 import { DeleteButton } from "@/components/projects/delete-button";
 import { StatusBadge, StatusLevel } from "@/components/dashboard/status-badge";
+import { projectWorkspaceFilter } from "@/services/workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ const statusLevelMap: Record<string, StatusLevel> = {
 
 export default async function AllProjectsPage() {
   const projects = await prisma.project.findMany({
+    where: await projectWorkspaceFilter(),
     orderBy: { updatedAt: "desc" },
     include: {
       competitors: { select: { name: true } },

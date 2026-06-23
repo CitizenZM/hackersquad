@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ProjectForm } from "@/components/projects/project-form";
+import { projectWorkspaceFilter } from "@/services/workspace";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const latestProject = await prisma.project.findFirst({
+    where: await projectWorkspaceFilter(),
     orderBy: { updatedAt: "desc" },
     select: { id: true, status: true },
   });

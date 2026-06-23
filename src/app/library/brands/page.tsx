@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { ensureDefaultWorkspace, listBrandProfiles } from "@/services/brand-library";
+import { listBrandProfiles } from "@/services/brand-library";
+import { getActiveWorkspace } from "@/services/workspace";
 
 export const dynamic = "force-dynamic";
 
 export default async function BrandLibraryPage() {
-  const workspace = await ensureDefaultWorkspace();
+  const workspace = await getActiveWorkspace();
   const [brands, competitors] = await Promise.all([
     listBrandProfiles(workspace.id),
     prisma.competitorProfile.findMany({

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { VideoLibraryPanel } from "@/components/video/video-library-panel";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -794,6 +795,8 @@ export default function VideoStudioPage() {
           )}
         </div>
       </div>
+
+      <VideoLibraryPanel projectId={projectId} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   FolderKanban,
   Wand2,
   Palette,
+  Library,
 } from "lucide-react";
 
 const tabs = [
@@ -15,6 +16,7 @@ const tabs = [
   { href: "/all", label: "Projects", icon: FolderKanban, match: (p: string) => p.startsWith("/all") },
   { href: "#creative", label: "Create", icon: Wand2, match: (p: string) => p.includes("/creative") },
   { href: "#studio", label: "Studio", icon: Palette, match: (p: string) => p.includes("/studio") },
+  { href: "/library/brands", label: "Library", icon: Library, match: (p: string) => p.startsWith("/library") },
 ];
 
 export function BottomNav() {
