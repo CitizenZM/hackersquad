@@ -5,7 +5,7 @@ import {
   quickBrandUnderstanding,
   extractSearchKeywords,
 } from "./keyword-extractor";
-import { searchAllPlatforms, type VideoResult } from "./video-search";
+import { searchVerifiedVideos, type VideoResult } from "./video-search";
 import { searchTikTokTopAds } from "./tiktok-creative-center";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
 import {
@@ -101,19 +101,32 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
     if (isShortFormSocial) searchStrategy = "short_social";
     else if (isTVC) searchStrategy = "tvc";
 
+    const brandProductName =
+      project.productPageTitle || project.productName || undefined;
     const videoTargets = [
-      { name: project.brandName, ownerId: null as string | null },
-      ...project.competitors.map((c) => ({ name: c.name, ownerId: c.id })),
+      { name: project.brandName, ownerId: null as string | null, productName: brandProductName },
+      ...project.competitors.map((c) => ({
+        name: c.name,
+        ownerId: c.id,
+        productName: undefined as string | undefined,
+      })),
     ];
     const videoResults = await pMapSettled(
       videoTargets,
       async (t, i) => {
-        const videos = await searchAllPlatforms(t.name, keywords, searchStrategy);
+        // Search → score → LLM-verify → loop, keeping only videos that are
+        // relevant AND high-engagement (or exhausting the retry rounds).
+        const videos = await searchVerifiedVideos(t.name, keywords, searchStrategy, {
+          productName: t.productName,
+          targetCount: 6,
+          maxRounds: 3,
+        });
+        const verifiedCount = videos.filter((v) => v.verified).length;
         await updateStep(
           jobId,
           "Video search",
           Math.round(((i + 1) / Math.max(videoTargets.length, 1)) * 100),
-          `${videos.length} videos for ${t.name}`
+          `${verifiedCount} verified videos for ${t.name}`
         );
         return { ownerId: t.ownerId, videos };
       },
