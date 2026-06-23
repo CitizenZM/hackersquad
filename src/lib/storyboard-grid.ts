@@ -143,15 +143,20 @@ export function repairFrames(
   windows: GridWindow[],
   scenes: SceneLike[]
 ): GridFrame[] {
-  // Order whatever we got by its declared frame number / start time.
-  const ordered = [...raw].sort((a, b) => {
-    const an = a.frameNumber ?? a.startSec ?? 0;
-    const bn = b.frameNumber ?? b.startSec ?? 0;
-    return an - bn;
-  });
+  // Index raw frames by their declared frameNumber so a skipped or reordered
+  // frame can't shift every later window's content by one (positional
+  // alignment would). Fall back to positional order for frames that declared
+  // no usable frameNumber.
+  const byNumber = new Map<number, RawFrame>();
+  const unnumbered: RawFrame[] = [];
+  for (const f of raw) {
+    const n = typeof f.frameNumber === "number" ? f.frameNumber : NaN;
+    if (Number.isFinite(n) && !byNumber.has(n)) byNumber.set(n, f);
+    else unnumbered.push(f);
+  }
 
   return windows.map((win, i) => {
-    const src = ordered[i] ?? {};
+    const src = byNumber.get(win.frameNumber) ?? unnumbered[i] ?? {};
     const scene = sceneForWindow(scenes, win);
     const fallbackScene =
       scene?.actorAction ||

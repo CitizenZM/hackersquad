@@ -88,7 +88,8 @@ export function scoreQuality(video: VideoResult): number {
   const viewScore = Math.min(1, Math.log10(views + 1) / 7);
 
   // Engagement rate = (likes + comments) / views, capped.
-  const eng = (video.likeCount + video.commentCount) / Math.max(views, 1);
+  const eng =
+    ((video.likeCount || 0) + (video.commentCount || 0)) / Math.max(views, 1);
   const engScore = Math.min(1, eng / 0.1); // 10% engagement → full marks
 
   // Recency: newer is slightly better.
@@ -171,9 +172,12 @@ ${list}`;
         reason: v?.reason ?? "no verdict",
       };
     });
-  } catch {
-    // Conservative: couldn't verify → mark unverified, let deterministic gate decide.
-    return videos.map(() => ({ relevant: false, confidence: 0, reason: "verify failed" }));
+  } catch (err) {
+    // Signal failure to the caller so it can fall back to deterministic-only
+    // gating instead of silently dropping every video.
+    throw new Error(
+      `LLM verification unavailable: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 };
 
@@ -217,11 +221,24 @@ export async function selectRelevantVideos(
 
   if (prefiltered.length === 0) return [];
 
-  // 2) LLM verification on the prefiltered set (batched).
-  const verdicts = await verify(
-    prefiltered.map((x) => x.v),
-    ctx
-  );
+  // 2) LLM verification on the prefiltered set (batched). If the LLM is
+  //    unavailable (bad key, timeout), degrade gracefully to deterministic-only
+  //    gating rather than silently dropping every candidate.
+  let verdicts: VerifyResult[];
+  let degraded = false;
+  try {
+    verdicts = await verify(
+      prefiltered.map((x) => x.v),
+      ctx
+    );
+  } catch {
+    degraded = true;
+    verdicts = prefiltered.map(() => ({
+      relevant: false,
+      confidence: 0,
+      reason: "verify unavailable — deterministic fallback",
+    }));
+  }
 
   // 3) Combine + apply quality gate.
   const scored: ScoredVideo[] = prefiltered.map((x, i) => {
@@ -241,10 +258,15 @@ export async function selectRelevantVideos(
   });
 
   const engRate = (v: ScoredVideo) =>
-    v.viewCount > 0 ? (v.likeCount + v.commentCount) / v.viewCount : 0;
+    v.viewCount > 0
+      ? ((v.likeCount || 0) + (v.commentCount || 0)) / v.viewCount
+      : 0;
 
   const passing = scored.filter((v) => {
-    if (!v.verified) return false;
+    // Relevance bar: LLM verification normally; a higher deterministic relevance
+    // bar when the LLM is unavailable.
+    const relevantEnough = degraded ? v.relevanceScore >= 0.5 : v.verified;
+    if (!relevantEnough) return false;
     const hasMetrics = v.viewCount > 0;
     const qualityOk = hasMetrics
       ? v.viewCount >= o.minViews || engRate(v) >= o.minEngagementRate

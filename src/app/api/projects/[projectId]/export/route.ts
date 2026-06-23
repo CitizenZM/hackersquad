@@ -17,9 +17,9 @@ function asArray(v: unknown): string[] {
 
 interface FrameLike {
   imageUrl?: string | null;
-  caption?: string | null;
-  description?: string | null;
-  shotDescription?: string | null;
+  scene?: string | null;
+  visualDirection?: string | null;
+  duration?: string | null;
 }
 
 export async function GET(
@@ -76,7 +76,9 @@ export async function GET(
       const frames = (Array.isArray(b.frames) ? b.frames : []) as FrameLike[];
       const cards = frames
         .map((f) => {
-          const cap = f.caption || f.shotDescription || f.description || "";
+          const cap = [f.duration, f.scene || f.visualDirection]
+            .filter(Boolean)
+            .join(" · ");
           const img = f.imageUrl
             ? `<img src="${esc(f.imageUrl)}" alt="" loading="lazy" />`
             : `<div class="noimg">no image</div>`;

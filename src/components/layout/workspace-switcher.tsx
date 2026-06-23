@@ -65,6 +65,7 @@ export function WorkspaceSwitcher() {
       setActiveId(id);
       setOpen(false);
       router.refresh();
+      load(); // refresh project-count badges for the new active workspace
     } finally {
       setBusy(false);
     }

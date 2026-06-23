@@ -21,7 +21,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { prompts, scriptId } = body as { prompts: string[]; scriptId?: string };
 
   if (!prompts || !Array.isArray(prompts) || prompts.length === 0) {

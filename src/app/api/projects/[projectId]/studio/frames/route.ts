@@ -87,7 +87,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { prompt, style, dimensions } = body;
 
   const isSquare = dimensions === "256x256" || dimensions === "512x512";

@@ -36,7 +36,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const {
     prompt,
     model = "grok-imagine-video",
@@ -87,6 +87,10 @@ export async function POST(
 
       const data = await res.json();
       const falRequestId = data.request_id;
+      if (!falRequestId) {
+        // falRequestId is a required @unique column — never persist undefined.
+        throw new Error("fal.ai response missing request_id");
+      }
 
       // Persist to DB
       const job = await prisma.falVideoJob.create({
