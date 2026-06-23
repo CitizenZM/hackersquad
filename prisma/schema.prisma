@@ -604,3 +604,45 @@ model AudienceProfile {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }
+
+// ─── Cross-project learning corpus ───────────────────────────────────────────
+// Every video surfaced by ANY search across ANY project accumulates here,
+// deduplicated by (platform, videoId) and never cleared. Refreshing or
+// regenerating a project upserts into this growing store so prior discoveries —
+// and their metrics/scores — are retained for later learning. This is additive,
+// not replace-on-refresh.
+model DiscoveredVideo {
+  id       String @id @default(cuid())
+  platform String // youtube | youtube_short | tiktok | vimeo
+  videoId  String
+  url      String
+
+  title        String
+  description  String?   @db.Text
+  channelTitle String?
+  thumbnailUrl String?
+  publishedAt  DateTime?
+
+  viewCount    Int?
+  likeCount    Int?
+  commentCount Int?
+
+  // Best scoring snapshot seen so far.
+  relevanceScore Float?
+  qualityScore   Float?
+  combinedScore  Float?
+  verified       Boolean @default(false)
+
+  // Learning metadata — which brands/searches surfaced this and how often.
+  brands      Json? // string[] of brand names that surfaced this video
+  workspaceId String?
+
+  seenCount   Int      @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([platform, videoId])
+  @@index([workspaceId])
+  @@index([combinedScore])
+  @@index([platform])
+}

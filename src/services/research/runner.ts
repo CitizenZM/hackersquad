@@ -6,6 +6,7 @@ import {
   extractSearchKeywords,
 } from "./keyword-extractor";
 import { searchVerifiedVideos, type VideoResult } from "./video-search";
+import { recordDiscoveredVideos } from "./video-corpus";
 import { getCampaignPlatform } from "@/lib/campaign-platform";
 import { searchTikTokTopAds } from "./tiktok-creative-center";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
@@ -136,6 +137,12 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
           allowedPlatforms,
         });
         const verifiedCount = videos.filter((v) => v.verified).length;
+        // Accumulate into the cross-project learning corpus (additive, never
+        // cleared) so discoveries persist across refreshes and projects.
+        await recordDiscoveredVideos(videos, {
+          brandName: t.name,
+          workspaceId: project.workspaceId ?? null,
+        });
         await updateStep(
           jobId,
           "Video search",
