@@ -75,7 +75,6 @@ async function handlePost(
   const productName = project.productPageTitle || project.productName
     || project.brand?.valueProposition || project.brandName;
   const totalSec = (campaignSel?.totalDurationSec as number | null) || 5;
-  const platform = (campaignSel?.platform as string | null) || "tiktok";
 
   // Map model to fal.ai endpoint via the shared registry (single source of
   // truth shared with generate-video and fal-status routes).
