@@ -1,6 +1,7 @@
 /**
- * Direct script-to-video — uses 1000-4000 word broadcast-quality cinematic prompts.
- * No LLM inference step — deterministic prompt building from brand research database.
+ * Direct script-to-video — uses the model-aware prompt compiler to build
+ * broadcast-quality cinematic prompts. No LLM inference step — deterministic
+ * prompt building from brand research database via prompt-compiler.ts.
  * Bypasses the veo-prompt endpoint (which times out at 60s with free models).
  *
  * Prompt quality targets SharkNinja commercial standard:
@@ -13,8 +14,13 @@
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildDenseCinematicPrompt, buildWan26Prompt } from "@/services/ai/prompts/cinematic-prompt-builder";
-import { getVideoModel, splitNegativePrompt, fitPromptForModel } from "@/services/video-gen/models";
+import { getVideoModel } from "@/services/video-gen/models";
+import {
+  compileForModel,
+  toShotSpec,
+  type BrandContext,
+  type ScriptSceneLike,
+} from "@/services/video-gen/prompt-compiler";
 
 export const maxDuration = 30;
 
@@ -71,53 +77,62 @@ async function handlePost(
   const totalSec = (campaignSel?.totalDurationSec as number | null) || 5;
   const platform = (campaignSel?.platform as string | null) || "tiktok";
 
-  // Use model-specific prompt builder — Wan 2.6 needs global style + shot separation
-  const promptBuilder = model === "wan-2.6" ? buildWan26Prompt : buildDenseCinematicPrompt;
-  const prompt = customPrompt || promptBuilder({
+  // Map model to fal.ai endpoint via the shared registry (single source of
+  // truth shared with generate-video and fal-status routes).
+  const falModel = getVideoModel(model) ?? getVideoModel("grok-imagine-video")!;
+
+  const brand: BrandContext = {
     brandName: project.brandName,
     productName,
-    productDescription: project.productPageText?.slice(0, 400)
-      || project.brand?.productDescription?.slice(0, 400),
-    category: project.category || undefined,
-    campaignGoal: project.campaignGoal || undefined,
-    platform,
-    totalDurationSec: totalSec,
-    selectedActorRole: (campaignSel?.selectedActorRole as string | null) || undefined,
-    selectedActorDesc: (campaignSel?.selectedActorDesc as string | null) || undefined,
-    selectedEnvironment: (campaignSel?.selectedEnvironment as string | null) || undefined,
-    environmentNotes: (campaignSel?.selectedEnvNotes as string | null) || undefined,
-    sellingPoints: [
+    productCategory: project.brand?.productCategory || project.category || "",
+    keySellingPoints: [
       ...sellingPoints.map(sp => sp.point),
       ...(Array.isArray(campaignSel?.selectedSellingPoints)
         ? (campaignSel.selectedSellingPoints as { point: string }[]).map(s => s.point)
         : []),
     ].slice(0, 5),
-    scenes: Array.isArray(script?.scenes)
-      ? (script.scenes as Array<{
-          startSec?: number; endSec?: number; segmentLabel?: string;
-          shotType?: string; location?: string; lighting?: string;
-          actorAction?: string; productAction?: string; voiceover?: string;
-        }>)
-      : [],
-  });
+    mustNotAppear: [],
+  };
 
-  // Map model to fal.ai endpoint via the shared registry (single source of
-  // truth shared with generate-video and fal-status routes).
-  const falModel = getVideoModel(model) ?? getVideoModel("grok-imagine-video")!;
+  const scenes: ScriptSceneLike[] = Array.isArray(script?.scenes)
+    ? (script.scenes as ScriptSceneLike[])
+    : [];
 
-  // Split out the negative/brand-safety block (built by cinematic-prompt-builder,
-  // marked with "negative:") BEFORE trimming, so it is never the part that gets
-  // truncated. fitPromptForModel trims only the positive prompt at a sentence
-  // boundary and reserves space for the negative block (or routes it to the
-  // dedicated negative_prompt field when the model supports one).
-  const { positive, negative } = splitNegativePrompt(prompt);
-  const { prompt: finalPrompt, negativePrompt } = fitPromptForModel(positive, negative, falModel);
+  // Adapt scenes JSON into ShotSpec[]. When there are no scenes yet, fall back
+  // to a single synthetic shot covering the full campaign duration so the
+  // compiler always has at least one shot to work with.
+  const shotSpecs = scenes.length
+    ? scenes.map((scene, i) =>
+        toShotSpec(scene, { title: script?.title || "", body: script?.body || "", totalDurationSec: totalSec }, brand, i)
+      )
+    : [
+        toShotSpec(
+          {
+            location: (campaignSel?.selectedEnvironment as string | null) || undefined,
+            lighting: (campaignSel?.selectedEnvNotes as string | null) || undefined,
+            actorAction: (campaignSel?.selectedActorDesc as string | null) || undefined,
+          },
+          { title: script?.title || "", body: script?.body || "", totalDurationSec: totalSec },
+          brand,
+          0
+        ),
+      ];
+
+  // compileForModel returns ONE payload PER SHOT (multi-shot honesty — no
+  // inline [0-3s][3-6s] timeline markers baked into a single prompt). This
+  // route currently only submits shot 0 to fal.ai; a separate per-shot
+  // generation route is being built to submit the rest.
+  const compiled = compileForModel(shotSpecs, brand, falModel.key, { aspectRatio, resolution });
+  const shotPayload = compiled[0];
+
+  const prompt = customPrompt || shotPayload.prompt;
+  const negativePrompt = customPrompt ? undefined : shotPayload.negativePrompt;
 
   const payload: Record<string, unknown> = {
-    prompt: finalPrompt,
-    aspect_ratio: aspectRatio,
-    resolution,
-    duration: totalSec,
+    prompt,
+    ...(falModel.supportedParams.includes("aspect_ratio") ? { aspect_ratio: aspectRatio } : {}),
+    ...(falModel.supportedParams.includes("resolution") ? { resolution } : {}),
+    ...(falModel.supportedParams.includes("duration") ? { duration: totalSec } : {}),
   };
   if (falModel.supportsAudio) payload.enable_audio = true;
   if (negativePrompt) payload.negative_prompt = negativePrompt;

@@ -13,9 +13,14 @@ export async function GET(
   const job = await prisma.falVideoJob.findUnique({ where: { id: jobId } });
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
+  // generate-shots (i2v jobs) prefixes job.prompt with a recoverable
+  // "[[endpoint:<submitEndpoint>]]" marker (see below) — strip it before ever
+  // returning the job to a client.
+  const stripEndpointMarker = (p: string) => p.replace(/^\[\[endpoint:[^\]]+\]\]/, "");
+
   // Already completed or failed
   if (job.status === "completed" || job.status === "failed") {
-    return NextResponse.json(job);
+    return NextResponse.json({ ...job, prompt: stripEndpointMarker(job.prompt) });
   }
 
   const falKey = process.env.FAL_KEY;
@@ -32,7 +37,15 @@ export async function GET(
       { status: 422 }
     );
   }
-  const endpoint = modelDef.statusEndpoint;
+
+  // Per-shot i2v jobs (studio/generate-shots) submit against modelDef.i2vEndpoint
+  // instead of submitEndpoint. FalVideoJob has no dedicated "mode"/endpoint
+  // column, so generate-shots prefixes job.prompt with a recoverable
+  // "[[endpoint:<submitEndpoint>]]" marker. fal.ai's queue status/result paths
+  // are scoped to the submit endpoint (not just the base model path), so i2v
+  // jobs must poll using that same endpoint rather than modelDef.statusEndpoint.
+  const endpointMarkerMatch = /^\[\[endpoint:([^\]]+)\]\]/.exec(job.prompt);
+  const endpoint = endpointMarkerMatch ? endpointMarkerMatch[1] : modelDef.statusEndpoint;
 
   // Poll fal.ai status
   const statusRes = await fetch(
@@ -41,7 +54,11 @@ export async function GET(
   );
 
   if (!statusRes.ok) {
-    return NextResponse.json({ ...job, error: `fal status ${statusRes.status}` });
+    return NextResponse.json({
+      ...job,
+      prompt: stripEndpointMarker(job.prompt),
+      error: `fal status ${statusRes.status}`,
+    });
   }
 
   const statusData = await statusRes.json();
@@ -84,7 +101,7 @@ export async function GET(
         error: video?.url ? null : "Video URL not retrieved from fal.ai after 3 attempts",
       },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({ ...updated, prompt: stripEndpointMarker(updated.prompt) });
   }
 
   if (falStatus === "FAILED") {
@@ -92,7 +109,7 @@ export async function GET(
       where: { id: jobId },
       data: { status: "failed", error: statusData.error || "Generation failed" },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({ ...updated, prompt: stripEndpointMarker(updated.prompt) });
   }
 
   // Still processing
@@ -100,7 +117,7 @@ export async function GET(
     where: { id: jobId },
     data: { status: "processing" },
   });
-  return NextResponse.json({ ...job, status: "processing" });
+  return NextResponse.json({ ...job, prompt: stripEndpointMarker(job.prompt), status: "processing" });
 }
 
 export async function DELETE(

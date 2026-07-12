@@ -33,6 +33,14 @@ export interface VideoModelDef {
   i2vEndpoint?: string;
   /** Payload field name the i2v endpoint expects for the conditioning image URL. */
   imageParamName?: string;
+  /**
+   * Request-body param keys this model actually accepts, from the candidate
+   * set { duration, aspect_ratio, resolution }. prompt-compiler.ts filters its
+   * generated params object down to only these keys before returning a
+   * per-shot payload — passing an unsupported field to a provider can cause
+   * a 422 or be silently ignored, so the allowlist is explicit per model.
+   */
+  supportedParams: string[];
 }
 
 export const VIDEO_MODELS: Record<string, VideoModelDef> = {
@@ -47,6 +55,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     costPerSecond: 0.07,
     i2vEndpoint: "xai/grok-imagine-video/image-to-video",
     imageParamName: "image_url",
+    supportedParams: ["duration", "aspect_ratio", "resolution"],
   },
   "wan-2.6": {
     key: "wan-2.6",
@@ -59,6 +68,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     costPerSecond: 0.10,
     i2vEndpoint: "wan/v2.6/image-to-video",
     imageParamName: "image_url",
+    supportedParams: ["duration", "aspect_ratio", "resolution"],
   },
   "kling-v3-pro": {
     key: "kling-v3-pro",
@@ -71,6 +81,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     costPerSecond: 0.112,
     i2vEndpoint: "fal-ai/kling-video/v3/pro/image-to-video",
     imageParamName: "image_url",
+    supportedParams: ["duration", "aspect_ratio"],
   },
   "wan-2.5": {
     key: "wan-2.5",
@@ -83,6 +94,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     costPerSecond: 0.05,
     i2vEndpoint: "fal-ai/wan-25-preview/image-to-video",
     imageParamName: "image_url",
+    supportedParams: ["duration", "aspect_ratio", "resolution"],
   },
   "kling-v3-standard": {
     key: "kling-v3-standard",
@@ -95,6 +107,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     costPerSecond: 0.07,
     i2vEndpoint: "fal-ai/kling-video/v3/standard/image-to-video",
     imageParamName: "image_url",
+    supportedParams: ["duration", "aspect_ratio"],
   },
   "veo-3.1-fast": {
     key: "veo-3.1-fast",
@@ -105,6 +118,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: false,
     supportsAudio: false,
     costPerSecond: 0.15,
+    supportedParams: ["aspect_ratio"],
   },
   "veo-3.1-standard": {
     key: "veo-3.1-standard",
@@ -115,6 +129,7 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: false,
     supportsAudio: false,
     costPerSecond: 0.30,
+    supportedParams: ["aspect_ratio"],
   },
 };
 

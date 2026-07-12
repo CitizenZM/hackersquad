@@ -228,6 +228,14 @@ NO: dry skin (exertion sheen MUST be present at forehead and temple), clean unna
 
 // ─── Main builder function ─────────────────────────────────────────────────
 
+/**
+ * @deprecated Superseded by `compileForModel` in
+ * `src/services/video-gen/prompt-compiler.ts`, which routes category style
+ * presets via the explicit `resolveCategoryTemplate` enum instead of
+ * brandLower/productLower `.includes()` guessing, and emits one payload per
+ * shot instead of an inline multi-shot timeline. Kept for any legacy callers;
+ * do not add new call sites.
+ */
 export function buildCinematicVideoPrompt(input: CinematicPromptInput): string {
   const productLower = (input.productName + " " + (input.productDescription || "")).toLowerCase();
   const categoryLower = (input.category || "").toLowerCase();
@@ -291,6 +299,13 @@ No plastic skin, no AI smoothed complexion, no uniform carpet without pile self-
 
 // ─── Dense 3800-char optimized prompts for fal.ai 4096 char limit ────────────
 
+/**
+ * @deprecated Superseded by `compileForModel` in
+ * `src/services/video-gen/prompt-compiler.ts`. This function bakes an inline
+ * multi-beat timeline (e.g. "[0-3s]...[3-6s]...") into a single prompt string,
+ * which the compiler intentionally avoids ("multi-shot honesty" — one payload
+ * per shot). Kept for any legacy callers; do not add new call sites.
+ */
 export function buildDenseCinematicPrompt(input: CinematicPromptInput): string {
   const dur = input.totalDurationSec;
   const productRef = input.productName;
@@ -372,6 +387,13 @@ NO: dry unwet skin at athletic context, static camera on any shot over 2s, actor
 // Mixing camera mechanics with emotional direction causes "average" output.
 // Format: [GLOBAL STYLE LINE] \n [SHOT EXECUTION BLOCK]
 
+/**
+ * @deprecated Superseded by `compileForModel(shots, brand, "wan-2.6")` in
+ * `src/services/video-gen/prompt-compiler.ts`, which applies wan-2.6's
+ * maxPromptChars via `fitPromptForModel` and emits one payload per shot
+ * instead of inline "[0-Ns]" timeline brackets. Kept for any legacy callers;
+ * do not add new call sites.
+ */
 export function buildWan26Prompt(input: CinematicPromptInput): string {
   const dur = input.totalDurationSec;
   const productRef = input.productName;
