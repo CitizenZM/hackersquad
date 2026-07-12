@@ -1,3 +1,5 @@
+import { getPlatformPlaybook } from "./platform-playbooks";
+
 export interface AngleInput {
   brandName: string;
   category?: string;
@@ -11,12 +13,18 @@ export interface AngleInput {
   painPoints?: string[];
   platformPreferences?: string[];
   briefing?: string;
+  /** Campaign platform id (tiktok|instagram|youtube|tvc|amazon) — drives a lightweight format-constraint summary. */
+  platformId?: string;
 }
 
 export function buildAngleGenerationPrompt(input: AngleInput) {
+  const platformSummary = input.platformId
+    ? `\n\nPLATFORM FORMAT CONSTRAINTS FOR "${input.platformId}" (angles must be viable within these constraints — do not propose angles that require formats the platform can't support, e.g. long story-arcs for a 5s pre-skip window, or external CTAs for Amazon PDP):\n${getPlatformPlaybook(input.platformId)}`
+    : "";
+
   const system = `You are an elite creative director at a top advertising agency.
 Generate 10 distinct ad angles based on brand intelligence and content analysis.
-Each angle should be production-ready and based on proven content patterns.
+Each angle should be production-ready and based on proven content patterns.${platformSummary}
 Respond with ONLY a JSON object:
 {
   "angles": [

@@ -1,3 +1,5 @@
+import { getPlatformPlaybook, getHookFormulas } from "./platform-playbooks";
+
 export interface ScriptInput {
   brandName: string;
   productName?: string;
@@ -22,20 +24,35 @@ export interface ScriptInput {
   environmentNotes?: string;
   audienceSummary?: string;
   briefing?: string;
+  /** Campaign platform id from CAMPAIGN_PLATFORMS (tiktok|instagram|youtube|tvc|amazon). Drives playbook + hook-formula injection. */
+  platformId?: string;
+  /** Optional "what's working in this niche" research summary derived from DeepAnalysis.platformInsights. */
+  nicheResearch?: string;
 }
 
 export function buildScriptWritingPrompt(input: ScriptInput) {
   const durationSec = input.totalDurationSec || 30;
   const platform = input.platform || "video";
+  const platformId = input.platformId || input.platform;
+
+  const platformPlaybook = getPlatformPlaybook(platformId);
+  const platformHookFormulas = getHookFormulas(platformId);
+  const hookFormulaNamesBlock = `\nPLATFORM HOOK FORMULAS (each hookVariant must reference one of these NAMES):\n${platformHookFormulas
+    .map((h) => `- ${h.name}: ${h.pattern} (When to use: ${h.whenToUse})`)
+    .join("\n")}`;
 
   const system = `You are a senior creative director and script writer for ${platform} ads.
 Write a DETAILED, production-ready video ad script that a director can shoot directly from.
+
+${platformPlaybook}
+${hookFormulaNamesBlock}
 
 SCRIPT REQUIREMENTS:
 - Every scene must specify: exact shot type + focal length + camera movement + duration
 - Every character action must be described at millimeter precision (not "she smiles" → "left corner of mouth rises 0.5cm, exhale through nose, eyes soften")
 - Every environment must be specified: room type + lighting source + color temperature + key props
-- Hook must match one of the provided hook formulas exactly (if provided)
+- Hook must match one of the provided hook formulas exactly (if provided) AND must apply the platform playbook's opening-frame requirements above
+- Apply the platform playbook's constraints throughout (safe zones, sound-on/sound-off design, CTA rules, pacing) — do not default to generic ad conventions that violate this platform's norms
 - Total script must sum to EXACTLY ${durationSec} seconds
 - Scene durations must add up to exactly ${durationSec} seconds — no rounding
 
@@ -47,12 +64,13 @@ OUTPUT JSON (no markdown, no extra keys):
   "duration": "string e.g. '30s'",
   "platform": "string",
   "totalDurationSec": number,
-  "hookVariants": ["3 distinct hooks — each with opening visual + first spoken word"],
+  "hookVariants": ["3 distinct hooks — each formatted as '[hook-formula-name] opening visual + first spoken word', using one of the platform hook formula names above per variant"],
   "body": "FULL SCRIPT with [SCENE X: Xs-Xs] markers, camera directions, VO text, actor actions",
-  "ctaVariants": ["3 distinct CTAs with visual direction"],
+  "ctaVariants": ["3 distinct CTAs with visual direction — must respect the platform playbook's CTA rules (e.g. no external CTAs on Amazon PDP)"],
   "narrativeType": "PROBLEM_SOLUTION|TESTIMONIAL|DEMONSTRATION|LIFESTYLE|EDUCATIONAL|COMPARISON|STORY_ARC|UGC_STYLE|TREND_RIDING|BEFORE_AFTER",
   "targetEmotion": "string",
   "predictedScore": number,
+  "platformTechniques": ["list each specific playbook technique actually applied in this script, e.g. 'native text overlay in frame 1', 'loop-ability last-frame match', 'sound-off caption fallback'"],
   "scenes": [
     {
       "sceneNumber": 1,
@@ -100,6 +118,10 @@ OUTPUT JSON (no markdown, no extra keys):
     ? `\nSELECTED ACTOR ROLE: ${input.selectedActorRole}${input.selectedActorDesc ? `\nActor visual description: ${input.selectedActorDesc}` : ""}`
     : "";
 
+  const nicheResearchBlock = input.nicheResearch
+    ? `\nWHAT'S WORKING IN THIS NICHE (from prior content research — use to inform choices, don't copy verbatim):\n${input.nicheResearch.slice(0, 1500)}`
+    : "";
+
   const user = `Write a production-ready ${durationSec}-second ${platform} ad script for "${input.brandName}":
 
 PRODUCT: ${input.productName || input.brandName}
@@ -120,14 +142,16 @@ ${actorBlock}
 ${hookFormulasBlock}
 ${cameraAnglesBlock}
 ${timelineBlock}
+${nicheResearchBlock}
 
 ${input.briefing ? `PROJECT BRIEF:\n${input.briefing.slice(0, 1000)}` : ""}
 
 DELIVERABLE:
 - scenes[] must contain every second: scenes[n].endSec - scenes[n].startSec summing to exactly ${durationSec}
-- 3 hook variants (each with unique visual direction + opening word)
+- 3 hook variants (each with unique visual direction + opening word, each tagged with the platform hook formula name used)
 - Full body script with [SCENE X: Xs-Xs] markers
-- 3 CTA variants with visual direction
+- 3 CTA variants with visual direction, respecting this platform's CTA rules
+- platformTechniques[] listing the concrete playbook techniques actually applied
 - Every scene must have: shotType, focalLength, cameraMovement, aperture, location, lighting, actorAction, productAction, voiceover, textOverlay, transition`;
 
   return { system, user };

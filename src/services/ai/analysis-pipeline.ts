@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { analyzeWithClaude } from "./claude-client";
 import { buildBrandAnalysisPrompt } from "./prompts/brand-analysis";
-import { buildContentScoringPrompt } from "./prompts/content-scoring";
+import { buildContentScoringPrompt, type VideoEvidence } from "./prompts/content-scoring";
 import { buildPatternMiningPrompt } from "./prompts/pattern-mining";
 import { buildCompetitorIntelPrompt } from "./prompts/competitor-intel";
 import { buildAudienceResearchPrompt } from "./prompts/audience-research";
@@ -11,6 +11,13 @@ import type { CrawlResult } from "@/services/research/website-crawler";
 import type { YouTubeVideo } from "@/services/research/youtube-service";
 import type { VideoResult } from "@/services/research/video-search";
 import { NarrativeType, ContentType } from "@/generated/prisma/enums";
+import { collectVideoSignal } from "@/services/research/video-signal";
+import { pMap } from "@/lib/parallel";
+
+// Configurable cap on how many videos get scored (and get real video-signal
+// collection) per pipeline run. Defaults to 10 to match prior behavior.
+const CONTENT_SCORING_MAX = Number(process.env.CONTENT_SCORING_MAX) || 10;
+const VIDEO_SIGNAL_CONCURRENCY = 3;
 
 const brandAnalysisSchema = z.object({
   productCategory: z.string().optional(),
@@ -59,6 +66,8 @@ const contentScoreSchema = z.object({
     keyMessages: z.array(z.string()),
     analysis: z.string(),
     contentCategory: z.string(),
+    evidenceLevel: z.enum(["transcript", "thumbnail", "metadata"]),
+    confidence: z.enum(["high", "medium", "low"]),
   })),
 });
 
@@ -204,7 +213,40 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
   if (allVideos.length > 0) {
     tasks.push((async () => {
       try {
-        const p = buildContentScoringPrompt(project.brandName, allVideos.slice(0, 10));
+        const topVideos = allVideos.slice(0, CONTENT_SCORING_MAX);
+
+        // Collect real video signal (transcript when feasible, else thumbnail)
+        // for the top videos before scoring, bounded concurrency + per-video
+        // time budget (enforced inside collectVideoSignal). This never throws.
+        const evidenceMap = new Map<string, VideoEvidence>();
+        await pMap(
+          topVideos,
+          async (video) => {
+            const vr = allVideoResults?.find((x) => x.videoId === video.videoId);
+            const platform = (video as YouTubeVideo & { _platform?: string })._platform || vr?.platform || "youtube";
+            const signal = await collectVideoSignal({
+              platform,
+              url: vr?.url || `https://youtube.com/watch?v=${video.videoId}`,
+              videoId: video.videoId,
+              thumbnailUrl: video.thumbnailUrl,
+            });
+            evidenceMap.set(video.videoId, {
+              transcript: signal.transcript,
+              transcriptSource: signal.transcriptSource,
+              thumbnailUrl: signal.thumbnailUrl,
+            });
+          },
+          { concurrency: VIDEO_SIGNAL_CONCURRENCY }
+        );
+
+        // Vision decision: analyzeWithClaude's signature takes userPrompt as a
+        // plain string (see src/services/ai/claude-client.ts), not an array of
+        // OpenAI-style content parts. Changing that would touch every other
+        // caller of analyzeWithClaude across the codebase, which is out of
+        // scope for this content-scoring change. So thumbnails are passed as a
+        // text note (thumbnail tier in the prompt) rather than an
+        // image_url content part — no vision call is made here.
+        const p = buildContentScoringPrompt(project.brandName, topVideos, evidenceMap);
         const r = await analyzeWithClaude({ systemPrompt: p.system, userPrompt: p.user, responseSchema: contentScoreSchema, maxTokens: 8192 });
         for (const score of r.scores) {
           const video = allVideos.find((v) => v.videoId === score.videoId);
@@ -228,6 +270,11 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
           const contentType = platformMap[platform] || "YOUTUBE_VIDEO";
           const videoUrl = vr?.url || `https://youtube.com/watch?v=${video.videoId}`;
 
+          const evidence = evidenceMap.get(score.videoId);
+          // Persist evidenceLevel/confidence in rawData (no schema migration
+          // needed) alongside the actual transcript text when we have one.
+          const scoringMeta = { evidenceLevel: score.evidenceLevel, confidence: score.confidence };
+
           await prisma.contentAsset.upsert({
             where: { projectId_url: { projectId, url: videoUrl } },
             create: {
@@ -247,6 +294,8 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
               hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
               keyMessages: score.keyMessages,
               contentCategory: score.contentCategory || null,
+              transcript: evidence?.transcript || null,
+              rawData: scoringMeta,
               isBrandOwned: !videoCompetitorMap.get(score.videoId),
               dataSource: "PUBLIC_WEB",
             },
@@ -258,6 +307,8 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
               ctaQuality: score.ctaQuality, emotionalAppeal: score.emotionalAppeal, pacing: score.pacing,
               hookText: score.hookText, narrativeType: validNarrativeType(score.narrativeType),
               keyMessages: score.keyMessages, contentCategory: score.contentCategory || null,
+              transcript: evidence?.transcript || null,
+              rawData: scoringMeta,
             },
           });
         }

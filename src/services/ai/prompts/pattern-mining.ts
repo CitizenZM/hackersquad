@@ -4,6 +4,7 @@ export interface ScoredContent {
   overallScore: number;
   hookText: string;
   keyMessages: string[];
+  evidenceLevel?: string;
 }
 
 export function buildPatternMiningPrompt(
