@@ -216,10 +216,14 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
           const platformMap: Record<string, ContentType> = {
             youtube: "YOUTUBE_VIDEO", youtube_short: "YOUTUBE_SHORT",
             tiktok: "TIKTOK_VIDEO", vimeo: "VIMEO_VIDEO",
+            // No dedicated ContentType exists for Instagram/Facebook in the
+            // Prisma schema — SOCIAL_POST is the closest generic fit.
+            instagram: "SOCIAL_POST", facebook: "SOCIAL_POST",
           };
           const platformLabels: Record<string, string> = {
             youtube: "YouTube", youtube_short: "YouTube Shorts",
             tiktok: "TikTok", vimeo: "Vimeo",
+            instagram: "Instagram", facebook: "Facebook",
           };
           const contentType = platformMap[platform] || "YOUTUBE_VIDEO";
           const videoUrl = vr?.url || `https://youtube.com/watch?v=${video.videoId}`;

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { pMapSettled } from "@/lib/parallel";
+import { pMap, pMapSettled } from "@/lib/parallel";
 import { crawlWebsite, type CrawlResult } from "./website-crawler";
 import {
   quickBrandUnderstanding,
@@ -172,53 +172,57 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
         limit: 20,
         industry: project.category ?? undefined,
       });
-      let saved = 0;
-      for (const ad of tiktokAds) {
-        if (!ad.adId) continue;
-        const adUrl =
-          ad.videoUrl ||
-          `https://ads.tiktok.com/business/creativecenter/inspiration/popular/pc/en?material_id=${ad.adId}`;
-        await prisma.contentAsset
-          .upsert({
-            where: { projectId_url: { projectId, url: adUrl } },
-            create: {
-              projectId,
-              type: "TIKTOK_VIDEO",
-              title: ad.title,
-              url: adUrl,
-              thumbnailUrl: ad.thumbnailUrl ?? null,
-              description: ad.brand
-                ? `Top TikTok ad by ${ad.brand}`
-                : "TikTok Creative Center top ad",
-              platform: "TikTok Ads",
-              isPaidMedia: true,
-              adSpendEstimate: {
-                impressions: ad.impressions ?? null,
-                ctr: ad.ctr ?? null,
-                cvr: ad.cvr ?? null,
-                firstSeen: ad.firstSeenAt ?? null,
-                lastSeen: ad.lastSeenAt ?? null,
-              } as never,
-              dataSource: "PUBLIC_WEB",
-              rawData: ad.rawData as never,
-            },
-            update: {
-              title: ad.title,
-              thumbnailUrl: ad.thumbnailUrl ?? null,
-              adSpendEstimate: {
-                impressions: ad.impressions ?? null,
-                ctr: ad.ctr ?? null,
-                cvr: ad.cvr ?? null,
-                firstSeen: ad.firstSeenAt ?? null,
-                lastSeen: ad.lastSeenAt ?? null,
-              } as never,
-            },
-          })
-          .then(() => {
-            saved++;
-          })
-          .catch(() => {});
-      }
+      const upsertResults = await pMap(
+        tiktokAds,
+        async (ad) => {
+          if (!ad.adId) return false;
+          const adUrl =
+            ad.videoUrl ||
+            `https://ads.tiktok.com/business/creativecenter/inspiration/popular/pc/en?material_id=${ad.adId}`;
+          try {
+            await prisma.contentAsset.upsert({
+              where: { projectId_url: { projectId, url: adUrl } },
+              create: {
+                projectId,
+                type: "TIKTOK_VIDEO",
+                title: ad.title,
+                url: adUrl,
+                thumbnailUrl: ad.thumbnailUrl ?? null,
+                description: ad.brand
+                  ? `Top TikTok ad by ${ad.brand}`
+                  : "TikTok Creative Center top ad",
+                platform: "TikTok Ads",
+                isPaidMedia: true,
+                adSpendEstimate: {
+                  impressions: ad.impressions ?? null,
+                  ctr: ad.ctr ?? null,
+                  cvr: ad.cvr ?? null,
+                  firstSeen: ad.firstSeenAt ?? null,
+                  lastSeen: ad.lastSeenAt ?? null,
+                } as never,
+                dataSource: "PUBLIC_WEB",
+                rawData: ad.rawData as never,
+              },
+              update: {
+                title: ad.title,
+                thumbnailUrl: ad.thumbnailUrl ?? null,
+                adSpendEstimate: {
+                  impressions: ad.impressions ?? null,
+                  ctr: ad.ctr ?? null,
+                  cvr: ad.cvr ?? null,
+                  firstSeen: ad.firstSeenAt ?? null,
+                  lastSeen: ad.lastSeenAt ?? null,
+                } as never,
+              },
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { concurrency: 5 }
+      );
+      const saved = upsertResults.filter(Boolean).length;
       await updateStep(
         jobId,
         "Paid media discovery",

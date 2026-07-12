@@ -4,7 +4,12 @@
 // filtering consistent with what the user picked (e.g. choose TikTok → only
 // TikTok/Reels videos are searched and shown).
 
-export type VideoPlatform = "youtube" | "youtube_short" | "tiktok" | "vimeo";
+export type VideoPlatform =
+  | "youtube"
+  | "youtube_short"
+  | "tiktok"
+  | "instagram"
+  | "vimeo";
 export type SearchStrategy = "short_social" | "tvc" | "mixed";
 
 export interface CampaignPlatform {
@@ -24,7 +29,7 @@ export const CAMPAIGN_PLATFORMS: Record<string, CampaignPlatform> = {
     label: "TikTok / Reels",
     defaultDurationSec: 30,
     searchStrategy: "short_social",
-    videoPlatforms: ["tiktok"],
+    videoPlatforms: ["tiktok", "instagram"],
     contentTypes: ["TIKTOK_VIDEO", "SOCIAL_POST"],
   },
   instagram: {
@@ -32,8 +37,7 @@ export const CAMPAIGN_PLATFORMS: Record<string, CampaignPlatform> = {
     label: "Instagram Feed",
     defaultDurationSec: 15,
     searchStrategy: "short_social",
-    // Instagram reels are stored under the "tiktok" social platform / SOCIAL_POST.
-    videoPlatforms: ["tiktok"],
+    videoPlatforms: ["instagram", "tiktok"],
     contentTypes: ["SOCIAL_POST", "TIKTOK_VIDEO"],
   },
   youtube: {
