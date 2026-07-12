@@ -377,6 +377,7 @@ model Script {
   targetEmotion    String?
   predictedScore   Float?
   scenes           Json? // [{sceneNumber, startSec, endSec, segmentLabel, shotType, focalLength, cameraMovement, aperture, location, lighting, actorAction, productAction, voiceover, textOverlay, transition}]
+  platformTechniques Json? // string[] — platform-playbook techniques applied (e.g. "native text overlay in frame 1")
 
   createdAt DateTime @default(now())
 }

@@ -331,6 +331,7 @@ Social proof: ${(a.socialProof || []).slice(0, 4).join(" / ")}`;
           title: a.title, narrativeType: a.narrativeType || "DEMONSTRATION",
           overallScore: a.overallScore || 0, hookText: a.hookText || "",
           keyMessages: (a.keyMessages as string[]) || [],
+          evidenceLevel: (a.rawData as { evidenceLevel?: string } | null)?.evidenceLevel,
         })));
         const r = await analyzeWithClaude({ systemPrompt: p.system, userPrompt: p.user, responseSchema: patternSchema, maxTokens: 4096 });
         for (const pat of r.patterns) {

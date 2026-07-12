@@ -18,6 +18,7 @@ const scriptSchema = z.object({
   narrativeType: z.string(),
   targetEmotion: z.string(),
   predictedScore: z.number(),
+  platformTechniques: z.array(z.string()).optional().default([]),
   scenes: z.array(z.object({
     sceneNumber: z.coerce.number().optional().default(1),
     startSec: z.coerce.number().optional().default(0),
@@ -74,6 +75,31 @@ export async function POST(
       prisma.audienceProfile.findUnique({ where: { projectId } }).catch(() => null),
     ]);
 
+    const platformId = (campaignSel?.platform as string | null) || undefined;
+
+    // Close the loop with research: surface DeepAnalysis.platformInsights (+ top patterns)
+    // as a "what's working in this niche" summary, truncated to stay lightweight.
+    let nicheResearch: string | undefined;
+    if (deepAnal?.platformInsights) {
+      const insights = deepAnal.platformInsights as Array<{
+        platform: string;
+        contentStyle?: string;
+        bestPractices?: string[];
+        avoidPatterns?: string[];
+      }>;
+      const relevant = platformId
+        ? insights.filter((i) => i.platform?.toLowerCase() === platformId.toLowerCase())
+        : insights;
+      const chosen = (relevant.length ? relevant : insights).slice(0, 2);
+      const lines: string[] = [];
+      for (const i of chosen) {
+        if (i.contentStyle) lines.push(`[${i.platform}] ${i.contentStyle}`);
+        if (i.bestPractices?.length) lines.push(`Best practices: ${i.bestPractices.slice(0, 3).join("; ")}`);
+        if (i.avoidPatterns?.length) lines.push(`Avoid: ${i.avoidPatterns.slice(0, 2).join("; ")}`);
+      }
+      if (lines.length) nicheResearch = lines.join("\n").slice(0, 1500);
+    }
+
     const prompt = buildScriptWritingPrompt({
       brandName: project.brandName,
       productName: project.productPageTitle || project.productName || undefined,
@@ -81,7 +107,8 @@ export async function POST(
       angle,
       sellingPoints: sellingPoints.map((sp) => sp.point),
       campaignGoal: project.campaignGoal || undefined,
-      platform: (campaignSel?.platform as string | null) || undefined,
+      platform: platformId,
+      platformId,
       totalDurationSec: (campaignSel?.totalDurationSec as number | null) || 30,
       selectedEnvironment: (campaignSel?.selectedEnvironment as string | null) || undefined,
       selectedActorRole: (campaignSel?.selectedActorRole as string | null) || undefined,
@@ -93,6 +120,7 @@ export async function POST(
       audienceSummary: audienceData
         ? `Audience: ${(audienceData.segments as {name:string}[] | null)?.[0]?.name || "general"}, pain: ${(audienceData.painPoints as string[] | null)?.slice(0, 2).join(", ") || ""}`
         : undefined,
+      nicheResearch,
     });
 
     const result = await analyzeWithClaude({
@@ -127,6 +155,7 @@ export async function POST(
         targetEmotion: result.targetEmotion,
         predictedScore: result.predictedScore,
         scenes: result.scenes as never,
+        platformTechniques: result.platformTechniques as never,
       },
     });
 

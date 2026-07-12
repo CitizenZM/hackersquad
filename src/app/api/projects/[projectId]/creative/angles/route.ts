@@ -44,6 +44,8 @@ export async function POST(
       orderBy: { avgPerformance: "desc" },
     });
 
+    const campaignSel = await prisma.campaignSelection.findUnique({ where: { projectId } }).catch(() => null);
+
     // Get audience data
     const audience = await prisma.audienceProfile.findUnique({ where: { projectId } });
     const segments = (audience?.segments as { name: string; ageRange: string; description: string }[]) || [];
@@ -63,6 +65,7 @@ export async function POST(
       painPoints: painPoints.map((p) => p.point),
       platformPreferences: platforms.filter((p) => p.adReceptivity === "high").map((p) => p.platform),
       briefing: [project.briefingText, project.briefingParsed].filter(Boolean).join("\n\n") || undefined,
+      platformId: (campaignSel?.platform as string | null) || undefined,
     });
 
     const result = await analyzeWithClaude({

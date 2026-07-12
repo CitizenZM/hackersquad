@@ -13,6 +13,7 @@ export function buildPatternMiningPrompt(
 ) {
   const system = `You are a creative strategist identifying content patterns and narrative trends.
 Analyze the scored content and identify recurring narrative patterns.
+Weight content with "evidence: transcript" more heavily than "evidence: metadata" when judging what patterns actually work — transcript-evidenced scores reflect real content, metadata-only scores are conservative guesses.
 Respond with ONLY a JSON object:
 {
   "patterns": [
@@ -43,7 +44,7 @@ Scored Content:
 ${contents
   .map(
     (c, i) => `[${i + 1}] "${c.title}"
-  Type: ${c.narrativeType} | Score: ${c.overallScore}
+  Type: ${c.narrativeType} | Score: ${c.overallScore} | Evidence: ${c.evidenceLevel || "metadata"}
   Hook: ${c.hookText}
   Messages: ${c.keyMessages.join(", ")}`
   )
