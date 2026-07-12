@@ -1,35 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getVideoModel, VIDEO_MODELS } from "@/services/video-gen/models";
 
 export const maxDuration = 60;
-
-const FAL_MODELS: Record<string, { endpoint: string; costPerSec: number; supportsAudio: boolean }> = {
-  "grok-imagine-video": {
-    endpoint: "xai/grok-imagine-video/text-to-video",
-    costPerSec: 0.07,
-    supportsAudio: true,
-  },
-  "wan-2.6": {
-    endpoint: "wan/v2.6/text-to-video",
-    costPerSec: 0.10,
-    supportsAudio: true,
-  },
-  "kling-v3-pro": {
-    endpoint: "fal-ai/kling-video/v3/pro/text-to-video",
-    costPerSec: 0.112,
-    supportsAudio: false,
-  },
-  "wan-2.5": {
-    endpoint: "fal-ai/wan-25-preview/text-to-video",
-    costPerSec: 0.05,
-    supportsAudio: false,
-  },
-};
-
-const VEO_MODELS: Record<string, string> = {
-  "veo-3.1-fast": "veo-3.1-fast-generate-preview",
-  "veo-3.1-standard": "veo-3.1-generate-preview",
-};
 
 export async function POST(
   request: Request,
@@ -58,7 +31,8 @@ export async function POST(
   if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
   const falKey = process.env.FAL_KEY;
-  const falModel = FAL_MODELS[model];
+  const modelDef = getVideoModel(model);
+  const falModel = modelDef?.provider === "fal" ? modelDef : undefined;
 
   // Use fal.ai if key present and model known
   if (falKey && falModel) {
@@ -71,7 +45,7 @@ export async function POST(
       };
       if (falModel.supportsAudio) payload.enable_audio = true;
 
-      const res = await fetch(`https://queue.fal.run/${falModel.endpoint}`, {
+      const res = await fetch(`https://queue.fal.run/${falModel.submitEndpoint}`, {
         method: "POST",
         headers: {
           Authorization: `Key ${falKey}`,
@@ -104,7 +78,7 @@ export async function POST(
           duration,
           scriptId,
           shotIndex,
-          costUsd: falModel.costPerSec * duration,
+          costUsd: falModel.costPerSecond * duration,
           status: "queued",
         },
       });

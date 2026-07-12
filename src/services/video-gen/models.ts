@@ -1,0 +1,204 @@
+/**
+ * Single source of truth for video generation models used across the
+ * studio/* API routes (generate-video, generate-from-script, fal-status,
+ * video-status). Replaces three previously-diverging maps:
+ *   - studio/generate-video/route.ts FAL_MODELS + VEO_MODELS
+ *   - studio/generate-from-script/route.ts FAL_MODELS
+ *   - studio/fal-status/[jobId]/route.ts MODEL_ENDPOINTS
+ */
+
+export type VideoModelProvider = "fal" | "veo";
+
+export interface VideoModelDef {
+  key: string;
+  provider: VideoModelProvider;
+  /** Endpoint used to submit a generation job (fal.ai queue path, or Veo model id). */
+  submitEndpoint: string;
+  /**
+   * Endpoint used to poll/fetch status & result. For fal.ai, this can differ
+   * from submitEndpoint (e.g. Kling requires the /text-to-video suffix on
+   * both submit AND status, but some models only need the base path for status).
+   */
+  statusEndpoint: string;
+  /** Realistic max prompt length accepted by the provider/model, in characters. */
+  maxPromptChars: number;
+  supportsNegativePrompt: boolean;
+  supportsAudio: boolean;
+  costPerSecond: number;
+}
+
+export const VIDEO_MODELS: Record<string, VideoModelDef> = {
+  "grok-imagine-video": {
+    key: "grok-imagine-video",
+    provider: "fal",
+    submitEndpoint: "xai/grok-imagine-video/text-to-video",
+    statusEndpoint: "xai/grok-imagine-video",
+    maxPromptChars: 4000,
+    supportsNegativePrompt: false,
+    supportsAudio: true,
+    costPerSecond: 0.07,
+  },
+  "wan-2.6": {
+    key: "wan-2.6",
+    provider: "fal",
+    submitEndpoint: "wan/v2.6/text-to-video",
+    statusEndpoint: "wan/v2.6",
+    maxPromptChars: 4000,
+    supportsNegativePrompt: true,
+    supportsAudio: true,
+    costPerSecond: 0.10,
+  },
+  "kling-v3-pro": {
+    key: "kling-v3-pro",
+    provider: "fal",
+    submitEndpoint: "fal-ai/kling-video/v3/pro/text-to-video",
+    statusEndpoint: "fal-ai/kling-video/v3/pro/text-to-video",
+    maxPromptChars: 2500,
+    supportsNegativePrompt: true,
+    supportsAudio: false,
+    costPerSecond: 0.112,
+  },
+  "wan-2.5": {
+    key: "wan-2.5",
+    provider: "fal",
+    submitEndpoint: "fal-ai/wan-25-preview/text-to-video",
+    statusEndpoint: "fal-ai/wan-25-preview",
+    maxPromptChars: 4000,
+    supportsNegativePrompt: true,
+    supportsAudio: false,
+    costPerSecond: 0.05,
+  },
+  "kling-v3-standard": {
+    key: "kling-v3-standard",
+    provider: "fal",
+    submitEndpoint: "fal-ai/kling-video/v3/standard/text-to-video",
+    statusEndpoint: "fal-ai/kling-video/v3/standard/text-to-video",
+    maxPromptChars: 2500,
+    supportsNegativePrompt: true,
+    supportsAudio: false,
+    costPerSecond: 0.07,
+  },
+  "veo-3.1-fast": {
+    key: "veo-3.1-fast",
+    provider: "veo",
+    submitEndpoint: "veo-3.1-fast-generate-preview",
+    statusEndpoint: "veo-3.1-fast-generate-preview",
+    maxPromptChars: 4000,
+    supportsNegativePrompt: false,
+    supportsAudio: false,
+    costPerSecond: 0.15,
+  },
+  "veo-3.1-standard": {
+    key: "veo-3.1-standard",
+    provider: "veo",
+    submitEndpoint: "veo-3.1-generate-preview",
+    statusEndpoint: "veo-3.1-generate-preview",
+    maxPromptChars: 4000,
+    supportsNegativePrompt: false,
+    supportsAudio: false,
+    costPerSecond: 0.30,
+  },
+};
+
+export function getVideoModel(model: string): VideoModelDef | undefined {
+  return VIDEO_MODELS[model];
+}
+
+export function isKnownVideoModel(model: string): boolean {
+  return Object.prototype.hasOwnProperty.call(VIDEO_MODELS, model);
+}
+
+/**
+ * Splits a cinematic-prompt-builder output into { positive, negative } based
+ * on the "negative:" marker used throughout cinematic-prompt-builder.ts
+ * (case-insensitive, optionally wrapped in a trailing "[...]" block).
+ * Returns negative === "" when no marker is found.
+ */
+export function splitNegativePrompt(prompt: string): { positive: string; negative: string } {
+  const match = /negative\s*:/i.exec(prompt);
+  if (!match) return { positive: prompt, negative: "" };
+
+  const idx = match.index;
+  let positive = prompt.slice(0, idx).trim();
+  let negative = prompt.slice(idx + match[0].length).trim();
+
+  // Strip a leading "[" from positive (if the marker was preceded by "[negative:")
+  // and a trailing "]" from negative.
+  if (positive.endsWith("[")) positive = positive.slice(0, -1).trim();
+  if (negative.endsWith("]")) negative = negative.slice(0, -1).trim();
+
+  return { positive, negative };
+}
+
+/** Trims text to maxChars at the last sentence boundary (. ! ? or newline) at or before the limit. */
+function trimAtSentenceBoundary(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const slice = text.slice(0, maxChars);
+  const boundary = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf(".\n"),
+    slice.lastIndexOf("\n")
+  );
+  if (boundary > maxChars * 0.5) {
+    return slice.slice(0, boundary + 1).trim();
+  }
+  // No good sentence boundary found — hard trim as last resort.
+  return slice.trim();
+}
+
+export interface FitPromptResult {
+  /** The (possibly trimmed) positive prompt text to send as the main `prompt` field. */
+  prompt: string;
+  /**
+   * The negative text, when the model supports a dedicated negative_prompt
+   * field. Undefined when the model does NOT support one — in that case the
+   * negative block is already appended to `prompt` instead.
+   */
+  negativePrompt?: string;
+}
+
+/**
+ * Budgets a prompt + negative-prompt pair against a model's maxChars limit.
+ *
+ * - If `supportsNegativePrompt`, the negative text is returned separately
+ *   (send via payload.negative_prompt) and only the positive prompt is
+ *   trimmed (at a sentence boundary) to fit maxChars.
+ * - If not, space for the negative block is reserved at the end of the
+ *   combined string, and the positive part is trimmed at a sentence
+ *   boundary so the negative block is never cut off.
+ */
+export function fitPrompt(
+  prompt: string,
+  negative: string,
+  maxChars: number,
+  supportsNegativePrompt: boolean
+): FitPromptResult {
+  if (!negative) {
+    return { prompt: trimAtSentenceBoundary(prompt, maxChars) };
+  }
+
+  if (supportsNegativePrompt) {
+    // Negative goes in its own field — full budget available for positive.
+    return {
+      prompt: trimAtSentenceBoundary(prompt, maxChars),
+      negativePrompt: negative,
+    };
+  }
+
+  // No dedicated field: negative block must be appended and never cut.
+  const negativeBlock = `\n\nnegative: ${negative}`;
+  const reserved = maxChars - negativeBlock.length;
+  const trimmedPositive = trimAtSentenceBoundary(prompt, Math.max(reserved, 0));
+  return { prompt: `${trimmedPositive}${negativeBlock}` };
+}
+
+/** Convenience wrapper that pulls maxChars/supportsNegativePrompt from a model def. */
+export function fitPromptForModel(
+  prompt: string,
+  negative: string,
+  model: VideoModelDef
+): FitPromptResult {
+  return fitPrompt(prompt, negative, model.maxPromptChars, model.supportsNegativePrompt);
+}
