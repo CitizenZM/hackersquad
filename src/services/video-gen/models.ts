@@ -25,6 +25,14 @@ export interface VideoModelDef {
   supportsNegativePrompt: boolean;
   supportsAudio: boolean;
   costPerSecond: number;
+  /**
+   * fal.ai queue path for image-conditioned (image-to-video) generation, when
+   * the provider/model supports it. Undefined means no i2v path is known yet
+   * (e.g. Veo) — callers should fall back to the text-to-video submitEndpoint.
+   */
+  i2vEndpoint?: string;
+  /** Payload field name the i2v endpoint expects for the conditioning image URL. */
+  imageParamName?: string;
 }
 
 export const VIDEO_MODELS: Record<string, VideoModelDef> = {
@@ -37,6 +45,8 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: false,
     supportsAudio: true,
     costPerSecond: 0.07,
+    i2vEndpoint: "xai/grok-imagine-video/image-to-video",
+    imageParamName: "image_url",
   },
   "wan-2.6": {
     key: "wan-2.6",
@@ -47,6 +57,8 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: true,
     supportsAudio: true,
     costPerSecond: 0.10,
+    i2vEndpoint: "wan/v2.6/image-to-video",
+    imageParamName: "image_url",
   },
   "kling-v3-pro": {
     key: "kling-v3-pro",
@@ -57,6 +69,8 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: true,
     supportsAudio: false,
     costPerSecond: 0.112,
+    i2vEndpoint: "fal-ai/kling-video/v3/pro/image-to-video",
+    imageParamName: "image_url",
   },
   "wan-2.5": {
     key: "wan-2.5",
@@ -67,6 +81,8 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: true,
     supportsAudio: false,
     costPerSecond: 0.05,
+    i2vEndpoint: "fal-ai/wan-25-preview/image-to-video",
+    imageParamName: "image_url",
   },
   "kling-v3-standard": {
     key: "kling-v3-standard",
@@ -77,6 +93,8 @@ export const VIDEO_MODELS: Record<string, VideoModelDef> = {
     supportsNegativePrompt: true,
     supportsAudio: false,
     costPerSecond: 0.07,
+    i2vEndpoint: "fal-ai/kling-video/v3/standard/image-to-video",
+    imageParamName: "image_url",
   },
   "veo-3.1-fast": {
     key: "veo-3.1-fast",
