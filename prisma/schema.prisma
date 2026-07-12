@@ -649,14 +649,14 @@ model DiscoveredVideo {
 }
 
 // Browser-driven generation jobs — executed by a local worker on the operator's
-// Mac controlling logged-in web UIs (AI Studio / Flow / Kling) via browser-harness,
+// Mac controlling logged-in web UIs (Gemini App / Flow / Kling) via browser-harness,
 // consuming subscription quota instead of API tokens.
 model BrowserGenJob {
   id        String @id @default(cuid())
   projectId String
 
   kind           String // "image_keyframe" | "video"
-  site           String // "ai_studio" | "flow" | "kling"
+  site           String // "ai_studio" (dispatches to Gemini App / gemini.google.com — aistudio.google.com itself requires paid API billing and is not used) | "flow" | "kling"
   model          String? // e.g. "nano-banana-v3", "veo-3.1"
   prompt         String  @db.Text
   negativePrompt String? @db.Text

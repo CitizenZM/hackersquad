@@ -24,7 +24,7 @@ import { randomUUID } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { runAiStudioJob } from './playbooks/ai-studio.mjs';
+import { runGeminiAppJob } from './playbooks/gemini-app.mjs';
 import { runFlowJob } from './playbooks/flow.mjs';
 import { runKlingJob } from './playbooks/kling.mjs';
 
@@ -43,8 +43,13 @@ const WORKER_ID = `mac-browser-worker-${randomUUID().slice(0, 8)}`;
 
 const API_ENDPOINT = `${APP_URL}/api/worker/browser-jobs`;
 
+// NOTE: the "ai_studio" site key is retained for backward compatibility with
+// existing BrowserGenJob rows/queue configs, but it now dispatches to the
+// Gemini App (gemini.google.com) implementation — aistudio.google.com itself
+// is a dead end for token-free generation (Nano Banana image models there
+// require a linked paid API billing account). See gemini-app.mjs.
 const PLAYBOOKS = {
-  ai_studio: runAiStudioJob,
+  ai_studio: runGeminiAppJob,
   flow: runFlowJob,
   kling: runKlingJob,
 };
