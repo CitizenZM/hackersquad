@@ -53,10 +53,34 @@ directly in the launchd plist's `EnvironmentVariables` block (see below).
   if it hits a sign-in wall it fails the job with
   `AUTH_REQUIRED: log into Google in Chrome` (or Kling equivalent) so you can
   log in manually and let the next poll retry.
-- Only `ai_studio` (Nano Banana image generation) is implemented today.
-  `flow` and `kling` are stubs that throw `NOT_IMPLEMENTED` — enabling them in
-  `WORKER_SITES` will just cause those claimed jobs to fail immediately with
-  that error, which is expected until they're built out.
+- `ai_studio` (site key, kept for backward compatibility with existing job
+  rows/queue configs) and `flow` are implemented today. `kling` is still a
+  stub that throws `NOT_IMPLEMENTED` — enabling it in `WORKER_SITES` will just
+  cause those claimed jobs to fail immediately with that error, which is
+  expected until it's built out.
+
+### Important: `ai_studio` now means Gemini App, not AI Studio
+
+A manual live test found that **aistudio.google.com (the dev console) is a
+dead end** for token-free generation — its Nano Banana image models require a
+linked **paid API billing account** ("Link a paid API key here"). That path
+was abandoned.
+
+**gemini.google.com (the consumer Gemini App) DOES work token-free**,
+generating images against the account's existing Pro subscription quota with
+zero API key. The `playbooks/gemini-app.mjs` file implements this, and the
+`ai_studio` site key (in `WORKER_SITES` and `BrowserGenJob.site`) is kept
+as-is for compatibility but now dispatches to `runGeminiAppJob`. The old
+`playbooks/ai-studio.mjs` (which targeted the dead-end dev console) has been
+removed.
+
+**Flow (`playbooks/flow.mjs`) is also now implemented**, targeting
+`labs.google/fx/tools/flow` for token-free video generation (confirmed
+generating a real 6-second video via Veo under the hood, using existing
+account quota). It handles the one-time onboarding/consent modal, drives the
+in-project agent chat panel, auto-answers clarifying questions (e.g. video
+duration) and the cost-confirmation gate (always clicking plain "Approve",
+never "Approve, do not ask again"), and extracts the finished video.
 
 ## Running
 
@@ -156,11 +180,46 @@ must be resolvable exactly as it would be in your interactive shell).
    ```
 
 3. Start the worker (`node worker.mjs`) and watch the logs — it should claim
-   the job, drive AI Studio, upload to Cloudinary, and call `complete`.
+   the job, drive Gemini App, upload to Cloudinary, and call `complete`.
 4. To simulate failure handling without a real browser session, temporarily
    unset `BROWSER_WORKER_TOKEN` or point `WORKER_SITES` at an unimplemented
    site like `kling` and confirm the API receives a `fail` call with
    `NOT_IMPLEMENTED`.
+
+## Known gotchas
+
+Field-tested during manual live testing of `gemini-app.mjs` and `flow.mjs`:
+
+- **Coordinate space**: `capture_screenshot()` returns an image at
+  **2x devicePixelRatio** relative to the actual page viewport (e.g. a
+  2400x1720 screenshot for a 1200x860 page). Never eyeball screenshot pixel
+  positions and pass them to `click_at_xy` directly. The reliable pattern:
+  use `js()` with `document.querySelector(...)` / `getBoundingClientRect()`
+  to compute an element's real page-space center coordinates, then call
+  `click_at_xy` with those exact numbers.
+- **Flow's decorative banner videos**: Flow's pages contain multiple
+  `<video>` elements — decorative promo/banner carousel videos elsewhere on
+  the page (e.g. `gstatic.com/aitestkitchen` or `/banners/` URLs) that WILL
+  match a naive `document.querySelector('video')`. Any DOM query for "the
+  generated video" must explicitly exclude any video/img whose src contains
+  `gstatic.com/aitestkitchen` or `/banners/`, and prefer elements inside a
+  chat-message/result container. See `EXCLUDE_SRC_PATTERNS_JS` in
+  `playbooks/flow.mjs`.
+- **Gemini App image extraction via blob: URLs fails silently**: the
+  generated `<img>`'s `src` is a `blob:` URL, and directly `fetch()`-ing or
+  XHR-ing it from a CDP `Runtime.evaluate` injected context fails (silently,
+  or with a generic "Failed to fetch"). The reliable extraction method — and
+  the one used as the PRIMARY method in `gemini-app.mjs`, not a fallback —
+  is to draw the `<img>` onto an off-screen `<canvas>` and call
+  `canvas.toDataURL('image/png')` to get a base64 PNG directly, bypassing
+  the blob URL entirely.
+- **Flow's cost-confirmation gate**: always click plain "Approve", never
+  "Approve, do not ask again" — the latter silently disables future
+  confirmations, removing a safety check a human should keep.
+- **Flow's `blob:` video src** is not currently supported for download (would
+  need a `MediaRecorder`-based capture); `flow.mjs` throws a clear
+  `FLOW_STEP_FAILED[extract_video]: blob: video URLs are not currently
+  supported...` error rather than failing silently if this is ever hit.
 
 ## Caveat
 
