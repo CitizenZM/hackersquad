@@ -103,7 +103,9 @@ export async function POST(
     return NextResponse.json({ error: "No video generation API key configured (FAL_KEY or GOOGLE_API_KEY)" }, { status: 500 });
   }
 
-  const veoModelId = VEO_MODELS[model] || VEO_MODELS["veo-3.1-fast"];
+  const veoModelKey = modelDef?.provider === "veo" ? modelDef.key : "veo-3.1-fast";
+  const veoModel = VIDEO_MODELS[veoModelKey];
+  const veoModelId = veoModel.submitEndpoint;
   const veoRes = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${veoModelId}:predictLongRunning`,
     {
@@ -122,8 +124,39 @@ export async function POST(
   }
 
   const veoData = await veoRes.json();
+  const operationId = veoData.name as string | undefined;
+
+  if (operationId) {
+    // Persist a FalVideoJob row so video-status can later record the completed
+    // video URL. There is no dedicated "provider" field on FalVideoJob, so we
+    // reuse falRequestId (required + unique) to store the Veo operation id,
+    // and `model` to store the veo model key (e.g. "veo-3.1-fast") so status
+    // lookups can resolve provider/endpoint via the shared registry.
+    try {
+      await prisma.falVideoJob.create({
+        data: {
+          projectId,
+          falRequestId: operationId,
+          model: veoModelKey,
+          prompt,
+          aspectRatio,
+          resolution,
+          duration,
+          scriptId,
+          shotIndex,
+          costUsd: veoModel.costPerSecond * duration,
+          status: "generating",
+        },
+      });
+    } catch (err) {
+      // Non-fatal: if persistence fails (e.g. duplicate operationId), still
+      // return the operationId to the client so polling can proceed.
+      console.error("Failed to persist Veo FalVideoJob row:", err);
+    }
+  }
+
   return NextResponse.json({
-    operationId: veoData.name,
+    operationId,
     model: veoModelId,
     engine: "veo",
     projectId,

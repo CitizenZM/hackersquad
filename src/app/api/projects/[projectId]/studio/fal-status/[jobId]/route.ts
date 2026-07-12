@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getVideoModel } from "@/services/video-gen/models";
 
 export const maxDuration = 30;
 
@@ -20,16 +21,18 @@ export async function GET(
   const falKey = process.env.FAL_KEY;
   if (!falKey) return NextResponse.json({ error: "FAL_KEY not set" }, { status: 500 });
 
-  // Get model endpoint from stored model name
-  // IMPORTANT: Kling v3 requires /text-to-video in the path for status polling
-  const MODEL_ENDPOINTS: Record<string, string> = {
-    "grok-imagine-video": "xai/grok-imagine-video",
-    "wan-2.6": "wan/v2.6",
-    "kling-v3-pro": "fal-ai/kling-video/v3/pro/text-to-video",
-    "kling-v3-standard": "fal-ai/kling-video/v3/standard/text-to-video",
-    "wan-2.5": "fal-ai/wan-25-preview",
-  };
-  const endpoint = MODEL_ENDPOINTS[job.model] || "xai/grok-imagine-video";
+  // Get model endpoint from stored model name via the shared registry.
+  // IMPORTANT: Kling v3 requires /text-to-video in the path for status polling.
+  // Unknown models must error clearly rather than silently defaulting to
+  // grok's endpoint (which previously returned wrong/misleading status data).
+  const modelDef = getVideoModel(job.model);
+  if (!modelDef || modelDef.provider !== "fal") {
+    return NextResponse.json(
+      { error: `Unknown or non-fal video model "${job.model}" for job ${jobId}` },
+      { status: 422 }
+    );
+  }
+  const endpoint = modelDef.statusEndpoint;
 
   // Poll fal.ai status
   const statusRes = await fetch(

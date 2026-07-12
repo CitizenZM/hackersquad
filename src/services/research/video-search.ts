@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { searchYouTubeVideos, type YouTubeVideo } from "./youtube-service";
 import { searchDuckDuckGo } from "./duckduckgo";
 import { scrapeTikTokVideo } from "./tiktok-scraper";
 import { getVimeoMetadata } from "./vimeo-service";
 import type { SearchKeywords } from "./keyword-extractor";
+import { pMap } from "@/lib/parallel";
 import {
   selectRelevantVideos,
   type RelevanceContext,
@@ -11,7 +13,7 @@ import {
 } from "./video-relevance";
 
 export interface VideoResult {
-  platform: "youtube" | "youtube_short" | "tiktok" | "vimeo";
+  platform: "youtube" | "youtube_short" | "tiktok" | "vimeo" | "instagram";
   videoId: string;
   title: string;
   description: string;
@@ -22,6 +24,21 @@ export interface VideoResult {
   likeCount: number;
   commentCount: number;
   publishedAt: string;
+  /** True when likeCount/commentCount are heuristic estimates, not real data. */
+  metricsEstimated?: boolean;
+}
+
+/**
+ * Derive a short, stable, deterministic ID from a URL. Used as a fallback
+ * whenever a platform-native ID can't be extracted (e.g. no numeric Vimeo ID
+ * in the URL, or no recognizable Instagram shortcode). Normalizes the URL
+ * (strips query string/fragment, lowercases) so the same video always maps
+ * to the same ID.
+ */
+function stableIdFromUrl(url: string): string {
+  let normalized = url.trim().toLowerCase();
+  normalized = normalized.split("#")[0].split("?")[0];
+  return createHash("sha1").update(normalized).digest("hex").slice(0, 12);
 }
 
 export async function searchAllPlatforms(
@@ -77,7 +94,7 @@ async function searchVimeoContent(
       .filter((r) => r.url.includes("vimeo.com"))
       .map((r) => {
         const idMatch = r.url.match(/vimeo\.com\/(\d+)/);
-        const videoId = idMatch?.[1] || Math.random().toString(36).slice(2);
+        const videoId = idMatch?.[1] || stableIdFromUrl(r.url);
         return {
           platform: "vimeo" as const,
           videoId,
@@ -110,16 +127,19 @@ async function searchYouTubeLong(
   const mc = keywords.brandContext?.disambiguationKeywords;
   const mnc = keywords.brandContext?.notRelatedTo;
 
-  const results: VideoResult[] = [];
-  for (const query of queries) {
-    try {
-      const videos = await searchYouTubeVideos(query, 5, undefined, brandName, mc, mnc);
-      results.push(...videos.map((v) => youtubeToResult(v, "youtube")));
-    } catch {
-      // continue
-    }
-  }
-  return results;
+  const perQuery = await pMap(
+    queries,
+    async (query) => {
+      try {
+        const videos = await searchYouTubeVideos(query, 5, undefined, brandName, mc, mnc);
+        return videos.map((v) => youtubeToResult(v, "youtube"));
+      } catch {
+        return [];
+      }
+    },
+    { concurrency: 3 }
+  );
+  return perQuery.flat();
 }
 
 async function searchYouTubeShorts(
@@ -138,13 +158,81 @@ async function searchYouTubeShorts(
   }
 }
 
+/** Extract a stable Instagram shortcode from a /reel/ or /p/ URL, ignoring
+ * any trailing query string/fragment. Falls back to a URL hash if no
+ * shortcode pattern matches. */
+function instagramVideoId(url: string): string {
+  const match = url.match(/\/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+  if (match?.[1]) return match[1];
+  return stableIdFromUrl(url);
+}
+
+async function socialResultForDdgItem(
+  r: { title: string; url: string; snippet: string },
+  brandName: string
+): Promise<VideoResult | null> {
+  if (r.url.includes("tiktok.com") && r.url.includes("/video/")) {
+    const video = await scrapeTikTokVideo(r.url).catch(() => null);
+    if (!video) return null;
+    return {
+      platform: "tiktok",
+      videoId: video.videoId,
+      title: video.title || video.description.slice(0, 80),
+      description: video.description,
+      url: video.url,
+      thumbnailUrl: video.thumbnailUrl,
+      channelTitle: video.author || video.authorHandle,
+      viewCount: video.viewCount,
+      likeCount: video.likeCount,
+      commentCount: video.commentCount,
+      publishedAt: video.publishedAt,
+    };
+  }
+
+  if (r.url.includes("instagram.com") && (r.url.includes("/reel/") || r.url.includes("/p/"))) {
+    return {
+      platform: "instagram",
+      videoId: instagramVideoId(r.url),
+      title: r.title || `${brandName} Instagram Reel`,
+      description: r.snippet || "",
+      url: r.url,
+      thumbnailUrl: "",
+      channelTitle: "Instagram",
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      publishedAt: new Date().toISOString(),
+    };
+  }
+
+  if (r.url.includes("vimeo.com")) {
+    const video = await getVimeoMetadata(r.url).catch(() => null);
+    if (!video) return null;
+    return {
+      platform: "vimeo",
+      videoId: video.videoId,
+      title: video.title,
+      description: video.description,
+      url: video.url,
+      thumbnailUrl: video.thumbnailUrl,
+      channelTitle: video.author,
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      publishedAt: video.publishedAt,
+    };
+  }
+
+  return null;
+}
+
 async function searchSocialPlatforms(
   brandName: string,
   keywords: SearchKeywords
 ): Promise<VideoResult[]> {
   // Single DuckDuckGo query for TikTok + IG + Vimeo combined
   const disambig = keywords.brandContext?.disambiguationKeywords?.[0] || "";
-  const results: VideoResult[] = [];
+  let results: VideoResult[] = [];
 
   try {
     const ddgResults = await searchDuckDuckGo(
@@ -152,58 +240,12 @@ async function searchSocialPlatforms(
       10
     );
 
-    for (const r of ddgResults) {
-      if (r.url.includes("tiktok.com") && r.url.includes("/video/")) {
-        // Try to scrape TikTok metadata
-        const video = await scrapeTikTokVideo(r.url).catch(() => null);
-        if (video) {
-          results.push({
-            platform: "tiktok",
-            videoId: video.videoId,
-            title: video.title || video.description.slice(0, 80),
-            description: video.description,
-            url: video.url,
-            thumbnailUrl: video.thumbnailUrl,
-            channelTitle: video.author || video.authorHandle,
-            viewCount: video.viewCount,
-            likeCount: video.likeCount,
-            commentCount: video.commentCount,
-            publishedAt: video.publishedAt,
-          });
-        }
-      } else if (r.url.includes("instagram.com") && (r.url.includes("/reel/") || r.url.includes("/p/"))) {
-        results.push({
-          platform: "tiktok",
-          videoId: `ig_${r.url.split("/").filter(Boolean).pop() || ""}`,
-          title: r.title || `${brandName} Instagram Reel`,
-          description: r.snippet || "",
-          url: r.url,
-          thumbnailUrl: "",
-          channelTitle: "Instagram",
-          viewCount: 0,
-          likeCount: 0,
-          commentCount: 0,
-          publishedAt: new Date().toISOString(),
-        });
-      } else if (r.url.includes("vimeo.com")) {
-        const video = await getVimeoMetadata(r.url).catch(() => null);
-        if (video) {
-          results.push({
-            platform: "vimeo",
-            videoId: video.videoId,
-            title: video.title,
-            description: video.description,
-            url: video.url,
-            thumbnailUrl: video.thumbnailUrl,
-            channelTitle: video.author,
-            viewCount: 0,
-            likeCount: 0,
-            commentCount: 0,
-            publishedAt: video.publishedAt,
-          });
-        }
-      }
-    }
+    const perItem = await pMap(
+      ddgResults,
+      (r) => socialResultForDdgItem(r, brandName),
+      { concurrency: 3 }
+    );
+    results = perItem.filter((v): v is VideoResult => v !== null);
   } catch {
     // fall through
   }
@@ -232,6 +274,10 @@ async function searchTikTok(
     `site:tiktok.com "${brandName}" ${disambig}`,
   ];
 
+  // Intentionally sequential: the `results.length >= 5` early-break below is
+  // a deliberate short-circuit once we have enough results, and running the
+  // queries in parallel would waste requests that this loop is designed to
+  // avoid. Leave as-is.
   for (const query of queries) {
     try {
       const ddgResults = await searchDuckDuckGo(query, 8);
@@ -284,6 +330,7 @@ function youtubeToResult(
     likeCount: v.likeCount,
     commentCount: v.commentCount,
     publishedAt: v.publishedAt,
+    metricsEstimated: v.metricsEstimated,
   };
 }
 

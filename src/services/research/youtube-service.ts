@@ -11,6 +11,9 @@ export interface YouTubeVideo {
   viewCount: number;
   likeCount: number;
   commentCount: number;
+  /** True when likeCount/commentCount are heuristic estimates, not real data
+   * (set on results from the HTML-scrape path, which has no engagement data). */
+  metricsEstimated?: boolean;
 }
 
 const youtube = google.youtube("v3");
@@ -269,8 +272,9 @@ function parseYtInitialData(jsonStr: string, maxResults: number): YouTubeVideo[]
         thumbnailUrl: thumb.split("?")[0], // clean thumbnail URL
         channelTitle: channel,
         viewCount,
-        likeCount: Math.round(viewCount * 0.035), // estimated ~3.5% like ratio
-        commentCount: Math.round(viewCount * 0.005), // estimated ~0.5% comment ratio
+        likeCount: 0,
+        commentCount: 0,
+        metricsEstimated: true,
       });
 
       if (videos.length >= maxResults) break;

@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { buildDenseCinematicPrompt, buildWan26Prompt } from "@/services/ai/prompts/cinematic-prompt-builder";
+import { getVideoModel, splitNegativePrompt, fitPromptForModel } from "@/services/video-gen/models";
 
 export const maxDuration = 30;
 
@@ -21,7 +22,22 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const { projectId } = await params;
+  try {
+    return await handlePost(request, params);
+  } catch (err) {
+    console.error("generate-from-script failed:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unknown error generating video from script" },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(
+  request: Request,
+  paramsPromise: Promise<{ projectId: string }>
+) {
+  const { projectId } = await paramsPromise;
   const body = await request.json().catch(() => ({}));
   const {
     scriptId,
@@ -85,35 +101,17 @@ export async function POST(
       : [],
   });
 
-  // Map model to fal.ai endpoint
-  const FAL_MODELS: Record<string, { endpoint: string; costPerSec: number; supportsAudio: boolean }> = {
-    "grok-imagine-video": {
-      endpoint: "xai/grok-imagine-video/text-to-video",
-      costPerSec: 0.07,
-      supportsAudio: true,
-    },
-    "wan-2.6": {
-      endpoint: "wan/v2.6/text-to-video",
-      costPerSec: 0.10,
-      supportsAudio: true,
-    },
-    "kling-v3-pro": {
-      endpoint: "fal-ai/kling-video/v3/pro/text-to-video",
-      costPerSec: 0.112,
-      supportsAudio: false,
-    },
-    "wan-2.5": {
-      endpoint: "fal-ai/wan-25-preview/text-to-video",
-      costPerSec: 0.05,
-      supportsAudio: false,
-    },
-  };
+  // Map model to fal.ai endpoint via the shared registry (single source of
+  // truth shared with generate-video and fal-status routes).
+  const falModel = getVideoModel(model) ?? getVideoModel("grok-imagine-video")!;
 
-  const falModel = FAL_MODELS[model] || FAL_MODELS["grok-imagine-video"];
-
-  // buildDenseCinematicPrompt produces ~3800 chars — under fal.ai 4096 limit.
-  // Hard-cap as safety net.
-  const finalPrompt = prompt.slice(0, 4000);
+  // Split out the negative/brand-safety block (built by cinematic-prompt-builder,
+  // marked with "negative:") BEFORE trimming, so it is never the part that gets
+  // truncated. fitPromptForModel trims only the positive prompt at a sentence
+  // boundary and reserves space for the negative block (or routes it to the
+  // dedicated negative_prompt field when the model supports one).
+  const { positive, negative } = splitNegativePrompt(prompt);
+  const { prompt: finalPrompt, negativePrompt } = fitPromptForModel(positive, negative, falModel);
 
   const payload: Record<string, unknown> = {
     prompt: finalPrompt,
@@ -122,8 +120,9 @@ export async function POST(
     duration: totalSec,
   };
   if (falModel.supportsAudio) payload.enable_audio = true;
+  if (negativePrompt) payload.negative_prompt = negativePrompt;
 
-  const falRes = await fetch(`https://queue.fal.run/${falModel.endpoint}`, {
+  const falRes = await fetch(`https://queue.fal.run/${falModel.submitEndpoint}`, {
     method: "POST",
     headers: {
       Authorization: `Key ${falKey}`,
@@ -158,7 +157,7 @@ export async function POST(
       resolution,
       duration: totalSec,
       scriptId: scriptId || null,
-      costUsd: falModel.costPerSec * totalSec,
+      costUsd: falModel.costPerSecond * totalSec,
       status: "queued",
     },
   });

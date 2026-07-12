@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 export async function GET(
   _request: Request,
@@ -30,6 +31,23 @@ export async function GET(
       // Extract video URL
       const videos = data.response?.generateVideoResponse?.generatedSamples || [];
       const videoUrl = videos[0]?.video?.uri || null;
+
+      // Persist to the FalVideoJob row created by generate-video's Veo
+      // fallback (keyed by falRequestId === operationId). Without this,
+      // completed Veo videos were never recorded anywhere (data loss).
+      try {
+        await prisma.falVideoJob.updateMany({
+          where: { falRequestId: operationId },
+          data: {
+            status: videoUrl ? "completed" : "failed",
+            videoUrl: videoUrl ?? null,
+            completedAt: new Date(),
+            error: videoUrl ? null : "Veo reported done but no video URL was returned",
+          },
+        });
+      } catch (err) {
+        console.error("Failed to persist Veo completion to FalVideoJob:", err);
+      }
 
       return NextResponse.json({
         done: true,
