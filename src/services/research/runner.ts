@@ -9,6 +9,7 @@ import { searchVerifiedVideos, type VideoResult } from "./video-search";
 import { recordDiscoveredVideos } from "./video-corpus";
 import { getCampaignPlatform } from "@/lib/campaign-platform";
 import { searchTikTokTopAds } from "./tiktok-creative-center";
+import { searchMetaAdLibrary, SkippedNoCredentialsError } from "./meta-ads";
 import { runAnalysisPipeline } from "@/services/ai/analysis-pipeline";
 import {
   startStep,
@@ -236,6 +237,78 @@ export async function runResearch(projectId: string, jobId: string): Promise<voi
         100,
         `Paid media skipped: ${err instanceof Error ? err.message : "unknown"}`
       );
+    }
+    // Meta Ad Library (Instagram/Facebook paid ads) — additive, guarded so a
+    // missing token or API failure never breaks the run. Runs alongside the
+    // TikTok Creative Center step above (same "Paid media discovery" step).
+    try {
+      const metaAds = await searchMetaAdLibrary({
+        brand: project.brandName,
+        countries: ["US"],
+        limit: 20,
+      });
+      const metaSaved = await pMap(
+        metaAds,
+        async (ad) => {
+          if (!ad.adId || !ad.adSnapshotUrl) return false;
+          const isInstagramSnapshot = /instagram/i.test(ad.adSnapshotUrl);
+          try {
+            await prisma.contentAsset.upsert({
+              where: { projectId_url: { projectId, url: ad.adSnapshotUrl } },
+              create: {
+                projectId,
+                type: "SOCIAL_POST",
+                title: ad.creativeBody?.slice(0, 120) || ad.pageName || "Meta ad",
+                url: ad.adSnapshotUrl,
+                thumbnailUrl: ad.creativeImageUrl ?? null,
+                description: ad.creativeBody ?? null,
+                platform: isInstagramSnapshot ? "instagram" : "facebook",
+                isPaidMedia: true,
+                adSpendEstimate: {
+                  impressions: ad.impressions ?? null,
+                  spend: ad.spend ?? null,
+                  firstSeen: ad.firstSeenAt ?? null,
+                  lastSeen: ad.lastSeenAt ?? null,
+                } as never,
+                dataSource: "PUBLIC_WEB",
+                rawData: ad as never,
+              },
+              update: {
+                title: ad.creativeBody?.slice(0, 120) || ad.pageName || "Meta ad",
+                thumbnailUrl: ad.creativeImageUrl ?? null,
+                adSpendEstimate: {
+                  impressions: ad.impressions ?? null,
+                  spend: ad.spend ?? null,
+                  firstSeen: ad.firstSeenAt ?? null,
+                  lastSeen: ad.lastSeenAt ?? null,
+                } as never,
+              },
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { concurrency: 5 }
+      );
+      const savedCount = metaSaved.filter(Boolean).length;
+      await updateStep(
+        jobId,
+        "Paid media discovery",
+        100,
+        `${savedCount} Meta Ad Library ads saved`
+      );
+    } catch (err) {
+      if (err instanceof SkippedNoCredentialsError) {
+        await updateStep(jobId, "Paid media discovery", 100, err.message);
+      } else {
+        await updateStep(
+          jobId,
+          "Paid media discovery",
+          100,
+          `Meta Ad Library skipped: ${err instanceof Error ? err.message : "unknown error"}`
+        );
+      }
     }
     await completeStep(jobId, "Paid media discovery");
 
