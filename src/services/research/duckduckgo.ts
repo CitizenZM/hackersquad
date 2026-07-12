@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchWithRetry } from "./http";
 
 export interface SearchResult {
   title: string;
@@ -12,17 +13,17 @@ export async function searchDuckDuckGo(
 ): Promise<SearchResult[]> {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    const response = await fetchWithRetry(
+      url,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
       },
-    });
+      { timeoutMs: 8000 }
+    );
 
     if (!response.ok) return [];
     const html = await response.text();
@@ -48,7 +49,5 @@ export async function searchDuckDuckGo(
     return results.slice(0, maxResults);
   } catch {
     return [];
-  } finally {
-    clearTimeout(timeout);
   }
 }

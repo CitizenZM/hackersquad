@@ -1,3 +1,5 @@
+import { fetchWithRetry } from "./http";
+
 export interface TikTokVideo {
   videoId: string;
   title: string;
@@ -15,19 +17,19 @@ export interface TikTokVideo {
 }
 
 export async function scrapeTikTokVideo(videoUrl: string): Promise<TikTokVideo | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-
   try {
-    const response = await fetch(videoUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "en-US,en;q=0.9",
+    const response = await fetchWithRetry(
+      videoUrl,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
       },
-    });
+      { timeoutMs: 8000 }
+    );
 
     if (!response.ok) return null;
     const html = await response.text();
@@ -68,7 +70,5 @@ export async function scrapeTikTokVideo(videoUrl: string): Promise<TikTokVideo |
     };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }

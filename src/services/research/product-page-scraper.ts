@@ -6,6 +6,7 @@
  * override any AI inferences about what the product looks like.
  */
 import * as cheerio from "cheerio";
+import { fetchWithRetry } from "./http";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CheerioEl = any;
 
@@ -84,15 +85,18 @@ function scoreImage(url: string, alt: string, context: { title: string }): numbe
 }
 
 export async function scrapeProductPage(url: string): Promise<ProductPageData> {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "Cache-Control": "no-cache",
+  const res = await fetchWithRetry(
+    url,
+    {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+      },
     },
-    signal: AbortSignal.timeout(15000),
-  });
+    { timeoutMs: 15000 }
+  );
 
   if (!res.ok) throw new Error(`Failed to fetch product page: ${res.status}`);
 

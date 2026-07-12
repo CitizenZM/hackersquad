@@ -1,4 +1,5 @@
 import { cached } from "@/services/cache";
+import { fetchWithRetry } from "./http";
 
 export interface TikTokAd {
   adId: string;
@@ -52,20 +53,21 @@ export async function searchTikTokTopAds(
       if (options.industry) params.set("industry", options.industry);
 
       const url = `${API_BASE}/top_ads/v2/list?${params.toString()}`;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
 
       try {
-        const res = await fetch(url, {
-          signal: controller.signal,
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-            Accept: "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            Referer: BASE,
+        const res = await fetchWithRetry(
+          url,
+          {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+              Accept: "application/json, text/plain, */*",
+              "Accept-Language": "en-US,en;q=0.9",
+              Referer: BASE,
+            },
           },
-        });
+          { timeoutMs: 15000 }
+        );
 
         if (!res.ok) {
           return [];
@@ -78,8 +80,6 @@ export async function searchTikTokTopAds(
         return materials.map(mapRawAd);
       } catch {
         return [];
-      } finally {
-        clearTimeout(timer);
       }
     }
   );

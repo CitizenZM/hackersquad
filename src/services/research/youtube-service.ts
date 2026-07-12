@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { cached } from "@/services/cache";
+import { fetchWithRetry } from "./http";
 
 export interface YouTubeVideo {
   videoId: string;
@@ -180,12 +181,9 @@ async function scrapeYouTubeSearch(
   let url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&gl=US&hl=en`;
   if (spFilter) url += `&sp=${spFilter}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
+  const response = await fetchWithRetry(
+    url,
+    {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -193,28 +191,27 @@ async function scrapeYouTubeSearch(
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
-    });
+    },
+    { timeoutMs: 10000 }
+  );
 
-    if (!response.ok) throw new Error(`YouTube returned ${response.status}`);
+  if (!response.ok) throw new Error(`YouTube returned ${response.status}`);
 
-    const html = await response.text();
+  const html = await response.text();
 
-    // Extract ytInitialData JSON from the page
-    const match = html.match(
-      /var ytInitialData = ({.*?});<\/script>/
+  // Extract ytInitialData JSON from the page
+  const match = html.match(
+    /var ytInitialData = ({.*?});<\/script>/
+  );
+  if (!match) {
+    const match2 = html.match(
+      /window\["ytInitialData"\] = ({.*?});<\/script>/
     );
-    if (!match) {
-      const match2 = html.match(
-        /window\["ytInitialData"\] = ({.*?});<\/script>/
-      );
-      if (!match2) throw new Error("ytInitialData not found in page");
-      return parseYtInitialData(match2[1], maxResults);
-    }
-
-    return parseYtInitialData(match[1], maxResults);
-  } finally {
-    clearTimeout(timeout);
+    if (!match2) throw new Error("ytInitialData not found in page");
+    return parseYtInitialData(match2[1], maxResults);
   }
+
+  return parseYtInitialData(match[1], maxResults);
 }
 
 function parseYtInitialData(jsonStr: string, maxResults: number): YouTubeVideo[] {

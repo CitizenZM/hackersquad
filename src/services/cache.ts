@@ -22,7 +22,28 @@ export interface CachedOptions {
   ttlSec?: number;
   schemaVersion?: number;
   skip?: boolean;
+  /**
+   * When false (default), results that are "empty" (null, undefined, an
+   * empty array, or a plain object with no own keys) are NOT persisted to
+   * the cache — they're still returned to the caller, just not stored, so a
+   * transient empty result doesn't poison the cache for the TTL window. Set
+   * true to cache empty results anyway (e.g. when an empty result is a
+   * meaningful, stable answer for that key).
+   */
+  cacheEmpty?: boolean;
 }
+
+function isEmptyResult(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "object") return Object.keys(value as object).length === 0;
+  return false;
+}
+
+// Single-flight de-duplication: if a loader is already in flight for a given
+// cache key, concurrent callers await the same promise instead of invoking
+// the loader again. Cleaned up once the promise settles (success or failure).
+const inFlight = new Map<string, Promise<unknown>>();
 
 export async function cached<T>(
   options: CachedOptions,
@@ -34,6 +55,7 @@ export async function cached<T>(
   const key = cacheKey(options.kind, options.params);
   const schemaVersion = options.schemaVersion ?? 1;
   const ttlSec = options.ttlSec ?? DEFAULT_TTL_SEC;
+  const cacheEmpty = options.cacheEmpty ?? false;
 
   try {
     const hit = await prisma.crawlCache.findUnique({ where: { cacheKey: key } });
@@ -44,32 +66,48 @@ export async function cached<T>(
     // cache miss on read error — fall through to loader
   }
 
-  const value = await loader();
-
-  try {
-    const expiresAt = new Date(Date.now() + ttlSec * 1000);
-    await prisma.crawlCache.upsert({
-      where: { cacheKey: key },
-      create: {
-        cacheKey: key,
-        kind: options.kind,
-        schemaVersion,
-        payload: value as never,
-        expiresAt,
-      },
-      update: {
-        kind: options.kind,
-        schemaVersion,
-        payload: value as never,
-        fetchedAt: new Date(),
-        expiresAt,
-      },
-    });
-  } catch {
-    // cache write error is non-fatal
+  const existing = inFlight.get(key);
+  if (existing) {
+    return existing as Promise<T>;
   }
 
-  return value;
+  const loaderPromise = (async () => {
+    const value = await loader();
+
+    if (cacheEmpty || !isEmptyResult(value)) {
+      try {
+        const expiresAt = new Date(Date.now() + ttlSec * 1000);
+        await prisma.crawlCache.upsert({
+          where: { cacheKey: key },
+          create: {
+            cacheKey: key,
+            kind: options.kind,
+            schemaVersion,
+            payload: value as never,
+            expiresAt,
+          },
+          update: {
+            kind: options.kind,
+            schemaVersion,
+            payload: value as never,
+            fetchedAt: new Date(),
+            expiresAt,
+          },
+        });
+      } catch {
+        // cache write error is non-fatal
+      }
+    }
+
+    return value;
+  })();
+
+  inFlight.set(key, loaderPromise);
+  try {
+    return await loaderPromise;
+  } finally {
+    inFlight.delete(key);
+  }
 }
 
 export async function purgeCache(kindOrKey: string): Promise<number> {

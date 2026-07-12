@@ -87,18 +87,29 @@ export function scoreQuality(video: VideoResult): number {
   // Log-scaled view score: 1k→~0.3, 100k→~0.6, 10M→~1.0
   const viewScore = Math.min(1, Math.log10(views + 1) / 7);
 
-  // Engagement rate = (likes + comments) / views, capped.
-  const eng =
-    ((video.likeCount || 0) + (video.commentCount || 0)) / Math.max(views, 1);
-  const engScore = Math.min(1, eng / 0.1); // 10% engagement → full marks
+  // Engagement rate = (likes + comments) / views, capped. Skip this term
+  // (fall back to view-based scoring only) when metrics are known to be
+  // fabricated/estimated, or when both like/comment counts are zero — real
+  // engagement data of exactly 0/0 is rare and usually means "not available".
+  const noRealEngagementData =
+    video.metricsEstimated === true ||
+    ((video.likeCount || 0) === 0 && (video.commentCount || 0) === 0);
 
-  // Recency: newer is slightly better.
   let recencyScore = 0.5;
   const ts = Date.parse(video.publishedAt);
   if (!Number.isNaN(ts)) {
     const ageDays = (Date.now() - ts) / 86_400_000;
     recencyScore = ageDays <= 0 ? 0.5 : Math.max(0, Math.min(1, 1 - ageDays / 1095)); // ~3yr falloff
   }
+
+  if (noRealEngagementData) {
+    // Redistribute the engagement weight into the view score.
+    return 0.9 * viewScore + 0.1 * recencyScore;
+  }
+
+  const eng =
+    ((video.likeCount || 0) + (video.commentCount || 0)) / Math.max(views, 1);
+  const engScore = Math.min(1, eng / 0.1); // 10% engagement → full marks
 
   return 0.6 * viewScore + 0.3 * engScore + 0.1 * recencyScore;
 }

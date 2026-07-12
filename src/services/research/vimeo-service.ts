@@ -1,3 +1,5 @@
+import { fetchWithRetry } from "./http";
+
 export interface VimeoVideo {
   videoId: string;
   title: string;
@@ -10,15 +12,13 @@ export interface VimeoVideo {
 }
 
 export async function getVimeoMetadata(videoUrl: string): Promise<VimeoVideo | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
-
   try {
     const oembedUrl = `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(videoUrl)}`;
-    const response = await fetch(oembedUrl, {
-      signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
+    const response = await fetchWithRetry(
+      oembedUrl,
+      { headers: { "User-Agent": "Mozilla/5.0" } },
+      { timeoutMs: 5000 }
+    );
 
     if (!response.ok) return null;
     const data = await response.json();
@@ -38,7 +38,5 @@ export async function getVimeoMetadata(videoUrl: string): Promise<VimeoVideo | n
     };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
