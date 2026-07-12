@@ -160,12 +160,12 @@ model Project {
   campaignGoal String?
 
   // Product definition — user-specified, foundational source of truth
-  productUrl         String?   // specific product page URL (Amazon PDP, DTC page)
-  productName        String?   // exact product name entered by user
-  productPageTitle   String?   // scraped from productUrl
-  productPageImages  Json?     // [{url, alt, width?, height?}] real images from productUrl
-  productPageText    String?   @db.Text // scraped product description from productUrl
-  userProductImages  Json?     // [{url, caption, uploadedAt}] user-uploaded reference photos
+  productUrl        String? // specific product page URL (Amazon PDP, DTC page)
+  productName       String? // exact product name entered by user
+  productPageTitle  String? // scraped from productUrl
+  productPageImages Json? // [{url, alt, width?, height?}] real images from productUrl
+  productPageText   String? @db.Text // scraped product description from productUrl
+  userProductImages Json? // [{url, caption, uploadedAt}] user-uploaded reference photos
 
   briefingText   String?
   briefingParsed String?
@@ -213,13 +213,13 @@ model Brand {
   productFeatures  Json?
 
   // Product Intelligence — added for visual verification system
-  productCategory      String?   // e.g., "Home Appliances - Vacuum Cleaners"
-  productDescription   String?   @db.Text  // precise product description for AI
-  productImages        Json?     // [{url, caption, type: "product"|"in-use"|"environment"}]
-  useEnvironments      Json?     // [{name, description, imagePrompt, sampleImageUrl}]
-  actorSettings        Json?     // [{role, ageRange, scenario, visualDescription}]
-  displayGuidelines    Json?     // [{rule, example, antiExample}]
-  productVerified      Boolean   @default(false)
+  productCategory    String? // e.g., "Home Appliances - Vacuum Cleaners"
+  productDescription String? @db.Text // precise product description for AI
+  productImages      Json? // [{url, caption, type: "product"|"in-use"|"environment"}]
+  useEnvironments    Json? // [{name, description, imagePrompt, sampleImageUrl}]
+  actorSettings      Json? // [{role, ageRange, scenario, visualDescription}]
+  displayGuidelines  Json? // [{rule, example, antiExample}]
+  productVerified    Boolean @default(false)
 
   dataSource   DataSource @default(AI_INFERRED)
   rawCrawlData Json?
@@ -376,7 +376,7 @@ model Script {
   narrativeType    NarrativeType?
   targetEmotion    String?
   predictedScore   Float?
-  scenes           Json?  // [{sceneNumber, startSec, endSec, segmentLabel, shotType, focalLength, cameraMovement, aperture, location, lighting, actorAction, productAction, voiceover, textOverlay, transition}]
+  scenes           Json? // [{sceneNumber, startSec, endSec, segmentLabel, shotType, focalLength, cameraMovement, aperture, location, lighting, actorAction, productAction, voiceover, textOverlay, transition}]
 
   createdAt DateTime @default(now())
 }
@@ -454,21 +454,21 @@ model FalVideoJob {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  falRequestId String  @unique
-  model        String  // "grok-imagine-video" | "wan-2.6" | "kling-v3" | "veo-3.1"
-  prompt       String  @db.Text
-  aspectRatio  String  @default("9:16")
-  resolution   String  @default("720p")
-  duration     Int     @default(5) // seconds
+  falRequestId String @unique
+  model        String // "grok-imagine-video" | "wan-2.6" | "kling-v3" | "veo-3.1"
+  prompt       String @db.Text
+  aspectRatio  String @default("9:16")
+  resolution   String @default("720p")
+  duration     Int    @default(5) // seconds
 
-  status       String  @default("queued") // queued|processing|completed|failed
-  videoUrl     String?
-  thumbnailUrl String?
+  status        String  @default("queued") // queued|processing|completed|failed
+  videoUrl      String?
+  thumbnailUrl  String?
   fileSizeBytes Int?
-  widthPx      Int?
-  heightPx     Int?
-  fpS          Float?
-  durationSec  Float?
+  widthPx       Int?
+  heightPx      Int?
+  fpS           Float?
+  durationSec   Float?
 
   // Script/shot context
   scriptId      String?
@@ -535,12 +535,12 @@ model DeepAnalysis {
   recommendations  Json?
 
   // Extended creative intelligence — added for ad creative production
-  environmentAnalysis Json?  // [{environment, frequency, description, lightingNotes, examples}]
-  cameraAngles        Json?  // [{shot, movement, frequency, whenToUse, adEffect, examples}]
-  hookFormulas        Json?  // [{type, formula, openingLine, why, platformFit, scoreImpact, examples}]
-  platformInsights    Json?  // [{platform, contentStyle, topFormats, avgEngagement, bestPractices}]
-  sellingPointVisuals Json?  // [{point, visualTreatment, screenTime, placement, examples}]
-  videoTimeline       Json?  // {recommendedDurationSec, platform, segments: [{segment, startSec, endSec, label, description, cameraNote, voiceover, purpose}], rationale}
+  environmentAnalysis Json? // [{environment, frequency, description, lightingNotes, examples}]
+  cameraAngles        Json? // [{shot, movement, frequency, whenToUse, adEffect, examples}]
+  hookFormulas        Json? // [{type, formula, openingLine, why, platformFit, scoreImpact, examples}]
+  platformInsights    Json? // [{platform, contentStyle, topFormats, avgEngagement, bestPractices}]
+  sellingPointVisuals Json? // [{point, visualTreatment, screenTime, placement, examples}]
+  videoTimeline       Json? // {recommendedDurationSec, platform, segments: [{segment, startSec, endSec, label, description, cameraNote, voiceover, purpose}], rationale}
 
   dataSource DataSource @default(AI_INFERRED)
   createdAt  DateTime   @default(now())
@@ -548,42 +548,42 @@ model DeepAnalysis {
 }
 
 model CampaignSelection {
-  id        String   @id @default(cuid())
-  projectId String   @unique
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   // Selected product focus
   selectedProductName  String?
-  selectedProductImage String?   // URL of chosen product reference image
+  selectedProductImage String? // URL of chosen product reference image
 
   // Selected environment
-  selectedEnvironment  String?   // environment name
-  selectedEnvImage     String?   // URL of environment reference image
-  selectedEnvNotes     String?   // lighting/prop notes
+  selectedEnvironment String? // environment name
+  selectedEnvImage    String? // URL of environment reference image
+  selectedEnvNotes    String? // lighting/prop notes
 
   // Selected actor role
-  selectedActorRole    String?
-  selectedActorImage   String?   // AI-generated actor appearance image URL
-  selectedActorDesc    String?   // visual description text
-  selectedActorAge     String?
+  selectedActorRole  String?
+  selectedActorImage String? // AI-generated actor appearance image URL
+  selectedActorDesc  String? // visual description text
+  selectedActorAge   String?
 
   // Selected selling points (ordered)
-  selectedSellingPoints Json?    // [{point, priority, visualTreatment}]
+  selectedSellingPoints Json? // [{point, priority, visualTreatment}]
 
   // Video timeline design
-  videoTimeline        Json?     // [{segment, startSec, endSec, label, description, cameraNote}]
-  totalDurationSec     Int       @default(30)
-  platform             String?   // tiktok|instagram|youtube|tvc
+  videoTimeline    Json? // [{segment, startSec, endSec, label, description, cameraNote}]
+  totalDurationSec Int     @default(30)
+  platform         String? // tiktok|instagram|youtube|tvc
 
   // Reference videos (selected from content page)
-  referenceVideoIds    Json?     // [contentAssetId, ...]
+  referenceVideoIds Json? // [contentAssetId, ...]
 
   // Confirmation
-  confirmedAt          DateTime?
-  confirmed            Boolean   @default(false)
+  confirmedAt DateTime?
+  confirmed   Boolean   @default(false)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AudienceProfile {
@@ -645,4 +645,41 @@ model DiscoveredVideo {
   @@index([workspaceId])
   @@index([combinedScore])
   @@index([platform])
+}
+
+// Browser-driven generation jobs — executed by a local worker on the operator's
+// Mac controlling logged-in web UIs (AI Studio / Flow / Kling) via browser-harness,
+// consuming subscription quota instead of API tokens.
+model BrowserGenJob {
+  id        String @id @default(cuid())
+  projectId String
+
+  kind           String // "image_keyframe" | "video"
+  site           String // "ai_studio" | "flow" | "kling"
+  model          String? // e.g. "nano-banana-v3", "veo-3.1"
+  prompt         String  @db.Text
+  negativePrompt String? @db.Text
+  inputImageUrl  String? // first-frame conditioning image
+  aspectRatio    String  @default("9:16")
+  durationSec    Int?
+
+  status    String    @default("queued") // queued|claimed|running|completed|failed
+  resultUrl String? // Cloudinary URL after upload
+  error     String?
+  workerId  String?
+  attempts  Int       @default(0)
+  claimedAt DateTime?
+
+  // Script/shot context (mirrors FalVideoJob)
+  scriptId      String?
+  shotIndex     Int?
+  promptVersion Int     @default(1)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  @@index([status, site])
+  @@index([projectId])
+  @@index([scriptId])
 }

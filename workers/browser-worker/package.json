@@ -1,0 +1,14 @@
+{
+  "name": "browser-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Mac worker daemon that executes BrowserGenJob rows by driving logged-in web UIs via browser-harness (CDP control of the operator's real Chrome).",
+  "main": "worker.mjs",
+  "scripts": {
+    "start": "node worker.mjs"
+  },
+  "dependencies": {
+    "cloudinary": "^2.5.1"
+  }
+}
