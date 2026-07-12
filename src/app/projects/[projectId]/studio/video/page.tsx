@@ -748,7 +748,7 @@ export default function VideoStudioPage() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Info className="h-3.5 w-3.5" />
-                    <span>Hover video thumbnail to preview · Toggle "3s Test" for quick iteration · Edit prompts before generating</span>
+                    <span>Hover video thumbnail to preview · Toggle &quot;3s Test&quot; for quick iteration · Edit prompts before generating</span>
                   </div>
                   {veoResult.shot_list.map((shot, i) => (
                     <ShotPromptCard
