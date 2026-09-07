@@ -1,24 +1,44 @@
 import OpenAI from "openai";
 import { z, ZodSchema } from "zod";
 
-// Route priority: OpenAI (subscription plan) → OpenRouter (free fallback)
-// OPENAI_API_KEY set → use directly, full GPT-4o + GPT Image 2 access
-// Only falls back to OpenRouter if OPENAI_API_KEY is absent
+// Route priority: Matrix (primary) → OpenAI (subscription) → OpenRouter (free).
+// All three speak OpenAI's protocol, so they differ only by baseURL, key and
+// model id — the SDK client is the same object in each case.
 let _client: OpenAI | null = null;
-let _clientIsOpenRouter = false;
+let _provider: "matrix" | "openai" | "openrouter" | null = null;
+
+/**
+ * OpenRouter's free tier moves underneath us. This id was verified live on
+ * 2026-09-06; the previous default here, meta-llama/llama-3.3-70b-instruct:free,
+ * had been retired upstream and answered 404 for every one of the ten-plus API
+ * routes that reach this file — silently, because there is no fallback below
+ * this layer. Re-check with client-portal's scripts/check-ai-models.mjs.
+ */
+const OPENROUTER_FREE_DEFAULT = "minimax/minimax-m3:free";
 
 function getClient(): OpenAI {
   if (_client) return _client;
 
-  // Priority 1: Direct OpenAI — uses your subscription plan
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (openaiKey) {
-    _client = new OpenAI({ apiKey: openaiKey });
-    _clientIsOpenRouter = false;
+  // Priority 1: Matrix (MoziaVerse) — the primary model.
+  const matrixKey = process.env.MATRIX_API_KEY;
+  if (matrixKey) {
+    _client = new OpenAI({
+      apiKey: matrixKey,
+      baseURL: process.env.MATRIX_BASE_URL ?? "https://mzsjai.com/v1",
+    });
+    _provider = "matrix";
     return _client;
   }
 
-  // Priority 2: OpenRouter free tier — fallback when no OpenAI key
+  // Priority 2: Direct OpenAI — uses your subscription plan
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    _client = new OpenAI({ apiKey: openaiKey });
+    _provider = "openai";
+    return _client;
+  }
+
+  // Priority 3: OpenRouter free tier
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (openrouterKey) {
     _client = new OpenAI({
@@ -29,23 +49,32 @@ function getClient(): OpenAI {
         "X-Title": "CreativeIntel OS",
       },
     });
-    _clientIsOpenRouter = true;
+    _provider = "openrouter";
     return _client;
   }
 
-  throw new Error("No AI key configured — set OPENAI_API_KEY or OPENROUTER_API_KEY");
+  throw new Error("No AI key configured — set MATRIX_API_KEY, OPENAI_API_KEY or OPENROUTER_API_KEY");
 }
 
 function getModel(): string {
   // Explicit override always wins
   if (process.env.AI_MODEL) return process.env.AI_MODEL;
-  // OpenAI key present → use GPT-4o (subscription plan)
-  if (process.env.OPENAI_API_KEY) return "gpt-4o";
-  // Fallback to OpenRouter free tier — override via AI_FALLBACK_MODEL
-  if (process.env.OPENROUTER_API_KEY) {
-    return process.env.AI_FALLBACK_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+  getClient();  // resolves _provider, and throws here rather than later if nothing is configured
+  switch (_provider) {
+    case "matrix":
+      // Matrix model ids are account-specific — GET /v1/models lists what a key
+      // can reach, and there is no id that can be safely assumed.
+      if (!process.env.MATRIX_MODEL) {
+        throw new Error("MATRIX_API_KEY is set but MATRIX_MODEL is not — set it to a full id from GET https://mzsjai.com/v1/models");
+      }
+      return process.env.MATRIX_MODEL;
+    case "openai":
+      return "gpt-4o";
+    case "openrouter":
+      return process.env.AI_FALLBACK_MODEL || OPENROUTER_FREE_DEFAULT;
+    default:
+      return "gpt-4o";
   }
-  return "gpt-4o";
 }
 
 /** Thrown when the AI response could not be parsed into the expected schema, even after retry. */
@@ -111,7 +140,9 @@ export async function analyzeWithClaude<T>(options: {
   // and OpenRouter passes it through for models that support it). Attempt it on both paths;
   // fall back to an unstructured request if the API rejects the param.
   const client = getClient();
-  const wantsJsonFormat = !!process.env.OPENAI_API_KEY || _clientIsOpenRouter;
+  // All three providers are OpenAI-compatible and accept response_format; the
+  // per-model rejection case is already handled by the retry inside callModel.
+  const wantsJsonFormat = _provider !== null;
 
   async function callModel(messages: OpenAI.Chat.ChatCompletionMessageParam[], modelToUse: string) {
     if (wantsJsonFormat) {
